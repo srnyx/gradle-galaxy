@@ -1,5 +1,6 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
+
 plugins {
     `kotlin-dsl`
     `maven-publish`
@@ -36,10 +37,7 @@ dependencies {
     implementation(kotlin("stdlib-jdk8"))
 
     // Plugins
-    compileOnly("io.github.gradle-nexus", "publish-plugin", "1.3.0")
-    compileOnly("org.jetbrains.dokka", "dokka-gradle-plugin", "1.8.20")
     compileOnly("com.github.jengelman.gradle.plugins", "shadow", "6.1.0")
-    compileOnly("org.jetbrains.kotlin", "kotlin-gradle-plugin", "1.8.22")
 }
 
 @Suppress("UnstableApiUsage")
@@ -78,17 +76,21 @@ publishing {
                 developers {
                     developer {
                         id.set("srnyx")
-                        name.set("srnyx")
-                        email.set("contact@srnyx.com")
                         url.set("https://srnyx.com")
+                        email.set("contact@srnyx.com")
                         organization.set("Venox Network")
                         organizationUrl.set("https://venox.network")
                         timezone.set("America/New_York")
                     }
+                    developer {
+                        id.set("dkim19375")
+                        timezone.set("America/New_York")
+                        roles.add("contributor")
+                    }
                 }
 
                 scm {
-                    connection.set("scm:git:git://${vcs}git")
+                    connection.set("scm:git:git://${vcs}.git")
                     developerConnection.set("scm:git:ssh://${vcs}.git")
                     url.set("https://${vcs}")
                 }

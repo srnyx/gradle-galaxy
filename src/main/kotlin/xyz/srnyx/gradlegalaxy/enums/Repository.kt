@@ -1,15 +1,18 @@
 package xyz.srnyx.gradlegalaxy.enums
 
+import org.gradle.api.Project
 import org.gradle.api.artifacts.ArtifactRepositoryContainer
 import org.gradle.api.artifacts.dsl.RepositoryHandler
 import org.gradle.api.artifacts.repositories.MavenArtifactRepository
-
 import org.gradle.kotlin.dsl.maven
+
+import xyz.srnyx.gradlegalaxy.annotations.Ignore
 
 
 /**
  * Enum class for popular repositories. Use with [mavenQuick]
  */
+@Suppress("unused")
 enum class Repository(internal val url: String) {
     /**
      * [ArtifactRepositoryContainer.MAVEN_CENTRAL_URL]
@@ -132,9 +135,24 @@ fun RepositoryHandler.mavenQuick(vararg repositories: Repository): Map<Repositor
     }
 
 /**
+ * Alias for [mavenQuick]
+ */
+@Ignore
+fun RepositoryHandler.maven(vararg repositories: Repository): Map<Repository, MavenArtifactRepository> = mavenQuick(*repositories)
+
+/**
  * Add all maven repositories in the [Repository] enum
  */
-fun RepositoryHandler.mavenAll(vararg exclude: Repository): Map<Repository, MavenArtifactRepository> =
-    Repository.values().filterNot(exclude::contains).associateWith {
-        maven(it.url)
-    }
+@Ignore
+fun RepositoryHandler.mavenAll(vararg exclude: Repository) {
+    Repository.values().filterNot(exclude::contains).forEach(::mavenQuick)
+}
+
+@Ignore
+fun Project.repository(vararg repositories: Repository): Map<Repository, MavenArtifactRepository> = this.repositories.mavenQuick(*repositories)
+
+@Ignore
+fun Project.repository(vararg repositories: String): Map<String, MavenArtifactRepository> = repositories.associateWith { this.repositories.maven(it) }
+
+@Ignore
+fun Project.repositoryAll(vararg exclude: Repository) = this.repositories.mavenAll(*exclude)

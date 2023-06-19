@@ -16,10 +16,17 @@ import org.gradle.jvm.tasks.Jar
 import org.gradle.kotlin.dsl.*
 
 import xyz.srnyx.gradlegalaxy.annotations.Ignore
+import xyz.srnyx.gradlegalaxy.data.pom.DeveloperData
+import xyz.srnyx.gradlegalaxy.data.pom.LicenseData
+import xyz.srnyx.gradlegalaxy.data.pom.ScmData
 import xyz.srnyx.gradlegalaxy.enums.Repository
-import xyz.srnyx.gradlegalaxy.enums.ShadowVersion
 import xyz.srnyx.gradlegalaxy.enums.mavenQuick
 
+
+/**
+ * Checks if the `java` plugin is applied
+ */
+fun Project.hasJavaPlugin(): Boolean = plugins.hasPlugin("java")
 
 /**
  * Checks if the Shadow plugin is applied
@@ -136,6 +143,12 @@ fun Project.relocate(
  * @param version The version
  * @param component The [SoftwareComponent] to publish
  * @param artifacts The artifacts to publish
+ * @param name The name of the project
+ * @param description The description of the project
+ * @param url The URL of the project
+ * @param licenses The licenses of the project
+ * @param developers The developers of the project
+ * @param scm The SCM information of the project
  * @param configuration The configuration of the [MavenPublication]
  *
  * @return The [MavenPublication] that was created
@@ -145,17 +158,61 @@ inline fun Project.setupPublishing(
     groupId: String? = null,
     artifactId: String? = null,
     version: String? = null,
+    withJavadocSourcesJars: Boolean = true,
     component: SoftwareComponent? = components["java"],
     artifacts: Collection<Any> = emptyList(),
-    crossinline configuration: MavenPublication.() -> Unit
+    name: String? = null,
+    description: String? = null,
+    url: String? = null,
+    licenses: List<LicenseData> = emptyList(),
+    developers: List<DeveloperData> = emptyList(),
+    scm: ScmData? = null,
+    crossinline configuration: MavenPublication.() -> Unit = {}
 ): MavenPublication {
     apply(plugin = "maven-publish")
+    if (withJavadocSourcesJars) addJavadocSourcesJars()
     return (extensions["publishing"] as PublishingExtension).publications.create<MavenPublication>("maven") {
         groupId?.let { this.groupId = it }
         artifactId?.let { this.artifactId = it }
         version?.let { this.version = it }
         component?.let { this.from(component) }
         artifacts.forEach(this::artifact)
+        pom {
+            name?.let(this.name::set)
+            description?.let(this.description::set)
+            url?.let(this.url::set)
+            licenses {
+                licenses.forEach {
+                    license {
+                        this.name.set(it.name)
+                        this.url.set(it.url)
+                        it.distribution?.value?.let(this.distribution::set)
+                        it.comments?.let(this.comments::set)
+                    }
+                }
+            }
+            developers {
+                developers.filterNot(DeveloperData::isEmpty).forEach {
+                    developer {
+                        it.id?.let(this.id::set)
+                        it.name?.let(this.name::set)
+                        it.url?.let(this.url::set)
+                        it.email?.let(this.email::set)
+                        it.timezone?.let(this.timezone::set)
+                        it.organization?.let(this.organization::set)
+                        it.organizationUrl?.let(this.organizationUrl::set)
+                        it.roles.takeIf(List<String>::isNotEmpty)?.let(this.roles::set)
+                        it.properties.takeIf(Map<String, String>::isNotEmpty)?.let(this.properties::set)
+                    }
+                }
+            }
+            if (scm != null) scm {
+                connection.set(scm.connection)
+                developerConnection.set(scm.developerConnection)
+                scm.url?.let(this.url::set)
+                scm.tag?.let(this.tag::set)
+            }
+        }
         configuration()
     }
 }
@@ -201,7 +258,7 @@ fun Project.setupMC(
 /**
  * Sets up the project using Annoying API
  *
- * 1. Applies the shadow plugin with the specified [shadowVersion]
+ * 1. Checks if the Shadow plugin is applied
  * 2. Calls [setupMC] with the specified parameters
  * 3. Adds the [Repository.JITPACK] repository
  * 4. Adds the Annoying API dependency (`implementation`)
@@ -209,7 +266,6 @@ fun Project.setupMC(
  */
 @Ignore
 fun Project.setupAnnoyingAPI(
-    shadowVersion: String,
     annoyingAPIVersion: String,
     group: String,
     version: String = "1.0.0",
@@ -222,14 +278,7 @@ fun Project.setupAnnoyingAPI(
     textEncoding: String? = "UTF-8",
     artifactClassifier: String? = "",
 ) {
-    //TODO Apply the shadow plugin
-    buildscript {
-        repositories { gradlePluginPortal() }
-        dependencies { add("classpath", "${ShadowVersion.parse(shadowVersion).groupId}:shadow:$shadowVersion") }
-    }
-    apply(plugin = "com.github.johnrengelman.shadow")
-
-    // Everything else
+    check(hasShadowPlugin()) { "Shadow plugin is required for Annoying API!" }
     setupMC(group, version, dependency, javaVersion, replacements, textEncoding, artifactClassifier)
     repositories { mavenQuick(Repository.JITPACK) }
     dependencies { add("implementation", "xyz.srnyx:annoying-api:$annoyingAPIVersion") }
