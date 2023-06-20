@@ -149,92 +149,6 @@ fun Project.relocate(
 }
 
 /**
- * Sets up a simple publishing configuration
- *
- * 1. Applies the `maven-publish` plugin
- * 2. Creates a [MavenPublication] with the specified parameters
- * 3. Configures the [MavenPublication] with the specified [configuration]
- *
- * @param groupId The group ID
- * @param artifactId The artifact ID
- * @param version The version
- * @param component The [SoftwareComponent] to publish
- * @param artifacts The artifacts to publish
- * @param name The name of the project
- * @param description The description of the project
- * @param url The URL of the project
- * @param licenses The licenses of the project
- * @param developers The developers of the project
- * @param scm The SCM information of the project
- * @param configuration The configuration of the [MavenPublication]
- *
- * @return The [MavenPublication] that was created
- */
-@Ignore
-inline fun Project.setupPublishing(
-    groupId: String? = null,
-    artifactId: String? = null,
-    version: String? = null,
-    withJavadocSourcesJars: Boolean = true,
-    component: SoftwareComponent? = components["java"],
-    artifacts: Collection<Any> = emptyList(),
-    name: String? = project.name,
-    description: String? = project.description,
-    url: String? = null,
-    licenses: List<LicenseData> = emptyList(),
-    developers: List<DeveloperData> = emptyList(),
-    scm: ScmData? = null,
-    crossinline configuration: MavenPublication.() -> Unit = {}
-): MavenPublication {
-    apply(plugin = "maven-publish")
-    if (withJavadocSourcesJars) addJavadocSourcesJars()
-    return (extensions["publishing"] as PublishingExtension).publications.create<MavenPublication>("maven") {
-        groupId?.let { this.groupId = it }
-        artifactId?.let { this.artifactId = it }
-        version?.let { this.version = it }
-        component?.let { this.from(component) }
-        artifacts.forEach(this::artifact)
-        pom {
-            name?.let(this.name::set)
-            description?.let(this.description::set)
-            url?.let(this.url::set)
-            licenses {
-                licenses.forEach {
-                    license {
-                        this.name.set(it.name)
-                        this.url.set(it.url)
-                        it.distribution?.value?.let(this.distribution::set)
-                        it.comments?.let(this.comments::set)
-                    }
-                }
-            }
-            developers {
-                developers.filterNot(DeveloperData::isEmpty).forEach {
-                    developer {
-                        it.id?.let(this.id::set)
-                        it.name?.let(this.name::set)
-                        it.url?.let(this.url::set)
-                        it.email?.let(this.email::set)
-                        it.timezone?.let(this.timezone::set)
-                        it.organization?.let(this.organization::set)
-                        it.organizationUrl?.let(this.organizationUrl::set)
-                        it.roles.takeIf(List<String>::isNotEmpty)?.let(this.roles::set)
-                        it.properties.takeIf(Map<String, String>::isNotEmpty)?.let(this.properties::set)
-                    }
-                }
-            }
-            if (scm != null) scm {
-                connection.set(scm.connection)
-                developerConnection.set(scm.developerConnection)
-                scm.url?.let(this.url::set)
-                scm.tag?.let(this.tag::set)
-            }
-        }
-        configuration()
-    }
-}
-
-/**
  * Sets up the project with the specified [group] and [version] for a simple Java project
  *
  * Calls [setJavaVersion], [setTextEncoding], and [addReplacementsTask]
@@ -327,4 +241,90 @@ fun Project.setupAnnoyingAPI(
     repositories { mavenQuick(Repository.JITPACK) }
     dependencies { add("implementation", "xyz.srnyx:annoying-api:$annoyingAPIVersion") }
     relocate("xyz.srnyx.annoyingapi")
+}
+
+/**
+ * Sets up a simple publishing configuration
+ *
+ * 1. Applies the `maven-publish` plugin
+ * 2. Creates a [MavenPublication] with the specified parameters
+ * 3. Configures the [MavenPublication] with the specified [configuration]
+ *
+ * @param groupId The group ID
+ * @param artifactId The artifact ID
+ * @param version The version
+ * @param component The [SoftwareComponent] to publish
+ * @param artifacts The artifacts to publish
+ * @param name The name of the project
+ * @param description The description of the project
+ * @param url The URL of the project
+ * @param licenses The licenses of the project
+ * @param developers The developers of the project
+ * @param scm The SCM information of the project
+ * @param configuration The configuration of the [MavenPublication]
+ *
+ * @return The [MavenPublication] that was created
+ */
+@Ignore
+inline fun Project.setupPublishing(
+    groupId: String? = null,
+    artifactId: String? = null,
+    version: String? = null,
+    withJavadocSourcesJars: Boolean = true,
+    component: SoftwareComponent? = components["java"],
+    artifacts: Collection<Any> = emptyList(),
+    name: String? = project.name,
+    description: String? = project.description,
+    url: String? = null,
+    licenses: List<LicenseData> = emptyList(),
+    developers: List<DeveloperData> = emptyList(),
+    scm: ScmData? = null,
+    crossinline configuration: MavenPublication.() -> Unit = {}
+): MavenPublication {
+    apply(plugin = "maven-publish")
+    if (withJavadocSourcesJars) addJavadocSourcesJars()
+    return (extensions["publishing"] as PublishingExtension).publications.create<MavenPublication>("maven") {
+        groupId?.let { this.groupId = it }
+        artifactId?.let { this.artifactId = it }
+        version?.let { this.version = it }
+        component?.let { this.from(component) }
+        artifacts.forEach(this::artifact)
+        pom {
+            name?.let(this.name::set)
+            description?.let(this.description::set)
+            url?.let(this.url::set)
+            licenses {
+                licenses.forEach {
+                    license {
+                        this.name.set(it.name)
+                        this.url.set(it.url)
+                        it.distribution?.value?.let(this.distribution::set)
+                        it.comments?.let(this.comments::set)
+                    }
+                }
+            }
+            developers {
+                developers.filterNot(DeveloperData::isEmpty).forEach {
+                    developer {
+                        it.id?.let(this.id::set)
+                        it.name?.let(this.name::set)
+                        it.url?.let(this.url::set)
+                        it.email?.let(this.email::set)
+                        it.timezone?.let(this.timezone::set)
+                        it.organization?.let(this.organization::set)
+                        it.organizationUrl?.let(this.organizationUrl::set)
+                        it.roles.takeIf(List<String>::isNotEmpty)?.let(this.roles::set)
+                        it.properties.takeIf(Map<String, String>::isNotEmpty)?.let(this.properties::set)
+                    }
+                }
+            }
+            if (scm != null) scm {
+                connection.set(scm.connection)
+                developerConnection.set(scm.developerConnection)
+                scm.url?.let(this.url::set)
+                scm.tag?.let(this.tag::set)
+            }
+        }
+        configuration()
+    }
 }
