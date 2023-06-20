@@ -54,10 +54,10 @@ fun Project.setTextEncoding(encoding: String = "UTF-8") {
  *
  * @param javaVersion The java version to set (example: [JavaVersion.VERSION_1_8])
  */
-fun Project.setJavaVersion(javaVersion: JavaVersion = JavaVersion.VERSION_1_8) {
+fun Project.setJavaVersion(version: JavaVersion = JavaVersion.VERSION_1_8) {
     val java: JavaPluginExtension = getJavaExtension()
-    java.sourceCompatibility = javaVersion
-    java.targetCompatibility = javaVersion
+    java.sourceCompatibility = version
+    java.targetCompatibility = version
 }
 
 /**
@@ -161,8 +161,8 @@ inline fun Project.setupPublishing(
     withJavadocSourcesJars: Boolean = true,
     component: SoftwareComponent? = components["java"],
     artifacts: Collection<Any> = emptyList(),
-    name: String? = null,
-    description: String? = null,
+    name: String? = project.name,
+    description: String? = project.description,
     url: String? = null,
     licenses: List<LicenseData> = emptyList(),
     developers: List<DeveloperData> = emptyList(),
@@ -237,12 +237,10 @@ fun Project.setupMC(
     javaVersion: JavaVersion? = null,
     replacements: Map<String, () -> String>? = mapOf(
         "name" to name::toString,
-        "version" to version::toString
-    ),
+        "version" to version::toString),
     textEncoding: String? = "UTF-8",
-    artifactClassifier: String? = "",
+    archiveClassifier: String? = "",
 ) {
-    apply(plugin = "java")
     this.group = group
     this.version = version
     dependency?.let { dependencies.add("compileOnly", it) }
@@ -250,7 +248,7 @@ fun Project.setupMC(
     replacements?.let(::addReplacementsTask)
     textEncoding?.let(::setTextEncoding)
     if (hasShadowPlugin()) {
-        artifactClassifier?.let(::setShadowArchiveClassifier)
+        archiveClassifier?.let(::setShadowArchiveClassifier)
         addBuildShadowTask()
     }
 }
