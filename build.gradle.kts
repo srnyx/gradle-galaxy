@@ -7,11 +7,13 @@ plugins {
     `java-gradle-plugin`
     kotlin("jvm") version "1.8.22"
     id("com.gradle.plugin-publish") version "1.2.0"
+    id("org.jetbrains.dokka") version "1.8.20"
 }
 
 group = "xyz.srnyx"
 version = "1.0.0"
-val pluginDescription: String = "A Gradle plugin to simplify the process of creating projects"
+description = "A Gradle plugin to simplify the process of creating projects"
+val pluginName = "Gradle Galaxy"
 val vcs: String = "github.com/srnyx/${project.name}"
 
 tasks.withType<JavaCompile> {
@@ -21,9 +23,7 @@ tasks.withType<JavaCompile> {
 }
 
 tasks.withType<KotlinCompile> {
-    kotlinOptions {
-        jvmTarget = "1.8"
-    }
+    kotlinOptions.jvmTarget = "1.8"
 }
 
 repositories {
@@ -39,6 +39,20 @@ dependencies {
     compileOnly("com.github.jengelman.gradle.plugins", "shadow", "6.1.0")
 }
 
+// Add docs and sources jars
+sourceSets {
+    val dokkaTask = tasks.getByName("dokkaHtml")
+    tasks.create("javadocJar", Jar::class) {
+        dependsOn(dokkaTask)
+        from(dokkaTask)
+        archiveClassifier.set("javadoc")
+    }
+    tasks.create("sourcesJar", Jar::class) {
+        from(sourceSets["main"].allSource.srcDirs)
+        archiveClassifier.set("sources")
+    }
+}
+
 @Suppress("UnstableApiUsage")
 gradlePlugin {
     isAutomatedPublishing = true
@@ -49,8 +63,8 @@ gradlePlugin {
             id = "${project.group}.${project.name}"
             implementationClass = "${project.group}.gradlegalaxy.GradleGalaxy"
             version = project.version
-            displayName = "Gradle Galaxy Plugin"
-            description = pluginDescription
+            displayName = pluginName
+            description = project.description
             tags.set(listOf("srnyx", "minecraft", "spigot"))
         }
     }
@@ -60,8 +74,8 @@ publishing {
     publications {
         create<MavenPublication>("pluginMaven") {
             pom {
-                name.set("Gradle Galaxy")
-                description.set(pluginDescription)
+                name.set(pluginName)
+                description.set(project.description)
                 url.set("https://${vcs}")
                 packaging = "jar"
 
@@ -77,9 +91,9 @@ publishing {
                         id.set("srnyx")
                         url.set("https://srnyx.com")
                         email.set("contact@srnyx.com")
+                        timezone.set("America/New_York")
                         organization.set("Venox Network")
                         organizationUrl.set("https://venox.network")
-                        timezone.set("America/New_York")
                     }
                     developer {
                         id.set("dkim19375")

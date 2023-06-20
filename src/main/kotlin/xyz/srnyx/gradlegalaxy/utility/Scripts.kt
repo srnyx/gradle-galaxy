@@ -12,7 +12,7 @@ import org.gradle.api.publish.PublishingExtension
 import org.gradle.api.publish.maven.MavenPublication
 import org.gradle.api.tasks.Copy
 import org.gradle.api.tasks.compile.JavaCompile
-import org.gradle.jvm.tasks.Jar
+import org.gradle.api.tasks.bundling.Jar
 import org.gradle.kotlin.dsl.*
 
 import xyz.srnyx.gradlegalaxy.annotations.Ignore
@@ -25,20 +25,38 @@ import xyz.srnyx.gradlegalaxy.enums.mavenQuick
 
 /**
  * Checks if the `java` plugin is applied
+ *
+ * @return If the `java` plugin is applied
  */
 fun Project.hasJavaPlugin(): Boolean = plugins.hasPlugin("java")
 
 /**
  * Checks if the Shadow plugin is applied
+ *
+ * @return If the Shadow plugin is applied
  */
 fun Project.hasShadowPlugin(): Boolean = plugins.hasPlugin("com.github.johnrengelman.shadow")
 
 /**
  * Gets the Java plugin extension
+ *
+ * @return The Java plugin extension
  */
 fun Project.getJavaExtension(): JavaPluginExtension {
     return extensions["java"] as JavaPluginExtension
 }
+
+/**
+ * Returns the default replacements map for [addReplacementsTask]
+ *
+ * @return The default replacements map
+ *
+ * @see addReplacementsTask
+ */
+fun Project.getDefaultReplacements(): Map<String, () -> String> = mapOf(
+    "name" to name::toString,
+    "version" to version::toString
+)
 
 /**
  * Sets the text encoding for the project
@@ -98,10 +116,7 @@ fun Project.addJavadocSourcesJars(javadocClassifier: String? = null, sourcesClas
  *
  * @param replacements A [Map] of all the replacements
  */
-fun Project.addReplacementsTask(replacements: Map<String, () -> String> = mapOf(
-    "name" to name::toString,
-    "version" to version::toString
-)) {
+fun Project.addReplacementsTask(replacements: Map<String, () -> String> = getDefaultReplacements()) {
     tasks.named<Copy>("processResources") {
         outputs.upToDateWhen { false }
         filesMatching("**/*.yml") { expand(replacements) }
@@ -110,6 +125,8 @@ fun Project.addReplacementsTask(replacements: Map<String, () -> String> = mapOf(
 
 /**
  * Adds the specified compiler arguments to the project
+ *
+ * @param args The compiler arguments to add
  */
 @Ignore
 fun Project.addCompilerArgs(vararg args: String) {
@@ -218,39 +235,62 @@ inline fun Project.setupPublishing(
 }
 
 /**
- * Sets up the project with the specified [group] and [version] for a simple Minecraft project
+ * Sets up the project with the specified [group] and [version] for a simple Java project
  *
- * Adds the text encoding, replacements, and build shadow task (if the Shadow plugin is applied)
+ * Calls [setJavaVersion], [setTextEncoding], and [addReplacementsTask]
  *
- * @param group The group of the project (example: `me.dkim19375`)
+ * If the [shadow plugin is applied][hasShadowPlugin], it will also call [setShadowArchiveClassifier] and [addJavadocSourcesJars]
+ *
+ * @param group The group of the project (example: `xyz.srnyx`)
  * @param version The version of the project (example: `1.0.0`)
- * @param dependency The dependency to add to the project (using `compileOnly`)
  * @param javaVersion The java version of the project (example: [JavaVersion.VERSION_1_8])
- * @param replacements The replacements for the [replacements task][addReplacementsTask]
  * @param textEncoding The text encoding for the [text encoding task][setTextEncoding]
+ * @param archiveClassifier The archive classifier for the [shadow jar][setShadowArchiveClassifier]
  */
 @Ignore
-fun Project.setupMC(
-    group: String,
-    version: String = "1.0.0",
-    dependency: String? = null,
+fun Project.setupJava(
+    group: String = project.group.toString(),
+    version: String = project.version.toString(),
     javaVersion: JavaVersion? = null,
-    replacements: Map<String, () -> String>? = mapOf(
-        "name" to name::toString,
-        "version" to version::toString),
     textEncoding: String? = "UTF-8",
     archiveClassifier: String? = "",
 ) {
     this.group = group
     this.version = version
-    dependency?.let { dependencies.add("compileOnly", it) }
     javaVersion?.let(::setJavaVersion)
-    replacements?.let(::addReplacementsTask)
     textEncoding?.let(::setTextEncoding)
     if (hasShadowPlugin()) {
         archiveClassifier?.let(::setShadowArchiveClassifier)
         addBuildShadowTask()
     }
+}
+
+/**
+ * Sets up the project with the specified [group] and [version] for a simple Minecraft project
+ *
+ * Calls [setupJava] with the specified parameters, as well as adding the [dependency] (`compileOnly`) and calling [addReplacementsTask]
+ *
+ * @param group The group of the project (example: `xyz.srnyx`)
+ * @param version The version of the project (example: `1.0.0`)
+ * @param dependency The dependency to add to the project (using `compileOnly`)
+ * @param javaVersion The java version of the project (example: [JavaVersion.VERSION_1_8])
+ * @param replacements The replacements for the [replacements task][addReplacementsTask]
+ * @param textEncoding The text encoding for the [text encoding task][setTextEncoding]
+ * @param archiveClassifier The archive classifier for the [shadow jar task][setShadowArchiveClassifier]
+ */
+@Ignore
+fun Project.setupMC(
+    group: String = project.group.toString(),
+    version: String = project.version.toString(),
+    dependency: String? = null,
+    javaVersion: JavaVersion? = null,
+    replacements: Map<String, () -> String>? = getDefaultReplacements(),
+    textEncoding: String? = "UTF-8",
+    archiveClassifier: String? = "",
+) {
+    setupJava(group, version, javaVersion, textEncoding, archiveClassifier)
+    dependency?.let { dependencies.add("compileOnly", it) }
+    replacements?.let(::addReplacementsTask)
 }
 
 /**
@@ -261,18 +301,24 @@ fun Project.setupMC(
  * 3. Adds the [Repository.JITPACK] repository
  * 4. Adds the Annoying API dependency (`implementation`)
  * 5. Relocates Annoying API using [relocate]
+ *
+ * @param annoyingAPIVersion The version of Annoying API to use (example: `3.0.1`)
+ * @param group The group of the project (example: `xyz.srnyx`)
+ * @param version The version of the project (example: `1.0.0`)
+ * @param dependency The dependency to add to the project (using `compileOnly`)
+ * @param javaVersion The java version of the project (example: [JavaVersion.VERSION_1_8])
+ * @param replacements The replacements for the [replacements task][addReplacementsTask]
+ * @param textEncoding The text encoding for the [text encoding task][setTextEncoding]
+ * @param artifactClassifier The artifact classifier for the [shadow jar task][setShadowArchiveClassifier]
  */
 @Ignore
 fun Project.setupAnnoyingAPI(
     annoyingAPIVersion: String,
-    group: String,
-    version: String = "1.0.0",
+    group: String = project.group.toString(),
+    version: String = project.version.toString(),
     dependency: String? = null,
     javaVersion: JavaVersion? = null,
-    replacements: Map<String, () -> String>? = mapOf(
-        "name" to name::toString,
-        "version" to version::toString
-    ),
+    replacements: Map<String, () -> String>? = getDefaultReplacements(),
     textEncoding: String? = "UTF-8",
     artifactClassifier: String? = "",
 ) {

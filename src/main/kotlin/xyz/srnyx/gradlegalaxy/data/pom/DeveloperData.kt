@@ -34,6 +34,7 @@ data class DeveloperData(
         @Ignore
         val dkim19375 = DeveloperData(
             id = "dkim19375",
-            url = "America/New_York")
+            url = "https://github.com/dkim19375",
+            timezone = "America/New_York")
     }
 }
