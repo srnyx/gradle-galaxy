@@ -52,7 +52,7 @@ fun Project.setTextEncoding(encoding: String = "UTF-8") {
 /**
  * Sets the Java version for the project
  *
- * @param javaVersion The java version to set (example: [JavaVersion.VERSION_1_8])
+ * @param version The java version to set (example: [JavaVersion.VERSION_1_8])
  */
 fun Project.setJavaVersion(version: JavaVersion = JavaVersion.VERSION_1_8) {
     val java: JavaPluginExtension = getJavaExtension()

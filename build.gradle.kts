@@ -6,7 +6,6 @@ plugins {
     `maven-publish`
     `java-gradle-plugin`
     kotlin("jvm") version "1.8.22"
-    id("org.jetbrains.dokka") version "1.8.20"
     id("com.gradle.plugin-publish") version "1.2.0"
 }
 
