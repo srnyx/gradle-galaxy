@@ -66,7 +66,7 @@ fun Project.getDefaultReplacements(): Map<String, String> = mapOf(
     "group" to group.toString(),
     "name" to name,
     "version" to version.toString(),
-    "description" to (description ?: "")
+    "description" to description.toString(),
 )
 
 /**
@@ -170,6 +170,7 @@ fun Project.relocate(
  *
  * @param group The group of the project (example: `xyz.srnyx`)
  * @param version The version of the project (example: `1.0.0`)
+ * @param description The description of the project
  * @param javaVersion The java version of the project (example: [JavaVersion.VERSION_1_8])
  * @param textEncoding The text encoding for the [text encoding task][setTextEncoding]
  * @param archiveClassifier The archive classifier for the [shadow jar][setShadowArchiveClassifier]
@@ -178,12 +179,14 @@ fun Project.relocate(
 fun Project.setupJava(
     group: String = project.group.toString(),
     version: String = project.version.toString(),
+    description: String? = project.description,
     javaVersion: JavaVersion? = null,
     textEncoding: String? = "UTF-8",
     archiveClassifier: String? = "",
 ) {
     this.group = group
     this.version = version
+    this.description = description
     javaVersion?.let(::setJavaVersion)
     textEncoding?.let(::setTextEncoding)
     if (hasShadowPlugin()) {
@@ -199,6 +202,7 @@ fun Project.setupJava(
  *
  * @param group The group of the project (example: `xyz.srnyx`)
  * @param version The version of the project (example: `1.0.0`)
+ * @param description The description of the project
  * @param dependency The dependency to add to the project (using `compileOnly`)
  * @param javaVersion The java version of the project (example: [JavaVersion.VERSION_1_8])
  * @param replacements The replacements for the [replacements task][addReplacementsTask]
@@ -209,13 +213,14 @@ fun Project.setupJava(
 fun Project.setupMC(
     group: String = project.group.toString(),
     version: String = project.version.toString(),
+    description: String? = project.description,
     dependency: String? = null,
     javaVersion: JavaVersion? = null,
     replacements: Map<String, String>? = getSentinelReplacements(),
     textEncoding: String? = "UTF-8",
     archiveClassifier: String? = "",
 ) {
-    setupJava(group, version, javaVersion, textEncoding, archiveClassifier)
+    setupJava(group, version, description, javaVersion, textEncoding, archiveClassifier)
     dependency?.let { dependencies.add("compileOnly", it) }
     replacements?.let(::addReplacementsTask)
 }
@@ -243,6 +248,7 @@ fun Project.setupAnnoyingAPI(
     annoyingAPIVersion: String,
     group: String = project.group.toString(),
     version: String = project.version.toString(),
+    description: String? = project.description,
     dependency: String? = null,
     javaVersion: JavaVersion? = null,
     replacements: Map<String, String>? = getSentinelReplacements(),
@@ -250,7 +256,7 @@ fun Project.setupAnnoyingAPI(
     artifactClassifier: String? = "",
 ) {
     check(hasShadowPlugin()) { "Shadow plugin is required for Annoying API!" }
-    setupMC(group, version, dependency, javaVersion, replacements, textEncoding, artifactClassifier)
+    setupMC(group, version, dependency, description, javaVersion, replacements, textEncoding, artifactClassifier)
     repositories { mavenQuick(Repository.JITPACK) }
     dependencies { add("implementation", "xyz.srnyx:annoying-api:$annoyingAPIVersion") }
     relocate("xyz.srnyx.annoyingapi")

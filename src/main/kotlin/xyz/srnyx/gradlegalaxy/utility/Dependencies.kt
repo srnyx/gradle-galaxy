@@ -25,7 +25,7 @@ import xyz.srnyx.gradlegalaxy.enums.mavenQuick
 fun Project.spigotAPI(versionString: String): String {
     check(hasJavaPlugin()) { "Java plugin is not applied!" }
     // Java version
-    getJavaVersionForMC(versionString)?.let { setJavaVersion(it) }
+    getJavaVersionForMC(versionString)?.let(::setJavaVersion)
     // Repositories
     val version = SemanticVersion(versionString)
     if (version.major <= 1 && version.minor <= 15) repositories.mavenQuick(Repository.SONATYPE_SNAPSHOTS_OLD)
@@ -42,7 +42,7 @@ fun Project.spigotAPI(versionString: String): String {
 fun Project.spigotNMS(versionString: String): String {
     check(hasJavaPlugin()) { "Java plugin is not applied!" }
     // Java version
-    getJavaVersionForMC(versionString)?.let { setJavaVersion(it) }
+    getJavaVersionForMC(versionString)?.let(::setJavaVersion)
     // Repositories
     repositories.mavenQuick(Repository.MAVEN_CENTRAL, Repository.SPIGOT)
     repositories.mavenLocal()
@@ -58,7 +58,7 @@ fun Project.spigotNMS(versionString: String): String {
 fun Project.paper(version: String): String {
     check(hasJavaPlugin()) { "Java plugin is not applied!" }
     // Java version
-    getJavaVersionForMC(version)?.let { setJavaVersion(it) }
+    getJavaVersionForMC(version)?.let(::setJavaVersion)
     // Repositories
     repositories.mavenQuick(Repository.MAVEN_CENTRAL, Repository.SONATYPE_SNAPSHOTS_OLD, Repository.PAPER)
     // Dependency
