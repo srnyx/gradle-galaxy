@@ -24,6 +24,15 @@ import xyz.srnyx.gradlegalaxy.enums.mavenQuick
 
 
 /**
+ * Returns a map that tells [addReplacementsTask] to use the default replacements
+ *
+ * @return The map that tells [addReplacementsTask] to use the default replacements
+ *
+ * @see addReplacementsTask
+ */
+fun getSentinelReplacements(): Map<String, String> = mapOf("defaultReplacements" to "true")
+
+/**
  * Checks if the `java` plugin is applied
  *
  * @return If the `java` plugin is applied
@@ -53,9 +62,11 @@ fun Project.getJavaExtension(): JavaPluginExtension {
  *
  * @see addReplacementsTask
  */
-fun Project.getDefaultReplacements(): Map<String, () -> String> = mapOf(
-    "name" to name::toString,
-    "version" to version::toString
+fun Project.getDefaultReplacements(): Map<String, String> = mapOf(
+    "group" to group.toString(),
+    "name" to name,
+    "version" to version.toString(),
+    "description" to (description ?: "")
 )
 
 /**
@@ -116,10 +127,12 @@ fun Project.addJavadocSourcesJars(javadocClassifier: String? = null, sourcesClas
  *
  * @param replacements A [Map] of all the replacements
  */
-fun Project.addReplacementsTask(replacements: Map<String, () -> String> = getDefaultReplacements()) {
+fun Project.addReplacementsTask(replacements: Map<String, String> = getDefaultReplacements()) {
     tasks.named<Copy>("processResources") {
         outputs.upToDateWhen { false }
-        filesMatching("**/*.yml") { expand(replacements) }
+        filesMatching("**/*.yml") {
+            expand(if (replacements == getSentinelReplacements()) getDefaultReplacements() else replacements)
+        }
     }
 }
 
@@ -198,7 +211,7 @@ fun Project.setupMC(
     version: String = project.version.toString(),
     dependency: String? = null,
     javaVersion: JavaVersion? = null,
-    replacements: Map<String, () -> String>? = getDefaultReplacements(),
+    replacements: Map<String, String>? = getSentinelReplacements(),
     textEncoding: String? = "UTF-8",
     archiveClassifier: String? = "",
 ) {
@@ -232,7 +245,7 @@ fun Project.setupAnnoyingAPI(
     version: String = project.version.toString(),
     dependency: String? = null,
     javaVersion: JavaVersion? = null,
-    replacements: Map<String, () -> String>? = getDefaultReplacements(),
+    replacements: Map<String, String>? = getSentinelReplacements(),
     textEncoding: String? = "UTF-8",
     artifactClassifier: String? = "",
 ) {
