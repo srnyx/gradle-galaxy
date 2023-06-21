@@ -256,7 +256,7 @@ fun Project.setupAnnoyingAPI(
     artifactClassifier: String? = "",
 ) {
     check(hasShadowPlugin()) { "Shadow plugin is required for Annoying API!" }
-    setupMC(group, version, dependency, description, javaVersion, replacements, textEncoding, artifactClassifier)
+    setupMC(group, version, description, dependency, javaVersion, replacements, textEncoding, artifactClassifier)
     repositories { mavenQuick(Repository.JITPACK) }
     dependencies { add("implementation", "xyz.srnyx:annoying-api:$annoyingAPIVersion") }
     relocate("xyz.srnyx.annoyingapi")
