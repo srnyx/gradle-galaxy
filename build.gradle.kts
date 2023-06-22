@@ -80,6 +80,7 @@ gradlePlugin {
 publishing {
     publications {
         create<MavenPublication>("pluginMaven") {
+            artifactId = projectId
             pom {
                 name.set(project.name)
                 description.set(project.description)
