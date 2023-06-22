@@ -114,6 +114,10 @@ enum class Repository(internal val url: String) {
      * [https://repo.kryptonmc.org/snapshots/](https://repo.kryptonmc.org/snapshots/)
      */
     KRYPTON_SNAPSHOTS("https://repo.kryptonmc.org/snapshots/"),
+    /**
+     * [https://ci.2lstudios.dev/plugin/repository/everything](https://ci.2lstudios.dev/plugin/repository/everything)
+     */
+    TWOL_STUDIOS("https://ci.2lstudios.dev/plugin/repository/everything"),
 
     // Keep these at the bottom as they include other dependencies of other repositories
     /**
