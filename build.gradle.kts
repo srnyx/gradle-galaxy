@@ -11,10 +11,10 @@ plugins {
 }
 
 group = "xyz.srnyx"
-version = "1.0.0"
+version = "1.0.1"
 description = "A Gradle plugin to simplify the process of creating projects"
-val pluginName = "Gradle Galaxy"
-val vcs: String = "github.com/srnyx/${project.name}"
+val projectId: String = "gradle-galaxy"
+val vcs: String = "github.com/srnyx/$projectId"
 
 tasks.withType<JavaCompile> {
     sourceCompatibility = "1.8"
@@ -39,6 +39,13 @@ dependencies {
     compileOnly("com.github.jengelman.gradle.plugins", "shadow", "6.1.0")
 }
 
+tasks {
+    build {
+        dependsOn("javadocJar")
+        dependsOn("sourcesJar")
+    }
+}
+
 // Add docs and sources jars
 sourceSets {
     val dokkaTask = tasks.getByName("dokkaHtml")
@@ -59,11 +66,11 @@ gradlePlugin {
     website.set("https://${vcs}")
     vcsUrl.set("https://${vcs}")
     plugins {
-        create(project.name) {
-            id = "${project.group}.${project.name}"
+        create(projectId) {
+            id = "${project.group}.$projectId"
             implementationClass = "${project.group}.gradlegalaxy.GradleGalaxy"
             version = project.version
-            displayName = pluginName
+            displayName = project.name
             description = project.description
             tags.set(listOf("srnyx", "minecraft", "spigot"))
         }
@@ -74,7 +81,7 @@ publishing {
     publications {
         create<MavenPublication>("pluginMaven") {
             pom {
-                name.set(pluginName)
+                name.set(project.name)
                 description.set(project.description)
                 url.set("https://${vcs}")
                 packaging = "jar"

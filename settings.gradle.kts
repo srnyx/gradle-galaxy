@@ -1,1 +1,1 @@
-rootProject.name = "gradle-galaxy"
+rootProject.name = "GradleGalaxy"
