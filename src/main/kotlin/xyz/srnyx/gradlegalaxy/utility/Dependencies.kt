@@ -12,14 +12,18 @@ import org.gradle.kotlin.dsl.add
 import xyz.srnyx.gradlegalaxy.annotations.Ignore
 import xyz.srnyx.gradlegalaxy.enums.PaperVersion
 import xyz.srnyx.gradlegalaxy.enums.Repository
-import xyz.srnyx.gradlegalaxy.enums.mavenQuick
+import xyz.srnyx.gradlegalaxy.enums.repository
 
 
 /**
  * 1. Sets the Java version for the project depending on the version
  * 2. Adds the [Repository.SONATYPE_SNAPSHOTS_OLD] repository if the version is 1.15 or below
  * 3. Adds the [Repository.MAVEN_CENTRAL] and [Repository.SPIGOT] repositories
- * 4. Adds the dependency (org.spigotmc:spigot-api:[getVersionString])
+ * 4. Returns the dependency annotation (org.spigotmc:spigot-api:[getVersionString])
+ *
+ * @param versionString The version of Spigot-API to use
+ *
+ * @return The dependency annotation for the provided Spigot-API version
  */
 @Ignore
 fun Project.spigotAPI(versionString: String): String {
@@ -28,15 +32,19 @@ fun Project.spigotAPI(versionString: String): String {
     getJavaVersionForMC(versionString)?.let(::setJavaVersion)
     // Repositories
     val version = SemanticVersion(versionString)
-    if (version.major <= 1 && version.minor <= 15) repositories.mavenQuick(Repository.SONATYPE_SNAPSHOTS_OLD)
-    repositories.mavenQuick(Repository.MAVEN_CENTRAL, Repository.SPIGOT)
+    if (version.major <= 1 && version.minor <= 15) repository(Repository.SONATYPE_SNAPSHOTS_OLD)
+    repository(Repository.MAVEN_CENTRAL, Repository.SPIGOT)
     // Dependency
     return "org.spigotmc:spigot-api:${getVersionString(versionString)}"
 }
 
 /**
  * 1. Adds the [Repository.MAVEN_CENTRAL], maven local, and [Repository.SPIGOT] repositories
- * 2. Adds the dependency (org.spigotmc:spigot:[getVersionString])
+ * 2. Returns the dependency annotation (org.spigotmc:spigot:[getVersionString])
+ *
+ * @param versionString The version of Spigot to use
+ *
+ * @return The dependency annotation for the provided Spigot version
  */
 @Ignore
 fun Project.spigotNMS(versionString: String): String {
@@ -44,7 +52,7 @@ fun Project.spigotNMS(versionString: String): String {
     // Java version
     getJavaVersionForMC(versionString)?.let(::setJavaVersion)
     // Repositories
-    repositories.mavenQuick(Repository.MAVEN_CENTRAL, Repository.SPIGOT)
+    repository(Repository.MAVEN_CENTRAL, Repository.SPIGOT)
     repositories.mavenLocal()
     // Dependency
     return "org.spigotmc:spigot:${getVersionString(versionString)}"
@@ -52,7 +60,11 @@ fun Project.spigotNMS(versionString: String): String {
 
 /**
  * 1. Adds the [Repository.MAVEN_CENTRAL], [Repository.SONATYPE_SNAPSHOTS_OLD], and [Repository.PAPER] repositories
- * 2. Adds the dependency ([PaperVersion.groupId]:[PaperVersion.artifactId]:[version]-R0.1-SNAPSHOT)
+ * 2. Returns the dependency annotation ([PaperVersion.groupId]:[PaperVersion.artifactId]:[version]-R0.1-SNAPSHOT)
+ *
+ * @param version The version of Paper to use
+ *
+ * @return The dependency annotation for the provided Paper version
  */
 @Ignore
 fun Project.paper(version: String): String {
@@ -60,10 +72,26 @@ fun Project.paper(version: String): String {
     // Java version
     getJavaVersionForMC(version)?.let(::setJavaVersion)
     // Repositories
-    repositories.mavenQuick(Repository.MAVEN_CENTRAL, Repository.SONATYPE_SNAPSHOTS_OLD, Repository.PAPER)
+    repository(Repository.MAVEN_CENTRAL, Repository.SONATYPE_SNAPSHOTS_OLD, Repository.PAPER)
     // Dependency
     val paperVersion: PaperVersion = PaperVersion.parse(version)
     return "${paperVersion.groupId}:${paperVersion.artifactId}:${getVersionString(version)}"
+}
+
+/**
+ * 1. Adds the [Repository.JITPACK] repository
+ * 2. Returns the dependency to the provided Annoying API version
+ *
+ * @param version The version of Annoying API to use
+ *
+ * @return The dependency annotation for the provided Annoying API version
+ */
+fun Project.annoyingAPI(version: String): String {
+    check(hasJavaPlugin()) { "Java plugin is not applied!" }
+    // Repositories
+    repository(Repository.JITPACK)
+    // Dependency
+    return "xyz.srnyx:annoying-api:$version"
 }
 
 /**

@@ -2,10 +2,11 @@ package xyz.srnyx.gradlegalaxy.utility
 
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 
+import org.gradle.api.Action
 import org.gradle.api.DefaultTask
 import org.gradle.api.JavaVersion
 import org.gradle.api.Project
-import org.gradle.api.Task
+import org.gradle.api.artifacts.ExternalModuleDependency
 import org.gradle.api.component.SoftwareComponent
 import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.publish.PublishingExtension
@@ -14,13 +15,14 @@ import org.gradle.api.tasks.Copy
 import org.gradle.api.tasks.compile.JavaCompile
 import org.gradle.api.tasks.bundling.Jar
 import org.gradle.kotlin.dsl.*
+import org.gradle.kotlin.dsl.accessors.runtime.addDependencyTo
 
 import xyz.srnyx.gradlegalaxy.annotations.Ignore
+import xyz.srnyx.gradlegalaxy.data.AnnoyingAPIReturn
 import xyz.srnyx.gradlegalaxy.data.pom.DeveloperData
 import xyz.srnyx.gradlegalaxy.data.pom.LicenseData
 import xyz.srnyx.gradlegalaxy.data.pom.ScmData
 import xyz.srnyx.gradlegalaxy.enums.Repository
-import xyz.srnyx.gradlegalaxy.enums.mavenQuick
 
 
 /**
@@ -219,10 +221,12 @@ fun Project.setupMC(
     replacements: Map<String, String>? = getSentinelReplacements(),
     textEncoding: String? = "UTF-8",
     archiveClassifier: String? = "",
-) {
+    configuration: Action<ExternalModuleDependency> = Action {}
+): ExternalModuleDependency? {
     setupJava(group, version, description, javaVersion, textEncoding, archiveClassifier)
-    dependency?.let { dependencies.add("compileOnly", it) }
     replacements?.let(::addReplacementsTask)
+    if (dependency != null) return addDependencyTo(project.dependencies, "compileOnly", dependency, configuration)
+    return null
 }
 
 /**
@@ -254,12 +258,17 @@ fun Project.setupAnnoyingAPI(
     replacements: Map<String, String>? = getSentinelReplacements(),
     textEncoding: String? = "UTF-8",
     artifactClassifier: String? = "",
-) {
+    configuration: AnnoyingAPIReturn.() -> Unit = {},
+): AnnoyingAPIReturn {
     check(hasShadowPlugin()) { "Shadow plugin is required for Annoying API!" }
-    setupMC(group, version, description, dependency, javaVersion, replacements, textEncoding, artifactClassifier)
-    repositories { mavenQuick(Repository.JITPACK) }
-    dependencies { add("implementation", "xyz.srnyx:annoying-api:$annoyingAPIVersion") }
-    relocate("xyz.srnyx.annoyingapi")
+    val annoyingAPIReturn = AnnoyingAPIReturn(
+        setupMC(group, version, description, dependency, javaVersion, replacements, textEncoding, artifactClassifier),
+        dependencies.implementationRelocate(project, annoyingAPI(annoyingAPIVersion), "xyz.srnyx.annoyingapi") {
+            exclude("org.bstats", "bstats-bukkit")
+            exclude("de.tr7zw", "item-nbt-api")
+        })
+    annoyingAPIReturn.configuration()
+    return annoyingAPIReturn
 }
 
 /**
