@@ -8,6 +8,7 @@ import org.gradle.api.artifacts.ModuleDependency
 import org.gradle.api.artifacts.dsl.DependencyHandler
 import org.gradle.kotlin.dsl.accessors.runtime.addDependencyTo
 import org.gradle.kotlin.dsl.add
+import org.gradle.kotlin.dsl.exclude
 
 import xyz.srnyx.gradlegalaxy.annotations.Ignore
 import xyz.srnyx.gradlegalaxy.enums.PaperVersion
@@ -19,84 +20,110 @@ import xyz.srnyx.gradlegalaxy.enums.repository
  * 1. Sets the Java version for the project depending on the version
  * 2. Adds the [Repository.SONATYPE_SNAPSHOTS_OLD] repository if the version is 1.15 or below
  * 3. Adds the [Repository.MAVEN_CENTRAL] and [Repository.SPIGOT] repositories
- * 4. Returns the dependency annotation (org.spigotmc:spigot-api:[getVersionString])
+ * 4. Adds the Spigot-API dependency (org.spigotmc:spigot-api:[getVersionString]) using the [configuration] and [configurationAction]
  *
- * @param versionString The version of Spigot-API to use
+ * @param version The version of Spigot-API to use
+ * @param configuration The configuration to add the dependency to
+ * @param configurationAction The action to apply to the dependency
  *
- * @return The dependency annotation for the provided Spigot-API version
+ * @return The [ExternalModuleDependency] of the added Spigot-API dependency
  */
 @Ignore
-fun Project.spigotAPI(versionString: String): String {
+fun Project.spigotAPI(
+    version: String,
+    configuration: String = "compileOnly",
+    configurationAction: Action<ExternalModuleDependency> = Action {}
+): ExternalModuleDependency {
     check(hasJavaPlugin()) { "Java plugin is not applied!" }
-    // Java version
-    getJavaVersionForMC(versionString)?.let(::setJavaVersion)
-    // Repositories
-    val version = SemanticVersion(versionString)
-    if (version.major <= 1 && version.minor <= 15) repository(Repository.SONATYPE_SNAPSHOTS_OLD)
+    getJavaVersionForMC(version)?.let(::setJavaVersion)
+    val semanticVersion = SemanticVersion(version)
+    if (semanticVersion.major <= 1 && semanticVersion.minor <= 15) repository(Repository.SONATYPE_SNAPSHOTS_OLD)
     repository(Repository.MAVEN_CENTRAL, Repository.SPIGOT)
-    // Dependency
-    return "org.spigotmc:spigot-api:${getVersionString(versionString)}"
+    return addDependencyTo(dependencies, configuration, "org.spigotmc:spigot-api:${getVersionString(version)}", configurationAction)
 }
 
 /**
  * 1. Adds the [Repository.MAVEN_CENTRAL], maven local, and [Repository.SPIGOT] repositories
- * 2. Returns the dependency annotation (org.spigotmc:spigot:[getVersionString])
+ * 2. Adds the Spigot dependency (org.spigotmc:spigot:[getVersionString]) using the [configuration] and [configurationAction]
  *
- * @param versionString The version of Spigot to use
+ * @param version The version of Spigot to use
+ * @param configuration The configuration to add the dependency to
+ * @param configurationAction The action to apply to the dependency
  *
- * @return The dependency annotation for the provided Spigot version
+ * @return The [ExternalModuleDependency] of the added Spigot dependency
  */
 @Ignore
-fun Project.spigotNMS(versionString: String): String {
+fun Project.spigotNMS(
+    version: String,
+    configuration: String = "compileOnly",
+    configurationAction: Action<ExternalModuleDependency> = Action {}
+): ExternalModuleDependency {
     check(hasJavaPlugin()) { "Java plugin is not applied!" }
-    // Java version
-    getJavaVersionForMC(versionString)?.let(::setJavaVersion)
-    // Repositories
+    getJavaVersionForMC(version)?.let(::setJavaVersion)
     repository(Repository.MAVEN_CENTRAL, Repository.SPIGOT)
     repositories.mavenLocal()
-    // Dependency
-    return "org.spigotmc:spigot:${getVersionString(versionString)}"
+    return addDependencyTo(dependencies, configuration, "org.spigotmc:spigot:${getVersionString(version)}", configurationAction)
 }
 
 /**
  * 1. Adds the [Repository.MAVEN_CENTRAL], [Repository.SONATYPE_SNAPSHOTS_OLD], and [Repository.PAPER] repositories
- * 2. Returns the dependency annotation ([PaperVersion.groupId]:[PaperVersion.artifactId]:[version]-R0.1-SNAPSHOT)
+ * 2. Adds the Paper dependency ([PaperVersion.groupId]:[PaperVersion.artifactId]:[version]-R0.1-SNAPSHOT) using the [configuration] and [configurationAction]
  *
  * @param version The version of Paper to use
+ * @param configuration The configuration to add the dependency to
+ * @param configurationAction The action to apply to the dependency
  *
- * @return The dependency annotation for the provided Paper version
+ * @return The [ExternalModuleDependency] of the added Paper dependency
  */
 @Ignore
-fun Project.paper(version: String): String {
+fun Project.paper(
+    version: String,
+    configuration: String = "compileOnly",
+    configurationAction: Action<ExternalModuleDependency> = Action {}
+): ExternalModuleDependency {
     check(hasJavaPlugin()) { "Java plugin is not applied!" }
-    // Java version
     getJavaVersionForMC(version)?.let(::setJavaVersion)
-    // Repositories
     repository(Repository.MAVEN_CENTRAL, Repository.SONATYPE_SNAPSHOTS_OLD, Repository.PAPER)
-    // Dependency
     val paperVersion: PaperVersion = PaperVersion.parse(version)
-    return "${paperVersion.groupId}:${paperVersion.artifactId}:${getVersionString(version)}"
+    return addDependencyTo(dependencies, configuration, "${paperVersion.groupId}:${paperVersion.artifactId}:${getVersionString(version)}", configurationAction)
 }
 
 /**
  * 1. Adds the [Repository.JITPACK] repository
- * 2. Returns the dependency to the provided Annoying API version
+ * 2. Adds the dependency to the provided Annoying API version
  *
  * @param version The version of Annoying API to use
+ * @param configuration The configuration to add the dependency to
+ * @param configurationAction The action to apply to the dependency
  *
- * @return The dependency annotation for the provided Annoying API version
+ * @return The [ExternalModuleDependency] of the added Annoying API dependency
  */
-fun Project.annoyingAPI(version: String): String {
+fun Project.annoyingAPI(
+    version: String,
+    configuration: String = "implementation",
+    configurationAction: Action<ExternalModuleDependency> = Action {}
+): ExternalModuleDependency {
     check(hasJavaPlugin()) { "Java plugin is not applied!" }
-    // Repositories
     repository(Repository.JITPACK)
-    // Dependency
-    return "xyz.srnyx:annoying-api:$version"
+    if (hasShadowPlugin()) relocate("xyz.srnyx.annoyingapi")
+    return addDependencyTo(dependencies, configuration, "xyz.srnyx:annoying-api:$version") {
+        exclude("org.bstats", "bstats-bukkit")
+        exclude("de.tr7zw", "item-nbt-api")
+        configurationAction.execute(this)
+    }
 }
 
 /**
  * 1. Adds the provided dependency as an `implementation` dependency
  * 2. Relocates the dependency to the provided package
+ *
+ * @param project The project to relocate the dependency for
+ * @param dependency The dependency to add
+ * @param relocateFrom The package to relocate from
+ * @param relocateTo The package to relocate to
+ * @param configuration The configuration to add the dependency to
+ *
+ * @return The [T] of the added dependency
  */
 @Ignore
 fun <T: ModuleDependency> DependencyHandler.implementationRelocate(
@@ -114,6 +141,14 @@ fun <T: ModuleDependency> DependencyHandler.implementationRelocate(
 /**
  * 1. Adds the provided dependency as an `implementation` dependency
  * 2. Relocates the dependency to the provided package
+ *
+ * @param project The project to relocate the dependency for
+ * @param dependency The dependency to add
+ * @param relocateFrom The package to relocate from
+ * @param relocateTo The package to relocate to
+ * @param configuration The configuration to add the dependency to
+ *
+ * @return The [ExternalModuleDependency] of the added dependency
  */
 @Ignore
 fun DependencyHandler.implementationRelocate(
@@ -130,6 +165,10 @@ fun DependencyHandler.implementationRelocate(
 
 /**
  * Returns the correct Java version that is required for the Minecraft version
+ *
+ * @param minecraftVersion The Minecraft version to get the Java version for
+ *
+ * @return The [JavaVersion] that is required for the Minecraft version
  */
 fun getJavaVersionForMC(minecraftVersion: String): JavaVersion? {
     val version = SemanticVersion(minecraftVersion)
@@ -139,5 +178,9 @@ fun getJavaVersionForMC(minecraftVersion: String): JavaVersion? {
 
 /**
  * Returns the version string with `-R0.1-SNAPSHOT` appended to it
+ *
+ * @param version The version to append to
+ *
+ * @return The version string with `-R0.1-SNAPSHOT` appended to it
  */
 fun getVersionString(version: String): String = "${version}-R0.1-SNAPSHOT"
