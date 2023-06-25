@@ -126,10 +126,10 @@ fun Project.addJavadocSourcesJars(javadocClassifier: String? = null, sourcesClas
  *
  * @param replacements A [Map] of all the replacements
  */
-fun Project.addReplacementsTask(replacements: Map<String, String> = getDefaultReplacements()) {
+fun Project.addReplacementsTask(files: Set<String> = setOf("plugin.yml"), replacements: Map<String, String> = getDefaultReplacements()) {
     tasks.named<Copy>("processResources") {
         outputs.upToDateWhen { false }
-        filesMatching("**/*.yml") {
+        filesMatching(files) {
             expand(if (replacements == getSentinelReplacements()) getDefaultReplacements() else replacements)
         }
     }
@@ -213,12 +213,13 @@ fun Project.setupMC(
     version: String = project.version.toString(),
     description: String? = project.description,
     javaVersion: JavaVersion? = null,
+    replacementFiles: Set<String>? = setOf("plugin.yml"),
     replacements: Map<String, String>? = getSentinelReplacements(),
     textEncoding: String? = "UTF-8",
     archiveClassifier: String? = "",
 ) {
     setupJava(group, version, description, javaVersion, textEncoding, archiveClassifier)
-    replacements?.let(::addReplacementsTask)
+    if (replacementFiles != null && replacements != null) addReplacementsTask(replacementFiles, replacements)
 }
 
 /**
@@ -244,6 +245,7 @@ fun Project.setupAnnoyingAPI(
     version: String = project.version.toString(),
     description: String? = project.description,
     javaVersion: JavaVersion? = null,
+    replacementFiles: Set<String>? = setOf("plugin.yml"),
     replacements: Map<String, String>? = getSentinelReplacements(),
     textEncoding: String? = "UTF-8",
     archiveClassifier: String? = "",
@@ -251,7 +253,7 @@ fun Project.setupAnnoyingAPI(
     configurationAction: Action<ExternalModuleDependency> = Action {}
 ): ExternalModuleDependency {
     check(hasShadowPlugin()) { "Shadow plugin is required for Annoying API!" }
-    setupMC(group, version, description, javaVersion, replacements, textEncoding, archiveClassifier)
+    setupMC(group, version, description, javaVersion, replacementFiles, replacements, textEncoding, archiveClassifier)
     return annoyingAPI(annoyingAPIVersion, configuration, configurationAction)
 }
 
