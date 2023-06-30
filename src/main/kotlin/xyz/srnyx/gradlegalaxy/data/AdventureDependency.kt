@@ -33,11 +33,13 @@ data class AdventureDependency(val component: Component, val version: String, va
             apiVersion: String = "4.14.0",
             textMinimessageVersion: String = "4.14.0",
             textSerializerLegacyVersion: String = "4.14.0",
+            platformBukkitVersion: String = "4.3.0",
             platformBungeecordVersion: String = "4.3.0",
         ): Array<AdventureDependency> = arrayOf(
-                AdventureDependency(AdventureComponent.API, apiVersion, configuration),
-                AdventureDependency(AdventureComponent.Text.MINIMESSAGE, textMinimessageVersion, configuration),
-                AdventureDependency(AdventureComponent.Text.Serializer.LEGACY, textSerializerLegacyVersion, configuration),
-                AdventureDependency(AdventureComponent.Platform.BUNGEECORD, platformBungeecordVersion, configuration))
+            AdventureDependency(AdventureComponent.API, apiVersion, configuration),
+            AdventureDependency(AdventureComponent.Text.MINIMESSAGE, textMinimessageVersion, configuration),
+            AdventureDependency(AdventureComponent.Text.Serializer.LEGACY, textSerializerLegacyVersion, configuration),
+            AdventureDependency(AdventureComponent.Platform.BUKKIT, platformBukkitVersion, configuration),
+            AdventureDependency(AdventureComponent.Platform.BUNGEECORD, platformBungeecordVersion, configuration))
     }
 }

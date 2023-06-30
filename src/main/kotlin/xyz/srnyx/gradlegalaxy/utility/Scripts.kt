@@ -235,6 +235,7 @@ fun Project.setupMC(
  * @param version The version of the project (example: `1.0.0`)
  * @param description The description of the project
  * @param adventureDependencies The []Adventure dependencies][AdventureDependency] to add
+ * @param adventureConfigurationAll The configuration for all the Adventure dependencies if they don't already have one
  * @param javaVersion The java version of the project (example: [JavaVersion.VERSION_1_8])
  * @param replacements The replacements for the [replacements task][addReplacementsTask]
  * @param textEncoding The text encoding for the [text encoding task][setTextEncoding]
@@ -248,6 +249,7 @@ fun Project.setupAnnoyingAPI(
     version: String = project.version.toString(),
     description: String? = project.description,
     vararg adventureDependencies: AdventureDependency = AdventureDependency.getDefaultAnnoying(),
+    adventureConfigurationAll: String? = null,
     javaVersion: JavaVersion? = null,
     replacementFiles: Set<String>? = setOf("plugin.yml"),
     replacements: Map<String, String>? = getSentinelReplacements(),
@@ -258,7 +260,7 @@ fun Project.setupAnnoyingAPI(
 ): ExternalModuleDependency {
     check(hasShadowPlugin()) { "Shadow plugin is required for Annoying API!" }
     setupMC(group, version, description, javaVersion, replacementFiles, replacements, textEncoding, archiveClassifier)
-    return annoyingAPI(annoyingAPIVersion, adventureDependencies = adventureDependencies, configuration, configurationAction)
+    return annoyingAPI(annoyingAPIVersion, adventureDependencies = adventureDependencies, adventureConfigurationAll, configuration, configurationAction)
 }
 
 /**
