@@ -11,6 +11,7 @@ import org.gradle.kotlin.dsl.add
 import org.gradle.kotlin.dsl.exclude
 
 import xyz.srnyx.gradlegalaxy.annotations.Ignore
+import xyz.srnyx.gradlegalaxy.data.AdventureDependency
 import xyz.srnyx.gradlegalaxy.enums.PaperVersion
 import xyz.srnyx.gradlegalaxy.enums.Repository
 import xyz.srnyx.gradlegalaxy.enums.repository
@@ -89,10 +90,25 @@ fun Project.paper(
 }
 
 /**
- * 1. Adds the [Repository.JITPACK] repository
- * 2. Adds the dependency to the provided Annoying API version
+ * 1. Adds the [Repository.MAVEN_CENTRAL] repository
+ * 2. Adds the dependencies to the provided Adventure components
+ *
+ * @param dependencies The Adventure dependencies to add
+ * @param configurationAll The configuration to use for the dependencies if they don't have one specified
+ */
+fun Project.adventure(vararg dependencies: AdventureDependency, configurationAll: String? = null) {
+    check(hasJavaPlugin()) { "Java plugin is not applied!" }
+    repository(Repository.MAVEN_CENTRAL)
+    dependencies.forEach { addDependencyTo(project.dependencies, it.configuration ?: configurationAll ?: "implementation", "net.kyori:${it.component.getComponent()}:${it.version}", it.configurationAction) }
+}
+
+/**
+ * 1. Calls [adventure] with the provided [AdventureDependencies][AdventureDependency] if any are provided
+ * 2. Adds the [Repository.JITPACK] repository
+ * 3. Adds the dependency to the provided Annoying API version
  *
  * @param version The version of Annoying API to use
+ * @param adventureDependencies The Adventure dependencies to add
  * @param configuration The configuration to add the dependency to
  * @param configurationAction The action to apply to the dependency
  *
@@ -100,10 +116,12 @@ fun Project.paper(
  */
 fun Project.annoyingAPI(
     version: String,
+    vararg adventureDependencies: AdventureDependency = emptyArray(),
     configuration: String = "implementation",
     configurationAction: Action<ExternalModuleDependency> = Action {}
 ): ExternalModuleDependency {
     check(hasJavaPlugin()) { "Java plugin is not applied!" }
+    if (adventureDependencies.isNotEmpty()) adventure(*adventureDependencies)
     repository(Repository.JITPACK)
     if (hasShadowPlugin()) relocate("xyz.srnyx.annoyingapi")
     return addDependencyTo(dependencies, configuration, "xyz.srnyx:annoying-api:$version") {

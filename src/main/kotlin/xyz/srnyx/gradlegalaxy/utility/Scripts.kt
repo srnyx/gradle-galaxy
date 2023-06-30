@@ -17,6 +17,7 @@ import org.gradle.api.tasks.bundling.Jar
 import org.gradle.kotlin.dsl.*
 
 import xyz.srnyx.gradlegalaxy.annotations.Ignore
+import xyz.srnyx.gradlegalaxy.data.AdventureDependency
 import xyz.srnyx.gradlegalaxy.data.pom.DeveloperData
 import xyz.srnyx.gradlegalaxy.data.pom.LicenseData
 import xyz.srnyx.gradlegalaxy.data.pom.ScmData
@@ -232,6 +233,8 @@ fun Project.setupMC(
  * @param annoyingAPIVersion The version of Annoying API to use (example: `3.0.1`)
  * @param group The group of the project (example: `xyz.srnyx`)
  * @param version The version of the project (example: `1.0.0`)
+ * @param description The description of the project
+ * @param adventureDependencies The []Adventure dependencies][AdventureDependency] to add
  * @param javaVersion The java version of the project (example: [JavaVersion.VERSION_1_8])
  * @param replacements The replacements for the [replacements task][addReplacementsTask]
  * @param textEncoding The text encoding for the [text encoding task][setTextEncoding]
@@ -244,6 +247,7 @@ fun Project.setupAnnoyingAPI(
     group: String = project.group.toString(),
     version: String = project.version.toString(),
     description: String? = project.description,
+    vararg adventureDependencies: AdventureDependency = AdventureDependency.getDefaultAnnoying(),
     javaVersion: JavaVersion? = null,
     replacementFiles: Set<String>? = setOf("plugin.yml"),
     replacements: Map<String, String>? = getSentinelReplacements(),
@@ -254,7 +258,7 @@ fun Project.setupAnnoyingAPI(
 ): ExternalModuleDependency {
     check(hasShadowPlugin()) { "Shadow plugin is required for Annoying API!" }
     setupMC(group, version, description, javaVersion, replacementFiles, replacements, textEncoding, archiveClassifier)
-    return annoyingAPI(annoyingAPIVersion, configuration, configurationAction)
+    return annoyingAPI(annoyingAPIVersion, adventureDependencies = adventureDependencies, configuration, configurationAction)
 }
 
 /**
