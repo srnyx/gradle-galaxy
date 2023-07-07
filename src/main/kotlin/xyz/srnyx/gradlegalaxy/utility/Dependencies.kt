@@ -103,34 +103,24 @@ fun Project.adventure(vararg dependencies: AdventureDependency, configurationAll
 }
 
 /**
- * 1. Calls [adventure] with the provided [AdventureDependencies][AdventureDependency] if any are provided
- * 2. Adds the [Repository.JITPACK] repository
- * 3. Adds the dependency to the provided Annoying API version
+ * 1. Adds the [Repository.JITPACK] repository
+ * 2. Adds the dependency to the provided Annoying API version
  *
  * @param version The version of Annoying API to use
- * @param adventureDependencies The Adventure dependencies to add
- * @param adventureConfigurationAll The configuration to use for the Adventure dependencies if they don't have one specified
- * @param annoyingApiConfiguration The configuration to add the dependency to
+ * @param configuration The configuration to add the dependency to
  * @param configurationAction The action to apply to the dependency
  *
  * @return The [ExternalModuleDependency] of the added Annoying API dependency
  */
 fun Project.annoyingAPI(
     version: String,
-    vararg adventureDependencies: AdventureDependency = emptyArray(),
-    adventureConfigurationAll: String? = null,
-    annoyingApiConfiguration: String = "implementation",
+    configuration: String = "implementation",
     configurationAction: ExternalModuleDependency.() -> Unit = {}
 ): ExternalModuleDependency {
     check(hasJavaPlugin()) { "Java plugin is not applied!" }
-
-    // Adventure
-    if (adventureDependencies.isNotEmpty()) adventure(*adventureDependencies, configurationAll = adventureConfigurationAll)
-
-    // Annoying API
     repository(Repository.JITPACK)
     if (hasShadowPlugin()) relocate("xyz.srnyx.annoyingapi")
-    return addDependencyTo(dependencies, annoyingApiConfiguration, "xyz.srnyx:annoying-api:$version") {
+    return addDependencyTo(dependencies, configuration, "xyz.srnyx:annoying-api:$version") {
         exclude("org.reflections")
         exclude("org.bstats", "bstats-bukkit")
         exclude("de.tr7zw", "item-nbt-api")
