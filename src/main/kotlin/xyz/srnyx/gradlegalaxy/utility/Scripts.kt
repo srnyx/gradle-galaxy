@@ -1,7 +1,6 @@
 package xyz.srnyx.gradlegalaxy.utility
 
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
-import org.gradle.api.Action
 
 import org.gradle.api.DefaultTask
 import org.gradle.api.JavaVersion
@@ -248,7 +247,7 @@ fun Project.setupAnnoyingAPI(
     group: String = project.group.toString(),
     version: String = project.version.toString(),
     description: String? = project.description,
-    vararg adventureDependencies: AdventureDependency = AdventureDependency.getDefaultAnnoying(),
+    vararg adventureDependencies: AdventureDependency = AdventureDependency.getDefaultAnnoyingSpigot(),
     adventureConfigurationAll: String? = null,
     javaVersion: JavaVersion? = null,
     replacementFiles: Set<String>? = setOf("plugin.yml"),
@@ -256,7 +255,7 @@ fun Project.setupAnnoyingAPI(
     textEncoding: String? = "UTF-8",
     archiveClassifier: String? = "",
     configuration: String = "implementation",
-    configurationAction: Action<ExternalModuleDependency> = Action {}
+    configurationAction: ExternalModuleDependency.() -> Unit = {},
 ): ExternalModuleDependency {
     check(hasShadowPlugin()) { "Shadow plugin is required for Annoying API!" }
     setupMC(group, version, description, javaVersion, replacementFiles, replacements, textEncoding, archiveClassifier)

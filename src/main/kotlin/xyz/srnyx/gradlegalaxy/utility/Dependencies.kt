@@ -120,23 +120,21 @@ fun Project.annoyingAPI(
     vararg adventureDependencies: AdventureDependency = emptyArray(),
     adventureConfigurationAll: String? = null,
     annoyingApiConfiguration: String = "implementation",
-    configurationAction: Action<ExternalModuleDependency> = Action {}
+    configurationAction: ExternalModuleDependency.() -> Unit = {}
 ): ExternalModuleDependency {
     check(hasJavaPlugin()) { "Java plugin is not applied!" }
 
     // Adventure
-    if (adventureDependencies.isNotEmpty()) {
-        adventure(*adventureDependencies, configurationAll = adventureConfigurationAll)
-        if (hasShadowPlugin()) relocate("net.kyori")
-    }
+    if (adventureDependencies.isNotEmpty()) adventure(*adventureDependencies, configurationAll = adventureConfigurationAll)
 
     // Annoying API
     repository(Repository.JITPACK)
     if (hasShadowPlugin()) relocate("xyz.srnyx.annoyingapi")
     return addDependencyTo(dependencies, annoyingApiConfiguration, "xyz.srnyx:annoying-api:$version") {
+        exclude("org.reflections")
         exclude("org.bstats", "bstats-bukkit")
         exclude("de.tr7zw", "item-nbt-api")
-        configurationAction.execute(this)
+        configurationAction()
     }
 }
 
