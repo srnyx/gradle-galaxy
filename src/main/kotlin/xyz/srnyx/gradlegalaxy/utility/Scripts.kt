@@ -16,7 +16,6 @@ import org.gradle.api.tasks.bundling.Jar
 import org.gradle.kotlin.dsl.*
 
 import xyz.srnyx.gradlegalaxy.annotations.Ignore
-import xyz.srnyx.gradlegalaxy.data.AdventureDependency
 import xyz.srnyx.gradlegalaxy.data.pom.DeveloperData
 import xyz.srnyx.gradlegalaxy.data.pom.LicenseData
 import xyz.srnyx.gradlegalaxy.data.pom.ScmData
@@ -43,7 +42,7 @@ fun Project.hasJavaPlugin(): Boolean = plugins.hasPlugin("java")
  *
  * @return If the Shadow plugin is applied
  */
-fun Project.hasShadowPlugin(): Boolean = plugins.hasPlugin("com.github.johnrengelman.shadow")
+fun Project.hasShadowPlugin(): Boolean = plugins.hasPlugin("com.github.johnrengelman.shadow") || plugins.hasPlugin("io.github.goooler.shadow")
 
 /**
  * Gets the Java plugin extension
