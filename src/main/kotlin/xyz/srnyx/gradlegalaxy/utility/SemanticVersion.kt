@@ -52,7 +52,7 @@ class SemanticVersion(version: String) : Comparable<SemanticVersion> {
         return result
     }
 
-    override fun toString(): String = "major.minor.patch"
+    override fun toString(): String = "$major.$minor.$patch"
 
     operator fun component1(): Int = major
 
