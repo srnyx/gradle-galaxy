@@ -121,9 +121,8 @@ fun Project.annoyingAPI(
     repository(Repository.JITPACK)
     if (hasShadowPlugin()) relocate("xyz.srnyx.annoyingapi")
     return addDependencyTo(dependencies, configuration, "xyz.srnyx:annoying-api:$version") {
-        exclude("org.reflections")
-        exclude("org.bstats", "bstats-bukkit")
-        exclude("de.tr7zw", "item-nbt-api")
+        exclude("net.byteflux", "libby-bukkit")
+        exclude("xyz.srnyx", "java-utilities")
         configurationAction()
     }
 }
