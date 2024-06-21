@@ -29,11 +29,13 @@ dependencies {
 // Set Kotlin JVM version
 kotlin.jvmToolchain(8)
 
-// Set Java version & text encoding
+// Set Java version, text encoding, & docs/sources jar task dependencies
 tasks.withType<JavaCompile> {
     sourceCompatibility = "1.8"
     targetCompatibility = "1.8"
     options.encoding = "UTF-8"
+    dependsOn("javadocJar")
+    dependsOn("sourcesJar")
 }
 
 // Add docs and sources jars
