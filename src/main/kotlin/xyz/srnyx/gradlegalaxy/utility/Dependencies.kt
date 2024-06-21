@@ -107,6 +107,7 @@ fun Project.adventure(vararg dependencies: AdventureDependency, configurationAll
  * 2. Adds the dependency to the provided Annoying API version
  *
  * @param version The version of Annoying API to use
+ * @param author The primary author of the project, **this should be the first one listed in authors in plugin.yml** (example: `srnyx`)
  * @param configuration The configuration to add the dependency to
  * @param configurationAction The action to apply to the dependency
  *
@@ -114,12 +115,22 @@ fun Project.adventure(vararg dependencies: AdventureDependency, configurationAll
  */
 fun Project.annoyingAPI(
     version: String,
+    author: String,
     configuration: String = "implementation",
     configurationAction: ExternalModuleDependency.() -> Unit = {}
 ): ExternalModuleDependency {
     check(hasJavaPlugin()) { "Java plugin is not applied!" }
+    check(hasShadowPlugin()) { "Shadow plugin is not applied!" }
     repository(Repository.JITPACK)
-    if (hasShadowPlugin()) relocate("xyz.srnyx.annoyingapi")
+    relocate("xyz.srnyx.annoyingapi")
+
+    // Runtime dependencies
+    val libs = getSafeRelocationPath("${author}.${project.name}") + ".libs."
+    relocate("org.bstats", "${libs}bstats")
+    relocate("javassist.", "${libs}javassist.")
+    relocate("org.reflections", "${libs}reflections")
+    relocate("de.tr7zw.changeme.nbtapi", "${libs}nbtapi")
+
     return addDependencyTo(dependencies, configuration, "xyz.srnyx:annoying-api:$version") {
         exclude("net.byteflux", "libby-bukkit")
         exclude("xyz.srnyx", "java-utilities")

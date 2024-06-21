@@ -1,5 +1,6 @@
 package xyz.srnyx.gradlegalaxy.utility
 
+import com.github.jengelman.gradle.plugins.shadow.relocation.SimpleRelocator
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 
 import org.gradle.api.DefaultTask
@@ -29,6 +30,15 @@ import xyz.srnyx.gradlegalaxy.data.pom.ScmData
  * @see addReplacementsTask
  */
 fun getSentinelReplacements(): Map<String, String> = mapOf("defaultReplacements" to "true")
+
+/**
+ * Gets the safe relocation path for the specified path
+ *
+ * @param path The path to get the safe relocation path for
+ *
+ * @return The safe relocation path
+ */
+fun getSafeRelocationPath(path: String): String = path.lowercase().filter { char -> char.isLetterOrDigit() || char in "._" }
 
 /**
  * Checks if the `java` plugin is applied
@@ -129,7 +139,7 @@ fun Project.addReplacementsTask(files: Set<String> = setOf("plugin.yml"), replac
     tasks.named<Copy>("processResources") {
         outputs.upToDateWhen { false }
         filesMatching(files) {
-            expand(if (replacements == getSentinelReplacements()) getDefaultReplacements() else replacements)
+            expand(if (replacements["defaultReplacements"] == "true") getDefaultReplacements() + replacements.minus("defaultReplacements") else replacements)
         }
     }
 }
@@ -153,10 +163,11 @@ fun Project.addCompilerArgs(vararg args: String) {
 @Ignore
 fun Project.relocate(
     from: String,
-    to: String = "${project.group}.${project.name.lowercase().filter { char -> char.isLetterOrDigit() || char in "._" }}.libs.${from.split(".").last()}",
+    to: String = getSafeRelocationPath("${project.group}.${project.name}.libs.${from.split(".").last()}"),
+    action: SimpleRelocator.() -> Unit = {},
 ) {
     check(hasShadowPlugin()) { "Shadow plugin is not applied!" }
-    tasks.named<ShadowJar>("shadowJar") { relocate(from, to) }
+    tasks.named<ShadowJar>("shadowJar") { relocate(from, to, action) }
 }
 
 /**
@@ -222,13 +233,14 @@ fun Project.setupMC(
 }
 
 /**
- * Sets up the project using Annoying API
+ * Sets up the project using Annoying API. **The [root project's name][Project.getName] must be the same as the one in plugin.yml**
  *
  * 1. Checks if the Shadow plugin is applied
  * 2. Calls [setupMC] with the specified parameters
  * 3. Calls and returns [annoyingAPI] with the specified parameters
  *
  * @param annoyingAPIVersion The version of Annoying API to use (example: `3.0.1`)
+ * @param author The primary author of the project, **this should be the first one listed in authors in plugin.yml** (example: `srnyx`)
  * @param group The group of the project (example: `xyz.srnyx`)
  * @param version The version of the project (example: `1.0.0`)
  * @param description The description of the project
@@ -241,6 +253,7 @@ fun Project.setupMC(
 @Ignore
 fun Project.setupAnnoyingAPI(
     annoyingAPIVersion: String,
+    author: String,
     group: String = project.group.toString(),
     version: String = project.version.toString(),
     description: String? = project.description,
@@ -253,8 +266,8 @@ fun Project.setupAnnoyingAPI(
     configurationAction: ExternalModuleDependency.() -> Unit = {},
 ): ExternalModuleDependency {
     check(hasShadowPlugin()) { "Shadow plugin is required for Annoying API!" }
-    setupMC(group, version, description, javaVersion, replacementFiles, replacements, textEncoding, archiveClassifier)
-    return annoyingAPI(annoyingAPIVersion, configuration, configurationAction)
+    setupMC(group, version, description, javaVersion, replacementFiles, replacements?.plus("author" to author), textEncoding, archiveClassifier)
+    return annoyingAPI(annoyingAPIVersion, author, configuration, configurationAction)
 }
 
 /**
