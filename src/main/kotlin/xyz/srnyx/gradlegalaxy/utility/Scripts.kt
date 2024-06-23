@@ -32,13 +32,20 @@ import xyz.srnyx.gradlegalaxy.data.pom.ScmData
 fun getSentinelReplacements(): Map<String, String> = mapOf("defaultReplacements" to "true")
 
 /**
- * Gets the safe relocation path for the specified path
+ * Makes the given package path safe to use
+ * - Converts the path to lowercase
+ * - Removes all characters that are **not** `a-z`, `0-9`, `.`, or `_`
  *
- * @param path The path to get the safe relocation path for
+ * @param path The package path to make safe
  *
- * @return The safe relocation path
+ * @return The safe package path
  */
-fun getSafeRelocationPath(path: String): String = path.lowercase().filter { char -> char.isLetterOrDigit() || char in "._" }
+fun makePackageSafe(path: String): String = path.lowercase().replace("[^a-z0-9._]".toRegex(), "")
+
+/**
+ * Gets the main package of the project
+ */
+fun Project.getPackage(): String = "$group.${makePackageSafe(name)}"
 
 /**
  * Checks if the `java` plugin is applied
@@ -75,6 +82,7 @@ fun Project.getDefaultReplacements(): Map<String, String> = mapOf(
     "name" to name,
     "version" to version.toString(),
     "description" to description.toString(),
+    "mainPackage" to getPackage(),
 )
 
 /**
@@ -163,7 +171,7 @@ fun Project.addCompilerArgs(vararg args: String) {
 @Ignore
 fun Project.relocate(
     from: String,
-    to: String = getSafeRelocationPath("${project.group}.${project.name}.libs.${from.split(".").last()}"),
+    to: String = "${getPackage()}.libs.${makePackageSafe(from.split(".").last())}",
     action: SimpleRelocator.() -> Unit = {},
 ) {
     check(hasShadowPlugin()) { "Shadow plugin is not applied!" }
@@ -240,7 +248,6 @@ fun Project.setupMC(
  * 3. Calls and returns [annoyingAPI] with the specified parameters
  *
  * @param annoyingAPIVersion The version of Annoying API to use (example: `3.0.1`)
- * @param author The primary author of the project, **this should be the first one listed in authors in plugin.yml** (example: `srnyx`)
  * @param group The group of the project (example: `xyz.srnyx`)
  * @param version The version of the project (example: `1.0.0`)
  * @param description The description of the project
@@ -253,7 +260,6 @@ fun Project.setupMC(
 @Ignore
 fun Project.setupAnnoyingAPI(
     annoyingAPIVersion: String,
-    author: String,
     group: String = project.group.toString(),
     version: String = project.version.toString(),
     description: String? = project.description,
@@ -266,8 +272,8 @@ fun Project.setupAnnoyingAPI(
     configurationAction: ExternalModuleDependency.() -> Unit = {},
 ): ExternalModuleDependency {
     check(hasShadowPlugin()) { "Shadow plugin is required for Annoying API!" }
-    setupMC(group, version, description, javaVersion, replacementFiles, replacements?.plus("author" to author), textEncoding, archiveClassifier)
-    return annoyingAPI(annoyingAPIVersion, author, configuration, configurationAction)
+    setupMC(group, version, description, javaVersion, replacementFiles, replacements, textEncoding, archiveClassifier)
+    return annoyingAPI(annoyingAPIVersion, configuration, configurationAction)
 }
 
 /**
