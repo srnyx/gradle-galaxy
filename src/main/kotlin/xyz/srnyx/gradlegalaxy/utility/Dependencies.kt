@@ -120,9 +120,9 @@ fun Project.annoyingAPI(
     check(hasJavaPlugin()) { "Java plugin is not applied!" }
     check(hasShadowPlugin()) { "Shadow plugin is not applied!" }
     repository(Repository.JITPACK)
-    relocate("xyz.srnyx.annoyingapi")
 
     // Runtime dependencies
+    relocate("xyz.srnyx.annoyingapi")
     relocate("org.bstats")
     relocate("javassist.", getPackage() + ".libs.javassist.")
     relocate("org.reflections")
