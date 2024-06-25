@@ -187,6 +187,10 @@ fun DependencyHandler.implementationRelocate(
 
 /**
  * Returns the correct Java version that is required for the Minecraft version
+ * - 1.20.5+: Java 21
+ * - 1.18+: Java 17
+ * - 1.17+: Java 16
+ * - Else: Java 8
  *
  * @param minecraftVersion The Minecraft version to get the Java version for
  *
@@ -194,7 +198,10 @@ fun DependencyHandler.implementationRelocate(
  */
 fun getJavaVersionForMC(minecraftVersion: String): JavaVersion? {
     val version = SemanticVersion(minecraftVersion)
-    if (version.major != 1 || version.minor >= 18) return null
+    if (version.major != 1) return null
+    if (version.minor >= 20 && version.patch >= 5) return JavaVersion.VERSION_21
+    if (version.minor >= 18) return JavaVersion.VERSION_17
+    if (version.minor >= 17) return JavaVersion.VERSION_16
     return JavaVersion.VERSION_1_8
 }
 
