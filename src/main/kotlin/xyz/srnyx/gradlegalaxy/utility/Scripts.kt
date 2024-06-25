@@ -23,15 +23,6 @@ import xyz.srnyx.gradlegalaxy.data.pom.ScmData
 
 
 /**
- * Returns a map that tells [addReplacementsTask] to use the default replacements
- *
- * @return The map that tells [addReplacementsTask] to use the default replacements
- *
- * @see addReplacementsTask
- */
-fun getSentinelReplacements(): Map<String, String> = mapOf("defaultReplacements" to "true")
-
-/**
  * Makes the given package path safe to use
  * - Converts the path to lowercase
  * - Removes all characters that are **not** `a-z`, `0-9`, `.`, or `_`
@@ -232,7 +223,7 @@ fun Project.setupMC(
     description: String? = project.description,
     javaVersion: JavaVersion? = null,
     replacementFiles: Set<String>? = setOf("plugin.yml"),
-    replacements: Map<String, String>? = getSentinelReplacements(),
+    replacements: Map<String, String>? = mapOf("defaultReplacements" to "true"),
     textEncoding: String? = "UTF-8",
     archiveClassifier: String? = "",
 ) {
@@ -265,7 +256,7 @@ fun Project.setupAnnoyingAPI(
     description: String? = project.description,
     javaVersion: JavaVersion? = null,
     replacementFiles: Set<String>? = setOf("plugin.yml"),
-    replacements: Map<String, String>? = getSentinelReplacements(),
+    replacements: Map<String, String>? = mapOf("defaultReplacements" to "true"),
     textEncoding: String? = "UTF-8",
     archiveClassifier: String? = "",
     configuration: String = "implementation",
