@@ -152,7 +152,7 @@ fun <T: ModuleDependency> DependencyHandler.implementationRelocate(
     project: Project,
     dependency: T,
     relocateFrom: String,
-    relocateTo: String = "${project.group}.${project.name.lowercase().filter { char -> char.isLetterOrDigit() || char in "._" }}.libs.${relocateFrom.split(".").last()}",
+    relocateTo: String = "${project.getPackage()}.libs.${relocateFrom.split(".").last()}",
     configuration: T.() -> Unit = {}
 ): T {
     check(project.hasShadowPlugin()) { "Shadow plugin is not applied!" }
@@ -177,7 +177,7 @@ fun DependencyHandler.implementationRelocate(
     project: Project,
     dependency: String,
     relocateFrom: String = dependency.split(":").first(),
-    relocateTo: String = "${project.group}.${project.name.lowercase().filter { char -> char.isLetterOrDigit() || char in "._" }}.libs.${relocateFrom.split(".").last()}",
+    relocateTo: String = "${project.getPackage()}.libs.${relocateFrom.split(".").last()}",
     configuration: Action<ExternalModuleDependency> = Action {}
 ): ExternalModuleDependency {
     check(project.hasShadowPlugin()) { "Shadow plugin is not applied!" }
