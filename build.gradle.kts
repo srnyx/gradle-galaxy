@@ -12,6 +12,7 @@ version = "1.2.2"
 description = "A Gradle plugin to simplify the process of creating projects"
 val projectId: String = "gradle-galaxy"
 val vcs: String = "github.com/srnyx/$projectId"
+val includeJavadocsSources: Boolean = true
 
 repositories {
     mavenCentral()
@@ -34,12 +35,14 @@ tasks.withType<JavaCompile> {
     sourceCompatibility = "1.8"
     targetCompatibility = "1.8"
     options.encoding = "UTF-8"
-    dependsOn("javadocJar")
-    dependsOn("sourcesJar")
+    if (includeJavadocsSources) {
+        dependsOn("javadocJar")
+        dependsOn("sourcesJar")
+    }
 }
 
 // Add docs and sources jars
-sourceSets {
+if (includeJavadocsSources) sourceSets {
     tasks.register("javadocJar", Jar::class) {
         group = "build"
         description = "Assembles a jar archive containing the javadoc files"
