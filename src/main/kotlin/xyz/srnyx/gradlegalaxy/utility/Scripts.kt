@@ -6,6 +6,7 @@ import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import org.gradle.api.DefaultTask
 import org.gradle.api.JavaVersion
 import org.gradle.api.Project
+import org.gradle.api.UnknownDomainObjectException
 import org.gradle.api.artifacts.ExternalModuleDependency
 import org.gradle.api.component.SoftwareComponent
 import org.gradle.api.plugins.JavaPluginExtension
@@ -21,6 +22,20 @@ import xyz.srnyx.gradlegalaxy.data.pom.DeveloperData
 import xyz.srnyx.gradlegalaxy.data.pom.LicenseData
 import xyz.srnyx.gradlegalaxy.data.pom.ScmData
 
+
+/**
+ * Whether the Java plugin is applied
+ *
+ * This is for caching, use [hasJavaPlugin] instead
+ */
+var hasJavaPlugin: Boolean? = null
+
+/**
+ * Whether the Shadow plugin is applied
+ *
+ * This is for caching, use [hasShadowPlugin] instead
+ */
+var hasShadowPlugin: Boolean? = null
 
 /**
  * Makes the given package path safe to use
@@ -43,14 +58,30 @@ fun Project.getPackage(): String = "$group.${makePackageSafe(name)}"
  *
  * @return If the `java` plugin is applied
  */
-fun Project.hasJavaPlugin(): Boolean = plugins.hasPlugin("java")
+fun Project.hasJavaPlugin(): Boolean {
+    if (hasJavaPlugin == null) hasJavaPlugin = try {
+        extensions["java"]
+        true
+    } catch (e: UnknownDomainObjectException) {
+        false
+    }
+    return hasJavaPlugin!!
+}
 
 /**
  * Checks if the Shadow plugin is applied
  *
  * @return If the Shadow plugin is applied
  */
-fun Project.hasShadowPlugin(): Boolean = plugins.hasPlugin("com.github.johnrengelman.shadow") || plugins.hasPlugin("io.github.goooler.shadow")
+fun Project.hasShadowPlugin(): Boolean {
+    if (hasShadowPlugin == null) hasShadowPlugin = try {
+        Class.forName("com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar")
+        true
+    } catch (e: ClassNotFoundException) {
+        false
+    }
+    return hasShadowPlugin!!
+}
 
 /**
  * Gets the Java plugin extension
@@ -58,6 +89,7 @@ fun Project.hasShadowPlugin(): Boolean = plugins.hasPlugin("com.github.johnrenge
  * @return The Java plugin extension
  */
 fun Project.getJavaExtension(): JavaPluginExtension {
+    check(hasJavaPlugin()) { "Java plugin is not applied!" }
     return extensions["java"] as JavaPluginExtension
 }
 
