@@ -2,7 +2,7 @@ plugins {
     `kotlin-dsl`
     `maven-publish`
     `java-gradle-plugin`
-    kotlin("jvm") version "2.0.20"
+    kotlin("jvm") version "1.9.24" // Do not update
     id("com.gradle.plugin-publish") version "1.2.1"
     id("org.jetbrains.dokka") version "1.9.20"
 }
