@@ -115,9 +115,25 @@ enum class Repository(internal val url: String) {
      */
     KRYPTON_SNAPSHOTS("https://repo.kryptonmc.org/snapshots/"),
     /**
-     * [https://ci.2lstudios.dev/plugin/repository/everything](https://ci.2lstudios.dev/plugin/repository/everything)
+     * [https://ci.2lstudios.dev/plugin/repository/everything/](https://ci.2lstudios.dev/plugin/repository/everything/)
      */
-    TWOL_STUDIOS("https://ci.2lstudios.dev/plugin/repository/everything"),
+    TWOL_STUDIOS("https://ci.2lstudios.dev/plugin/repository/everything/"),
+    /**
+     * [https://maven.fabricmc.net/](https://maven.fabricmc.net/)
+     */
+    FABRIC("https://maven.fabricmc.net/"),
+    /**
+     * [https://maven.shedaniel.me/](https://maven.shedaniel.me/)
+     */
+    SHEDANIEL("https://maven.shedaniel.me/"),
+    /**
+     * [https://maven.terraformersmc.com/releases/](https://maven.terraformersmc.com/releases/)
+     */
+    TERRAFORMERS("https://maven.terraformersmc.com/releases/"),
+    /**
+     * [https://maven.isxander.dev/releases/](https://maven.isxander.dev/releases/)
+     */
+    ISXANDER("https://maven.isxander.dev/releases/"),
 
     // Keep these at the bottom as they include other dependencies of other repositories
     /**
