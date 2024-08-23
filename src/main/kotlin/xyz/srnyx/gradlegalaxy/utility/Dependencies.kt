@@ -96,6 +96,7 @@ fun Project.paper(
  * @param dependencies The Adventure dependencies to add
  * @param configurationAll The configuration to use for the dependencies if they don't have one specified
  */
+@Ignore
 fun Project.adventure(vararg dependencies: AdventureDependency, configurationAll: String? = null) {
     check(hasJavaPlugin()) { "Java plugin is not applied!" }
     repository(Repository.MAVEN_CENTRAL)
@@ -136,6 +137,67 @@ fun Project.annoyingAPI(
 }
 
 /**
+ * 1. Adds the [Repository.MAVEN_CENTRAL] repository
+ * 2. Adds the dependency to the provided JDA version
+ *
+ * @param version The version of JDA to use
+ * @param configuration The configuration to add the dependency to
+ * @param configurationAction The action to apply to the dependency
+ *
+ * @return The [ExternalModuleDependency] of the added JDA dependency
+ */
+fun Project.jda(
+    version: String,
+    configuration: String = "implementation",
+    configurationAction: ExternalModuleDependency.() -> Unit = {}
+): ExternalModuleDependency {
+    check(hasJavaPlugin()) { "Java plugin is not applied!" }
+    repository(Repository.MAVEN_CENTRAL)
+    return addDependencyTo(dependencies, configuration, "net.dv8tion:JDA:$version", configurationAction)
+}
+
+/**
+ * 1. Adds the [Repository.JITPACK] repository
+ * 2. Adds the dependency to the provided Lazy Library version
+ *
+ * @param version The version of Lazy Library to use
+ * @param configuration The configuration to add the dependency to
+ * @param configurationAction The action to apply to the dependency
+ *
+ * @return The [ExternalModuleDependency] of the added Lazy Library dependency
+ */
+fun Project.lazyLibrary(
+    version: String,
+    configuration: String = "implementation",
+    configurationAction: ExternalModuleDependency.() -> Unit = {}
+): ExternalModuleDependency {
+    check(hasJavaPlugin()) { "Java plugin is not applied!" }
+    repository(Repository.JITPACK)
+    return addDependencyTo(dependencies, configuration, "xyz.srnyx:lazy-library:$version", configurationAction)
+}
+
+/**
+ * 1. Adds the [Repository.JITPACK] repository
+ * 2. Adds the dependency to the provided Magic Mongo version
+ *
+ * @param version The version of Magic Mongo to use
+ * @param configuration The configuration to add the dependency to
+ * @param configurationAction The action to apply to the dependency
+ *
+ * @return The [ExternalModuleDependency] of the added Magic Mongo dependency
+ */
+@Ignore
+fun Project.magicMongo(
+    version: String,
+    configuration: String = "implementation",
+    configurationAction: ExternalModuleDependency.() -> Unit = {}
+): ExternalModuleDependency {
+    check(hasJavaPlugin()) { "Java plugin is not applied!" }
+    repository(Repository.JITPACK)
+    return addDependencyTo(dependencies, configuration, "xyz.srnyx:magic-mongo:$version", configurationAction)
+}
+
+/**
  * 1. Adds the provided dependency as an `implementation` dependency
  * 2. Relocates the dependency to the provided package
  *
@@ -155,7 +217,7 @@ fun <T: ModuleDependency> DependencyHandler.implementationRelocate(
     relocateTo: String = "${project.getPackage()}.libs.${relocateFrom.split(".").last()}",
     configuration: T.() -> Unit = {}
 ): T {
-    check(project.hasShadowPlugin()) { "Shadow plugin is not applied!" }
+    check(hasShadowPlugin()) { "Shadow plugin is not applied!" }
     project.relocate(relocateFrom, relocateTo)
     return add("implementation", dependency, configuration)
 }
@@ -180,7 +242,7 @@ fun DependencyHandler.implementationRelocate(
     relocateTo: String = "${project.getPackage()}.libs.${relocateFrom.split(".").last()}",
     configuration: Action<ExternalModuleDependency> = Action {}
 ): ExternalModuleDependency {
-    check(project.hasShadowPlugin()) { "Shadow plugin is not applied!" }
+    check(hasShadowPlugin()) { "Shadow plugin is not applied!" }
     project.relocate(relocateFrom, relocateTo)
     return addDependencyTo(this, "implementation", dependency, configuration)
 }
