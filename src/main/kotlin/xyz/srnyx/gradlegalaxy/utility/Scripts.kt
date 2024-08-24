@@ -199,11 +199,11 @@ fun Project.addCompilerArgs(vararg args: String) {
 /**
  * Sets the main class for the project
  *
- * @param mainClassName The main class name to set, defaults to "[getPackage].[Project.getName]"
+ * @param mainClassName The main class name to set, uses "[getPackage].[Project.getName]" if null
  */
-fun Project.setMainClass(mainClassName: String = "${getPackage()}.${project.name}") {
+fun Project.setMainClass(mainClassName: String? = null) {
     check(hasApplicationPlugin()) { "Application plugin is not applied!" }
-    extensions.configure<JavaApplication>("application") { mainClass.set(mainClassName) }
+    extensions.configure<JavaApplication>("application") { mainClass.set(mainClassName ?: "${getPackage()}.${project.name}") }
 }
 
 /**

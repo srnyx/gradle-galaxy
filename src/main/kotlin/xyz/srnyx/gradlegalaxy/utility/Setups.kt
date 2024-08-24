@@ -140,7 +140,7 @@ fun Project.setupJda(
     version: String = project.version.toString(),
     description: String? = project.description,
     javaVersion: JavaVersion? = null,
-    mainClassName: String = "${getPackage()}.${project.name}",
+    mainClassName: String? = null,
     textEncoding: String? = "UTF-8",
     archiveClassifier: String? = "",
 ): ExternalModuleDependency {
@@ -180,7 +180,7 @@ fun Project.setupLazyLibrary(
     version: String = project.version.toString(),
     description: String? = project.description,
     javaVersion: JavaVersion? = null,
-    mainClassName: String = "${getPackage()}.${project.name}",
+    mainClassName: String? = null,
     textEncoding: String? = "UTF-8",
     archiveClassifier: String? = "",
 ): ExternalModuleDependency {
