@@ -104,7 +104,7 @@ fun Project.adventure(vararg dependencies: AdventureDependency, configurationAll
 }
 
 /**
- * 1. Adds the [Repository.JITPACK] repository
+ * 1. Adds the [Repository.JITPACK] and [Repository.ALESSIO_DP] (for Libby) repositories
  * 2. Adds the dependency to the provided Annoying API version
  *
  * @param version The version of Annoying API to use
@@ -120,7 +120,7 @@ fun Project.annoyingAPI(
 ): ExternalModuleDependency {
     check(hasJavaPlugin()) { "Java plugin is not applied!" }
     check(hasShadowPlugin()) { "Shadow plugin is not applied!" }
-    repository(Repository.JITPACK)
+    repository(Repository.JITPACK, Repository.ALESSIO_DP)
 
     // Runtime dependencies
     relocate("xyz.srnyx.annoyingapi")
