@@ -36,7 +36,7 @@ fun Project.spigotAPI(
     configurationAction: Action<ExternalModuleDependency> = Action {}
 ): ExternalModuleDependency {
     check(hasJavaPlugin()) { "Java plugin is not applied!" }
-    getJavaVersionForMC(version)?.let(::setJavaVersion)
+    setJavaVersion(getJavaVersionForMC(version))
     val semanticVersion = SemanticVersion(version)
     if (semanticVersion.major <= 1 && semanticVersion.minor <= 15) repository(Repository.SONATYPE_SNAPSHOTS_OLD)
     repository(Repository.MAVEN_CENTRAL, Repository.SPIGOT)
@@ -60,7 +60,7 @@ fun Project.spigotNMS(
     configurationAction: Action<ExternalModuleDependency> = Action {}
 ): ExternalModuleDependency {
     check(hasJavaPlugin()) { "Java plugin is not applied!" }
-    getJavaVersionForMC(version)?.let(::setJavaVersion)
+    setJavaVersion(getJavaVersionForMC(version))
     repository(Repository.MAVEN_CENTRAL, Repository.SPIGOT)
     repositories.mavenLocal()
     return addDependencyTo(dependencies, configuration, "org.spigotmc:spigot:${getVersionString(version)}", configurationAction)
@@ -83,7 +83,7 @@ fun Project.paper(
     configurationAction: Action<ExternalModuleDependency> = Action {}
 ): ExternalModuleDependency {
     check(hasJavaPlugin()) { "Java plugin is not applied!" }
-    getJavaVersionForMC(version)?.let(::setJavaVersion)
+    setJavaVersion(getJavaVersionForMC(version))
     repository(Repository.MAVEN_CENTRAL, Repository.SONATYPE_SNAPSHOTS_OLD, Repository.PAPER)
     val paperVersion: PaperVersion = PaperVersion.parse(version)
     return addDependencyTo(dependencies, configuration, "${paperVersion.groupId}:${paperVersion.artifactId}:${getVersionString(version)}", configurationAction)
@@ -258,10 +258,9 @@ fun DependencyHandler.implementationRelocate(
  *
  * @return The [JavaVersion] that is required for the Minecraft version
  */
-fun getJavaVersionForMC(minecraftVersion: String): JavaVersion? {
+fun getJavaVersionForMC(minecraftVersion: String): JavaVersion {
     val version = SemanticVersion(minecraftVersion)
-    if (version.major != 1) return null
-    if (version.minor >= 20 && version.patch >= 5) return JavaVersion.VERSION_21
+    if (version.major > 1 || version.minor > 20 || (version.minor == 20 && version.patch >= 5)) return JavaVersion.VERSION_21
     if (version.minor >= 18) return JavaVersion.VERSION_17
     if (version.minor >= 17) return JavaVersion.VERSION_16
     return JavaVersion.VERSION_1_8
