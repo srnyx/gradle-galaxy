@@ -151,6 +151,12 @@ fun Project.setupJda(
     setMainClass(mainClassName)
     addCompilerArgs("-parameters")
 
+    // Fix some tasks
+    tasks["distZip"].dependsOn("shadowJar")
+    tasks["distTar"].dependsOn("shadowJar")
+    tasks["startScripts"].dependsOn("shadowJar")
+    tasks["startShadowScripts"].dependsOn("jar")
+
     return jda(jdaVersion) {
         if (excludeOpus) exclude(module = "opus-java")
     }
@@ -196,12 +202,6 @@ fun Project.setupLazyLibrary(
     // Add compileOnly dependencies for documentation
     dependencies.add("compileOnly", "io.github.freya022:BotCommands:2.10.4")
     dependencies.add("compileOnly", "org.spongepowered:configurate-yaml:4.1.2")
-
-    // Fix some tasks
-    tasks["distZip"].dependsOn("shadowJar")
-    tasks["distTar"].dependsOn("shadowJar")
-    tasks["startScripts"].dependsOn("shadowJar")
-    tasks["startShadowScripts"].dependsOn("jar")
 
     return lazyLibrary(lazyLibraryVersion)
 }
