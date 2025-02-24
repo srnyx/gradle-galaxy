@@ -8,6 +8,7 @@ import org.gradle.api.publish.PublishingExtension
 import org.gradle.api.publish.maven.MavenPublication
 import org.gradle.kotlin.dsl.apply
 import org.gradle.kotlin.dsl.create
+import org.gradle.kotlin.dsl.exclude
 import org.gradle.kotlin.dsl.get
 
 import xyz.srnyx.gradlegalaxy.annotations.Ignore
@@ -136,6 +137,7 @@ fun Project.setupAnnoyingAPI(
  */
 fun Project.setupJda(
     jdaVersion: String,
+    excludeOpus: Boolean = true,
     group: String = project.group.toString(),
     version: String = project.version.toString(),
     description: String? = project.description,
@@ -148,7 +150,10 @@ fun Project.setupJda(
     setupJava(group, version, description, javaVersion, textEncoding, archiveClassifier)
     setMainClass(mainClassName)
     addCompilerArgs("-parameters")
-    return jda(jdaVersion)
+
+    return jda(jdaVersion) {
+        if (excludeOpus) exclude(module = "opus-java")
+    }
 }
 
 /**
@@ -176,6 +181,7 @@ fun Project.setupJda(
 fun Project.setupLazyLibrary(
     lazyLibraryVersion: String,
     jdaVersion: String,
+    excludeOpus: Boolean = true,
     group: String = project.group.toString(),
     version: String = project.version.toString(),
     description: String? = project.description,
@@ -185,7 +191,7 @@ fun Project.setupLazyLibrary(
     archiveClassifier: String? = "",
 ): ExternalModuleDependency {
     check(hasShadowPlugin()) { "Shadow plugin is required for Lazy Library!" }
-    setupJda(jdaVersion, group, version, description, javaVersion, mainClassName, textEncoding, archiveClassifier)
+    setupJda(jdaVersion, excludeOpus, group, version, description, javaVersion, mainClassName, textEncoding, archiveClassifier)
 
     // Add compileOnly dependencies for documentation
     dependencies.add("compileOnly", "io.github.freya022:BotCommands:2.10.4")
