@@ -167,9 +167,7 @@ fun Project.setupJda(
  *
  * 1. Checks if the Shadow plugin is applied
  * 2. Calls [setupJda] with the specified parameters
- * 3. Adds `compileOnly` dependencies for documentation
- * 4. Fixes some tasks
- * 5. Calls and returns [lazyLibrary] with the specified [lazyLibraryVersion]
+ * 3. Calls and returns [lazyLibrary] with the specified [lazyLibraryVersion]
  *
  * @param lazyLibraryVersion The version of Lazy Library to use (example: `3.1.0`)
  * @param jdaVersion The version of JDA to use (example: `5.1.0`)
