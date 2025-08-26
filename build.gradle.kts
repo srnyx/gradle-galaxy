@@ -3,8 +3,8 @@ plugins {
     `maven-publish`
     `java-gradle-plugin`
     kotlin("jvm") version "1.9.24" // Do not update
-    id("com.gradle.plugin-publish") version "1.2.1"
-    id("org.jetbrains.dokka") version "1.9.20"
+    id("com.gradle.plugin-publish") version "1.3.1"
+    id("org.jetbrains.dokka") version "1.9.20" // Do not update because of kotlin("jvm") version
 }
 
 group = "xyz.srnyx"
@@ -28,12 +28,12 @@ dependencies {
 }
 
 // Set Kotlin JVM version
-kotlin.jvmToolchain(8)
+kotlin.jvmToolchain(17)
 
 // Set Java version, text encoding, & docs/sources jar task dependencies
 tasks.withType<JavaCompile> {
-    sourceCompatibility = "1.8"
-    targetCompatibility = "1.8"
+    sourceCompatibility = "17"
+    targetCompatibility = "17"
     options.encoding = "UTF-8"
     if (includeJavadocsSources) {
         dependsOn("javadocJar")
