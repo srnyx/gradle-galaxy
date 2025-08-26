@@ -28,8 +28,8 @@ import xyz.srnyx.gradlegalaxy.data.pom.ScmData
  * @param version The version of the project (example: `1.0.0`)
  * @param description The description of the project
  * @param javaVersion The java version of the project (example: [JavaVersion.VERSION_1_8])
- * @param textEncoding The text encoding for the [text encoding task][setTextEncoding]
  * @param archiveClassifier The archive classifier for the [shadow jar][setShadowArchiveClassifier]
+ * @param textEncoding The text encoding for the [text encoding task][setTextEncoding]
  */
 @Ignore
 fun Project.setupJava(
@@ -37,8 +37,8 @@ fun Project.setupJava(
     version: String = project.version.toString(),
     description: String? = project.description,
     javaVersion: JavaVersion? = null,
-    textEncoding: String? = "UTF-8",
     archiveClassifier: String? = "",
+    textEncoding: String? = "UTF-8",
 ) {
     this.group = group
     this.version = version
@@ -61,8 +61,8 @@ fun Project.setupJava(
  * @param description The description of the project
  * @param javaVersion The java version of the project (example: [JavaVersion.VERSION_1_8])
  * @param replacements The replacements for the [replacements task][addReplacementsTask]
- * @param textEncoding The text encoding for the [text encoding task][setTextEncoding]
  * @param archiveClassifier The archive classifier for the [shadow jar task][setShadowArchiveClassifier]
+ * @param textEncoding The text encoding for the [text encoding task][setTextEncoding]
  */
 @Ignore
 fun Project.setupMC(
@@ -72,8 +72,8 @@ fun Project.setupMC(
     javaVersion: JavaVersion? = null,
     replacementFiles: Set<String>? = setOf("plugin.yml"),
     replacements: Map<String, String>? = mapOf("defaultReplacements" to "true"),
-    textEncoding: String? = "UTF-8",
     archiveClassifier: String? = "",
+    textEncoding: String? = "UTF-8",
 ) {
     setupJava(group, version, description, javaVersion, textEncoding, archiveClassifier)
     if (replacementFiles != null && replacements != null) addReplacementsTask(replacementFiles, replacements)
@@ -92,8 +92,8 @@ fun Project.setupMC(
  * @param description The description of the project
  * @param javaVersion The java version of the project (example: [JavaVersion.VERSION_1_8])
  * @param replacements The replacements for the [replacements task][addReplacementsTask]
- * @param textEncoding The text encoding for the [text encoding task][setTextEncoding]
  * @param archiveClassifier The archive classifier for the [shadow jar task][setShadowArchiveClassifier]
+ * @param textEncoding The text encoding for the [text encoding task][setTextEncoding]
  * @param configurationAction The configuration for the Annoying API dependency
  */
 @Ignore
@@ -126,30 +126,30 @@ fun Project.setupAnnoyingAPI(
  * 6. Calls and returns [jda] with the specified [jdaVersion]
  *
  * @param jdaVersion The version of JDA to use (example: `5.1.0`)
- * @param excludeOpus Whether to exclude the `opus-java` dependency from JDA (default: `true`)
  * @param group The group of the project (example: `xyz.srnyx`)
  * @param version The version of the project (example: `1.0.0`)
  * @param description The description of the project
  * @param javaVersion The java version of the project (example: [JavaVersion.VERSION_1_8])
  * @param mainClassName The main class name of the project (example: `xyz.srnyx.lazylibrary.LazyLibrary`)
- * @param textEncoding The text encoding for the [text encoding task][setTextEncoding]
+ * @param excludeOpus Whether to exclude the `opus-java` dependency from JDA (default: `true`)
  * @param archiveClassifier The archive classifier for the [shadow jar task][setShadowArchiveClassifier]
+ * @param textEncoding The text encoding for the [text encoding task][setTextEncoding]
  *
  * @return The JDA dependency that was created
  */
 fun Project.setupJda(
     jdaVersion: String,
-    excludeOpus: Boolean = true,
     group: String = project.group.toString(),
     version: String = project.version.toString(),
     description: String? = project.description,
     javaVersion: JavaVersion? = null,
     mainClassName: String? = null,
-    textEncoding: String? = "UTF-8",
+    excludeOpus: Boolean = true,
     archiveClassifier: String? = "",
+    textEncoding: String? = "UTF-8",
 ): ExternalModuleDependency {
     check(hasShadowPlugin()) { "Shadow plugin is required for JDA!" }
-    setupJava(group, version, description, javaVersion, textEncoding, archiveClassifier)
+    setupJava(group, version, description, javaVersion, archiveClassifier, textEncoding)
     setMainClass(mainClassName)
     addCompilerArgs("-parameters")
 
@@ -173,14 +173,14 @@ fun Project.setupJda(
  *
  * @param lazyLibraryVersion The version of Lazy Library to use (example: `3.1.0`)
  * @param jdaVersion The version of JDA to use (example: `5.1.0`)
- * @param excludeOpus Whether to exclude the `opus-java` dependency from JDA (default: `true`)
  * @param group The group of the project (example: `xyz.srnyx`)
  * @param version The version of the project (example: `1.0.0`)
  * @param description The description of the project
  * @param javaVersion The java version of the project (example: [JavaVersion.VERSION_1_8])
  * @param mainClassName The main class name of the project (example: `xyz.srnyx.lazylibrary.LazyLibrary`)
- * @param textEncoding The text encoding for the [text encoding task][setTextEncoding]
+ * @param excludeOpus Whether to exclude the `opus-java` dependency from JDA (default: `true`)
  * @param archiveClassifier The archive classifier for the [shadow jar task][setShadowArchiveClassifier]
+ * @param textEncoding The text encoding for the [text encoding task][setTextEncoding]
  *
  * @return The Lazy Library dependency that was created
  */
@@ -188,17 +188,17 @@ fun Project.setupJda(
 fun Project.setupLazyLibrary(
     lazyLibraryVersion: String,
     jdaVersion: String,
-    excludeOpus: Boolean = true,
     group: String = project.group.toString(),
     version: String = project.version.toString(),
     description: String? = project.description,
     javaVersion: JavaVersion? = null,
     mainClassName: String? = null,
-    textEncoding: String? = "UTF-8",
+    excludeOpus: Boolean = true,
     archiveClassifier: String? = "",
+    textEncoding: String? = "UTF-8",
 ): ExternalModuleDependency {
     check(hasShadowPlugin()) { "Shadow plugin is required for Lazy Library!" }
-    setupJda(jdaVersion, excludeOpus, group, version, description, javaVersion, mainClassName, textEncoding, archiveClassifier)
+    setupJda(jdaVersion, group, version, description, javaVersion, mainClassName, excludeOpus, archiveClassifier, textEncoding)
     return lazyLibrary(lazyLibraryVersion)
 }
 
