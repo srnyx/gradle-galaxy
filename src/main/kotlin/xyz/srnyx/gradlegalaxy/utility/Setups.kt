@@ -122,9 +122,11 @@ fun Project.setupAnnoyingAPI(
  * 2. Calls [setupJava] with the specified parameters
  * 3. Calls [setMainClass] with the specified [mainClassName]
  * 4. Adds the `-parameters` compiler argument using [addCompilerArgs]
- * 5. Calls and returns [jda] with the specified [jdaVersion]
+ * 5. Fixes some tasks to depend on the correct jar tasks
+ * 6. Calls and returns [jda] with the specified [jdaVersion]
  *
  * @param jdaVersion The version of JDA to use (example: `5.1.0`)
+ * @param excludeOpus Whether to exclude the `opus-java` dependency from JDA (default: `true`)
  * @param group The group of the project (example: `xyz.srnyx`)
  * @param version The version of the project (example: `1.0.0`)
  * @param description The description of the project
@@ -171,6 +173,7 @@ fun Project.setupJda(
  *
  * @param lazyLibraryVersion The version of Lazy Library to use (example: `3.1.0`)
  * @param jdaVersion The version of JDA to use (example: `5.1.0`)
+ * @param excludeOpus Whether to exclude the `opus-java` dependency from JDA (default: `true`)
  * @param group The group of the project (example: `xyz.srnyx`)
  * @param version The version of the project (example: `1.0.0`)
  * @param description The description of the project
