@@ -75,7 +75,7 @@ fun Project.setupMC(
     archiveClassifier: String? = "",
     textEncoding: String? = "UTF-8",
 ) {
-    setupJava(group, version, description, javaVersion, textEncoding, archiveClassifier)
+    setupJava(group, version, description, javaVersion, archiveClassifier, textEncoding)
     if (replacementFiles != null && replacements != null) addReplacementsTask(replacementFiles, replacements)
 }
 
@@ -111,7 +111,7 @@ fun Project.setupAnnoyingAPI(
     configurationAction: ExternalModuleDependency.() -> Unit = {},
 ): ExternalModuleDependency {
     check(hasShadowPlugin()) { "Shadow plugin is required for Annoying API!" }
-    setupMC(group, version, description, javaVersion, replacementFiles, replacements, textEncoding, archiveClassifier)
+    setupMC(group, version, description, javaVersion, replacementFiles, replacements, archiveClassifier, textEncoding)
     return annoyingAPI(annoyingAPIVersion, configuration, configurationAction)
 }
 
