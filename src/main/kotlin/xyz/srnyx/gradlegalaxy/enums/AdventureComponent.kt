@@ -14,7 +14,8 @@ fun interface Component {
 /**
  * `adventure-<component>`
  */
-enum class AdventureComponent : Component {
+@Suppress("unused")
+enum class AdventureComponent: Component {
     API,
     NBT,
     KEY,
@@ -26,7 +27,7 @@ enum class AdventureComponent : Component {
     /**
      * `adventure-platform-<component>`
      */
-    enum class Platform : Component {
+    enum class Platform: Component {
         API,
         BUKKIT,
         BUNGEECORD,
@@ -41,7 +42,7 @@ enum class AdventureComponent : Component {
     /**
      * `adventure-extra-<component>`
      */
-    enum class Extra : Component {
+    enum class Extra: Component {
         KOTLIN;
 
         override fun getComponent(): String = "adventure-extra-" + name.lowercase()
@@ -50,7 +51,7 @@ enum class AdventureComponent : Component {
     /**
      * `adventure-text-<component>`
      */
-    enum class Text : Component {
+    enum class Text: Component {
         MINIMESSAGE;
 
         override fun getComponent(): String = "adventure-text-" + name.lowercase()
@@ -58,7 +59,7 @@ enum class AdventureComponent : Component {
         /**
          * `adventure-text-serializer-<component>`
          */
-        enum class Serializer : Component {
+        enum class Serializer: Component {
             LEGACY,
             BUNGEECORD,
             CONFIGURATE3,
@@ -73,7 +74,7 @@ enum class AdventureComponent : Component {
             /**
              * `adventure-text-serializer-<component>-impl`
              */
-            enum class Implementation : Component {
+            enum class Implementation: Component {
                 JSON,
                 GSON;
 
@@ -84,7 +85,7 @@ enum class AdventureComponent : Component {
         /**
          * `adventure-text-logger-<component>`
          */
-        enum class Logger : Component {
+        enum class Logger: Component {
             SLF4J;
 
             override fun getComponent(): String = "adventure-text-logger-" + name.lowercase()

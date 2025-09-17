@@ -1,9 +1,15 @@
 package xyz.srnyx.gradlegalaxy.data.pom
 
+
 /**
  * More information:
  * - [Maven Pom Reference](https://maven.apache.org/pom.html#scm)
  * - [Maven Central SCM Information](https://central.sonatype.org/publish/requirements/#scm-information)
+ *
+ * @property connection This URL gives read access (does not have to be public)
+ * @property developerConnection This URL gives write access (does not have to be public)
+ * @property url This URL gives the browser access to browse the repository (does not have to be public)
+ * @property tag This specifies the tag that this project lives under
  */
 data class ScmData(
     /**

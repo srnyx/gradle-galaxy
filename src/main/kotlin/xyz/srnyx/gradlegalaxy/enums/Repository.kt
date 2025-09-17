@@ -134,6 +134,10 @@ enum class Repository(internal val url: String) {
      * [https://maven.isxander.dev/releases/](https://maven.isxander.dev/releases/)
      */
     ISXANDER("https://maven.isxander.dev/releases/"),
+    /**
+     * [https://maven.dynomake.it/releases/](https://maven.dynomake.it/releases/)
+     */
+    DYNOMAKE("https://maven.dynomake.it/releases/"),
 
     // Keep these at the bottom as they include other dependencies of other repositories
     /**
@@ -165,7 +169,7 @@ fun RepositoryHandler.maven(vararg repositories: Repository): Map<Repository, Ma
  */
 @Ignore
 fun RepositoryHandler.mavenAll(vararg exclude: Repository) {
-    Repository.values().filterNot(exclude::contains).forEach(::mavenQuick)
+    Repository.entries.filterNot(exclude::contains).forEach(::mavenQuick)
 }
 
 @Ignore

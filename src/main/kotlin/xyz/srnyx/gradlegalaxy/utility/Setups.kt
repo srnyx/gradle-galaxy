@@ -1,8 +1,6 @@
 package xyz.srnyx.gradlegalaxy.utility
 
-import org.gradle.api.JavaVersion
 import org.gradle.api.Project
-import org.gradle.api.artifacts.ExternalModuleDependency
 import org.gradle.api.component.SoftwareComponent
 import org.gradle.api.publish.PublishingExtension
 import org.gradle.api.publish.maven.MavenPublication
@@ -12,107 +10,77 @@ import org.gradle.kotlin.dsl.exclude
 import org.gradle.kotlin.dsl.get
 
 import xyz.srnyx.gradlegalaxy.annotations.Ignore
+import xyz.srnyx.gradlegalaxy.data.DependencyConfig
+import xyz.srnyx.gradlegalaxy.data.JavaSetupConfig
+import xyz.srnyx.gradlegalaxy.data.JdaSetupConfig
+import xyz.srnyx.gradlegalaxy.data.MCSetupConfig
 import xyz.srnyx.gradlegalaxy.data.pom.DeveloperData
 import xyz.srnyx.gradlegalaxy.data.pom.LicenseData
 import xyz.srnyx.gradlegalaxy.data.pom.ScmData
 
 
 /**
- * Sets up the project with the specified [group] and [version] for a simple Java project
+ * Sets up the project for a simple Java project
  *
- * Calls [setJavaVersion], [setTextEncoding], and [addReplacementsTask]
+ * 1. Sets up the project with the specified `group` and `version` for a simple Java project
+ * 2. Calls [setJavaVersion], [setTextEncoding], and [addReplacementsTask]
+ * 3. If the [shadow plugin is applied][hasShadowPlugin], it will also call [setShadowArchiveClassifier] and [addJavadocSourcesJars]
  *
- * If the [shadow plugin is applied][hasShadowPlugin], it will also call [setShadowArchiveClassifier] and [addJavadocSourcesJars]
- *
- * @param group The group of the project (example: `xyz.srnyx`)
- * @param version The version of the project (example: `1.0.0`)
- * @param description The description of the project
- * @param javaVersion The java version of the project (example: [JavaVersion.VERSION_1_8])
- * @param archiveClassifier The archive classifier for the [shadow jar][setShadowArchiveClassifier]
- * @param textEncoding The text encoding for the [text encoding task][setTextEncoding]
+ * @param config The configuration for setting up Java
  */
 @Ignore
 fun Project.setupJava(
-    group: String = project.group.toString(),
-    version: String = project.version.toString(),
-    description: String? = project.description,
-    javaVersion: JavaVersion? = null,
-    archiveClassifier: String? = "",
-    textEncoding: String? = "UTF-8",
+    config: JavaSetupConfig = JavaSetupConfig(),
 ) {
-    this.group = group
-    this.version = version
-    this.description = description
-    javaVersion?.let(::setJavaVersion)
-    textEncoding?.let(::setTextEncoding)
+    this.group = config.group ?: this.group
+    this.version = config.version ?: this.version
+    this.description = config.description ?: this.description
+    config.javaVersion?.let(::setJavaVersion)
+    config.textEncoding?.let(::setTextEncoding)
     if (hasShadowPlugin()) {
-        archiveClassifier?.let(::setShadowArchiveClassifier)
-        addBuildShadowTask()
+        config.archiveClassifier?.let(::setShadowArchiveClassifier)
+        addJavadocSourcesJars()
     }
 }
 
 /**
- * Sets up the project with the specified [group] and [version] for a simple Minecraft project
+ * Sets up the project for Minecraft development
  *
- * Calls [setupJava] and [addReplacementsTask] with the specified parameters
+ * 1. Calls [setupJava] with the specified parameters
+ * 2. Calls [addReplacementsTask] with the specified parameters
  *
- * @param group The group of the project (example: `xyz.srnyx`)
- * @param version The version of the project (example: `1.0.0`)
- * @param description The description of the project
- * @param javaVersion The java version of the project (example: [JavaVersion.VERSION_1_8])
- * @param replacements The replacements for the [replacements task][addReplacementsTask]
- * @param archiveClassifier The archive classifier for the [shadow jar task][setShadowArchiveClassifier]
- * @param textEncoding The text encoding for the [text encoding task][setTextEncoding]
+ * @param javaSetupConfig The configuration for [setupJava]
+ * @param mcSetupConfig The configuration for Minecraft setup
  */
 @Ignore
 fun Project.setupMC(
-    group: String = project.group.toString(),
-    version: String = project.version.toString(),
-    description: String? = project.description,
-    javaVersion: JavaVersion? = null,
-    replacementFiles: Set<String>? = setOf("plugin.yml"),
-    replacements: Map<String, String>? = mapOf("defaultReplacements" to "true"),
-    archiveClassifier: String? = "",
-    textEncoding: String? = "UTF-8",
+    javaSetupConfig: JavaSetupConfig = JavaSetupConfig(),
+    mcSetupConfig: MCSetupConfig = MCSetupConfig(),
 ) {
-    setupJava(group, version, description, javaVersion, archiveClassifier, textEncoding)
-    if (replacementFiles != null && replacements != null) addReplacementsTask(replacementFiles, replacements)
+    setupJava(javaSetupConfig)
+    if (mcSetupConfig.replacementFiles != null && mcSetupConfig.replacements != null) addReplacementsTask(mcSetupConfig.replacementFiles, mcSetupConfig.replacements)
 }
 
 /**
- * Sets up the project using Annoying API. **The [root project's name][Project.getName] must be the same as the one in plugin.yml**
+ * Sets up the project using Annoying API. **The [root project's name][Project.getName] must be the same as the one in plugin.yml!**
  *
  * 1. Checks if the Shadow plugin is applied
  * 2. Calls [setupMC] with the specified parameters
- * 3. Calls and returns [annoyingAPI] with the specified parameters
+ * 3. Calls [annoyingAPI] with the specified parameters
  *
- * @param annoyingAPIVersion The version of Annoying API to use (example: `3.0.1`)
- * @param group The group of the project (example: `xyz.srnyx`)
- * @param version The version of the project (example: `1.0.0`)
- * @param description The description of the project
- * @param javaVersion The java version of the project (example: [JavaVersion.VERSION_1_8])
- * @param replacements The replacements for the [replacements task][addReplacementsTask]
- * @param archiveClassifier The archive classifier for the [shadow jar task][setShadowArchiveClassifier]
- * @param textEncoding The text encoding for the [text encoding task][setTextEncoding]
- * @param configurationAction The configuration for the Annoying API dependency
+ * @param javaSetupConfig The configuration for [setupJava]
+ * @param mcSetupConfig The configuration for [setupMC]
+ * @param annoyingAPIConfig The configuration for [annoyingAPI]
  */
 @Ignore
 fun Project.setupAnnoyingAPI(
-    annoyingAPIVersion: String,
-    group: String = project.group.toString(),
-    version: String = project.version.toString(),
-    description: String? = project.description,
-    javaVersion: JavaVersion? = null,
-    replacementFiles: Set<String>? = setOf("plugin.yml"),
-    replacements: Map<String, String>? = mapOf("defaultReplacements" to "true"),
-    textEncoding: String? = "UTF-8",
-    archiveClassifier: String? = "",
-    configuration: String = "implementation",
-    configurationAction: ExternalModuleDependency.() -> Unit = {},
-): ExternalModuleDependency {
+    javaSetupConfig: JavaSetupConfig = JavaSetupConfig(),
+    mcSetupConfig: MCSetupConfig = MCSetupConfig(),
+    annoyingAPIConfig: DependencyConfig,
+) {
     check(hasShadowPlugin()) { "Shadow plugin is required for Annoying API!" }
-    setupMC(group, version, description, javaVersion, replacementFiles, replacements, archiveClassifier, textEncoding)
-    return annoyingAPI(annoyingAPIVersion, configuration, configurationAction)
+    setupMC(javaSetupConfig, mcSetupConfig)
+    annoyingAPI(annoyingAPIConfig)
 }
 
 /**
@@ -120,48 +88,40 @@ fun Project.setupAnnoyingAPI(
  *
  * 1. Checks if the Shadow plugin is applied
  * 2. Calls [setupJava] with the specified parameters
- * 3. Calls [setMainClass] with the specified [mainClassName]
+ * 3. Calls [setMainClass] with the specified main class name
  * 4. Adds the `-parameters` compiler argument using [addCompilerArgs]
- * 5. Fixes some tasks to depend on the correct jar tasks
- * 6. Calls and returns [jda] with the specified [jdaVersion]
+ * 5. Calls [jda] (excluding `opus-java` if specified)
+ * 6. Fixes some tasks to depend on the correct jar tasks
  *
- * @param jdaVersion The version of JDA to use (example: `5.1.0`)
- * @param group The group of the project (example: `xyz.srnyx`)
- * @param version The version of the project (example: `1.0.0`)
- * @param description The description of the project
- * @param javaVersion The java version of the project (example: [JavaVersion.VERSION_1_8])
- * @param mainClassName The main class name of the project (example: `xyz.srnyx.lazylibrary.LazyLibrary`)
- * @param excludeOpus Whether to exclude the `opus-java` dependency from JDA (default: `true`)
- * @param archiveClassifier The archive classifier for the [shadow jar task][setShadowArchiveClassifier]
- * @param textEncoding The text encoding for the [text encoding task][setTextEncoding]
- *
- * @return The JDA dependency that was created
+ * @param javaSetupConfig The configuration for [setupJava]
+ * @param jdaSetupConfig The configuration for JDA setup
+ * @param jdaConfig The configuration for [jda]
  */
 fun Project.setupJda(
-    jdaVersion: String,
-    group: String = project.group.toString(),
-    version: String = project.version.toString(),
-    description: String? = project.description,
-    javaVersion: JavaVersion? = null,
-    mainClassName: String? = null,
-    excludeOpus: Boolean = true,
-    archiveClassifier: String? = "",
-    textEncoding: String? = "UTF-8",
-): ExternalModuleDependency {
+    javaSetupConfig: JavaSetupConfig = JavaSetupConfig(),
+    jdaSetupConfig: JdaSetupConfig = JdaSetupConfig(),
+    jdaConfig: DependencyConfig,
+) {
     check(hasShadowPlugin()) { "Shadow plugin is required for JDA!" }
-    setupJava(group, version, description, javaVersion, archiveClassifier, textEncoding)
-    setMainClass(mainClassName)
+    setupJava(javaSetupConfig)
+    setMainClass(jdaSetupConfig.mainClassName)
     addCompilerArgs("-parameters")
+    jda(jdaConfig)
+
+    // Exclude opus-java if needed
+    if (jdaSetupConfig.excludeOpus) {
+        val original = jdaConfig.configurationAction
+        jdaConfig.configurationAction = {
+            exclude(module = "opus-java")
+            original()
+        }
+    }
 
     // Fix some tasks
     tasks["distZip"].dependsOn("shadowJar")
     tasks["distTar"].dependsOn("shadowJar")
     tasks["startScripts"].dependsOn("shadowJar")
     tasks["startShadowScripts"].dependsOn("jar")
-
-    return jda(jdaVersion) {
-        if (excludeOpus) exclude(module = "opus-java")
-    }
 }
 
 /**
@@ -169,37 +129,23 @@ fun Project.setupJda(
  *
  * 1. Checks if the Shadow plugin is applied
  * 2. Calls [setupJda] with the specified parameters
- * 3. Calls and returns [lazyLibrary] with the specified [lazyLibraryVersion]
+ * 3. Calls [lazyLibrary] with the specified parameters
  *
- * @param lazyLibraryVersion The version of Lazy Library to use (example: `3.1.0`)
- * @param jdaVersion The version of JDA to use (example: `5.1.0`)
- * @param group The group of the project (example: `xyz.srnyx`)
- * @param version The version of the project (example: `1.0.0`)
- * @param description The description of the project
- * @param javaVersion The java version of the project (example: [JavaVersion.VERSION_1_8])
- * @param mainClassName The main class name of the project (example: `xyz.srnyx.lazylibrary.LazyLibrary`)
- * @param excludeOpus Whether to exclude the `opus-java` dependency from JDA (default: `true`)
- * @param archiveClassifier The archive classifier for the [shadow jar task][setShadowArchiveClassifier]
- * @param textEncoding The text encoding for the [text encoding task][setTextEncoding]
- *
- * @return The Lazy Library dependency that was created
+ * @param javaSetupConfig The configuration for [setupJava]
+ * @param jdaSetupConfig The configuration for JDA setup
+ * @param jdaConfig The configuration for [jda]
+ * @param lazyLibraryConfig The configuration for [lazyLibrary]
  */
 @Ignore
 fun Project.setupLazyLibrary(
-    lazyLibraryVersion: String,
-    jdaVersion: String,
-    group: String = project.group.toString(),
-    version: String = project.version.toString(),
-    description: String? = project.description,
-    javaVersion: JavaVersion? = null,
-    mainClassName: String? = null,
-    excludeOpus: Boolean = true,
-    archiveClassifier: String? = "",
-    textEncoding: String? = "UTF-8",
-): ExternalModuleDependency {
+    javaSetupConfig: JavaSetupConfig = JavaSetupConfig(),
+    jdaSetupConfig: JdaSetupConfig = JdaSetupConfig(),
+    jdaConfig: DependencyConfig,
+    lazyLibraryConfig: DependencyConfig,
+) {
     check(hasShadowPlugin()) { "Shadow plugin is required for Lazy Library!" }
-    setupJda(jdaVersion, group, version, description, javaVersion, mainClassName, excludeOpus, archiveClassifier, textEncoding)
-    return lazyLibrary(lazyLibraryVersion)
+    setupJda(javaSetupConfig, jdaSetupConfig, jdaConfig)
+    lazyLibrary(lazyLibraryConfig)
 }
 
 /**

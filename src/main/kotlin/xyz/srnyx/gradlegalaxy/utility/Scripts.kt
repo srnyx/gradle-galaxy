@@ -86,7 +86,7 @@ fun hasApplicationPlugin(): Boolean {
     return try {
         Class.forName("org.gradle.api.plugins.ApplicationPlugin")
         true
-    } catch (e: ClassNotFoundException) {
+    } catch (_: ClassNotFoundException) {
         false
     }
 }
@@ -151,6 +151,7 @@ fun Project.setShadowArchiveClassifier(classifier: String = "") {
 /**
  * Adds the task that makes `gradle build` run `gradle shadowJar`
  */
+@Ignore
 fun Project.addBuildShadowTask() {
     check(hasShadowPlugin()) { "Shadow plugin is not applied!" }
     tasks.named<DefaultTask>("build") { dependsOn("shadowJar") }

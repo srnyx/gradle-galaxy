@@ -1,5 +1,6 @@
 package xyz.srnyx.gradlegalaxy.annotations
 
+
 /**
  * Lets the IDE know that whatever this annotation is applied to is going to be used
  */

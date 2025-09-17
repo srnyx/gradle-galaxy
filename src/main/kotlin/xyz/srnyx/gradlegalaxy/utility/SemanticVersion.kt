@@ -29,7 +29,7 @@ class SemanticVersion(version: String) : Comparable<SemanticVersion> {
             major = versionSplit[0].toInt()
             minor = versionSplit[1].toInt()
             patch = versionSplit.getOrElse(2) { "0" }.toInt()
-        } catch (e: NumberFormatException) {
+        } catch (_: NumberFormatException) {
             throw IllegalArgumentException("Failed to parse Minecraft version (invalid values): $version")
         }
     }
