@@ -1,5 +1,6 @@
 package xyz.srnyx.gradlegalaxy.data
 
+import xyz.srnyx.gradlegalaxy.data.config.DependencyConfig
 import xyz.srnyx.gradlegalaxy.enums.Component
 
 

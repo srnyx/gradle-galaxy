@@ -1,4 +1,4 @@
-package xyz.srnyx.gradlegalaxy.data
+package xyz.srnyx.gradlegalaxy.data.config
 
 import xyz.srnyx.gradlegalaxy.utility.addReplacementsTask
 import xyz.srnyx.gradlegalaxy.utility.setupMC

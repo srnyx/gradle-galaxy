@@ -9,7 +9,7 @@ import org.gradle.kotlin.dsl.exclude
 
 import xyz.srnyx.gradlegalaxy.annotations.Ignore
 import xyz.srnyx.gradlegalaxy.data.AdventureDependency
-import xyz.srnyx.gradlegalaxy.data.DependencyConfig
+import xyz.srnyx.gradlegalaxy.data.config.DependencyConfig
 import xyz.srnyx.gradlegalaxy.enums.PaperVersion
 import xyz.srnyx.gradlegalaxy.enums.Repository
 import xyz.srnyx.gradlegalaxy.enums.repository

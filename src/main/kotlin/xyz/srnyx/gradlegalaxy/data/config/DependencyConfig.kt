@@ -1,4 +1,4 @@
-package xyz.srnyx.gradlegalaxy.data
+package xyz.srnyx.gradlegalaxy.data.config
 
 import org.gradle.api.artifacts.ExternalModuleDependency
 

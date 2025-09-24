@@ -10,10 +10,10 @@ import org.gradle.kotlin.dsl.exclude
 import org.gradle.kotlin.dsl.get
 
 import xyz.srnyx.gradlegalaxy.annotations.Ignore
-import xyz.srnyx.gradlegalaxy.data.DependencyConfig
-import xyz.srnyx.gradlegalaxy.data.JavaSetupConfig
-import xyz.srnyx.gradlegalaxy.data.JdaSetupConfig
-import xyz.srnyx.gradlegalaxy.data.MCSetupConfig
+import xyz.srnyx.gradlegalaxy.data.config.DependencyConfig
+import xyz.srnyx.gradlegalaxy.data.config.JavaSetupConfig
+import xyz.srnyx.gradlegalaxy.data.config.JdaSetupConfig
+import xyz.srnyx.gradlegalaxy.data.config.MCSetupConfig
 import xyz.srnyx.gradlegalaxy.data.pom.DeveloperData
 import xyz.srnyx.gradlegalaxy.data.pom.LicenseData
 import xyz.srnyx.gradlegalaxy.data.pom.ScmData
