@@ -8,7 +8,7 @@ plugins {
 }
 
 group = "xyz.srnyx"
-version = "2.0.0"
+version = "2.0.1"
 description = "A Gradle plugin to simplify the process of creating projects"
 val projectId: String = "gradle-galaxy"
 val vcs: String = "github.com/srnyx/$projectId"
