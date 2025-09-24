@@ -39,7 +39,7 @@ fun Project.setupJava(
     config.textEncoding?.let(::setTextEncoding)
     if (hasShadowPlugin()) {
         config.archiveClassifier?.let(::setShadowArchiveClassifier)
-        addJavadocSourcesJars()
+        addBuildShadowTask()
     }
 }
 
