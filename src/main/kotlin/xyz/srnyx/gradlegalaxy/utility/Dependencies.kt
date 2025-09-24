@@ -10,6 +10,7 @@ import org.gradle.kotlin.dsl.exclude
 import xyz.srnyx.gradlegalaxy.annotations.Ignore
 import xyz.srnyx.gradlegalaxy.data.AdventureDependency
 import xyz.srnyx.gradlegalaxy.data.config.DependencyConfig
+import xyz.srnyx.gradlegalaxy.data.config.SpigotConfig
 import xyz.srnyx.gradlegalaxy.enums.PaperVersion
 import xyz.srnyx.gradlegalaxy.enums.Repository
 import xyz.srnyx.gradlegalaxy.enums.repository
@@ -24,9 +25,12 @@ import xyz.srnyx.gradlegalaxy.enums.repository
  * @param config The configuration for the Spigot-API dependency
  */
 @Ignore
-fun Project.spigotAPI(config: DependencyConfig): ExternalModuleDependency {
+fun Project.spigotAPI(
+    config: DependencyConfig,
+    spigotConfig: SpigotConfig,
+): ExternalModuleDependency {
     check(hasJavaPlugin()) { "Java plugin is not applied!" }
-    setJavaVersion(getJavaVersionForMC(config.version))
+    if (spigotConfig.setJavaVersion) setJavaVersion(getJavaVersionForMC(config.version))
     val semanticVersion = SemanticVersion(config.version)
     if (semanticVersion.major <= 1 && semanticVersion.minor <= 15) repository(Repository.SONATYPE_SNAPSHOTS_OLD)
     repository(Repository.MAVEN_CENTRAL, Repository.SPIGOT)
@@ -40,9 +44,12 @@ fun Project.spigotAPI(config: DependencyConfig): ExternalModuleDependency {
  * @param config The configuration for the Spigot dependency
  */
 @Ignore
-fun Project.spigotNMS(config: DependencyConfig): ExternalModuleDependency {
+fun Project.spigotNMS(
+    config: DependencyConfig,
+    spigotConfig: SpigotConfig,
+): ExternalModuleDependency {
     check(hasJavaPlugin()) { "Java plugin is not applied!" }
-    setJavaVersion(getJavaVersionForMC(config.version))
+    if (spigotConfig.setJavaVersion) setJavaVersion(getJavaVersionForMC(config.version))
     repository(Repository.MAVEN_CENTRAL, Repository.SPIGOT)
     repositories.mavenLocal()
     return addDependencyTo(dependencies, config.configuration ?: "compileOnly", "org.spigotmc:spigot:${getVersionString(config.version)}", config.configurationAction)
@@ -55,9 +62,12 @@ fun Project.spigotNMS(config: DependencyConfig): ExternalModuleDependency {
  * @param config The configuration for the Paper dependency
  */
 @Ignore
-fun Project.paper(config: DependencyConfig): ExternalModuleDependency {
+fun Project.paper(
+    config: DependencyConfig,
+    spigotConfig: SpigotConfig,
+): ExternalModuleDependency {
     check(hasJavaPlugin()) { "Java plugin is not applied!" }
-    setJavaVersion(getJavaVersionForMC(config.version))
+    if (spigotConfig.setJavaVersion) setJavaVersion(getJavaVersionForMC(config.version))
     repository(Repository.MAVEN_CENTRAL, Repository.SONATYPE_SNAPSHOTS_OLD, Repository.PAPER)
     val paperVersion: PaperVersion = PaperVersion.parse(config.version)
     return addDependencyTo(dependencies, config.configuration ?: "compileOnly", "${paperVersion.groupId}:${paperVersion.artifactId}:${getVersionString(config.version)}", config.configurationAction)
