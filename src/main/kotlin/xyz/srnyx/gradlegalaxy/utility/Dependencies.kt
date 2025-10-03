@@ -33,7 +33,7 @@ fun Project.spigotAPI(
     if (spigotConfig.setJavaVersion) setJavaVersion(getJavaVersionForMC(config.version))
     val semanticVersion = SemanticVersion(config.version)
     if (semanticVersion.major <= 1 && semanticVersion.minor <= 15) repository(Repository.SONATYPE_SNAPSHOTS_OLD)
-    repository(Repository.MAVEN_CENTRAL, Repository.SPIGOT)
+    repository(Repository.MAVEN_CENTRAL, Repository.SPIGOT, Repository.SPIGOT_SNAPSHOTS)
     return addDependencyTo(dependencies, config.configuration ?: "compileOnly", "org.spigotmc:spigot-api:${getVersionString(config.version)}", config.configurationAction)
 }
 
@@ -50,7 +50,7 @@ fun Project.spigotNMS(
 ): ExternalModuleDependency {
     check(hasJavaPlugin()) { "Java plugin is not applied!" }
     if (spigotConfig.setJavaVersion) setJavaVersion(getJavaVersionForMC(config.version))
-    repository(Repository.MAVEN_CENTRAL, Repository.SPIGOT)
+    repository(Repository.MAVEN_CENTRAL, Repository.SPIGOT, Repository.SPIGOT_SNAPSHOTS)
     repositories.mavenLocal()
     return addDependencyTo(dependencies, config.configuration ?: "compileOnly", "org.spigotmc:spigot:${getVersionString(config.version)}", config.configurationAction)
 }
