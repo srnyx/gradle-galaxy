@@ -27,7 +27,7 @@ import xyz.srnyx.gradlegalaxy.enums.repository
 @Ignore
 fun Project.spigotAPI(
     config: DependencyConfig,
-    spigotConfig: SpigotConfig,
+    spigotConfig: SpigotConfig = SpigotConfig(),
 ): ExternalModuleDependency {
     check(hasJavaPlugin()) { "Java plugin is not applied!" }
     if (spigotConfig.setJavaVersion) setJavaVersion(getJavaVersionForMC(config.version))
@@ -46,7 +46,7 @@ fun Project.spigotAPI(
 @Ignore
 fun Project.spigotNMS(
     config: DependencyConfig,
-    spigotConfig: SpigotConfig,
+    spigotConfig: SpigotConfig = SpigotConfig(),
 ): ExternalModuleDependency {
     check(hasJavaPlugin()) { "Java plugin is not applied!" }
     if (spigotConfig.setJavaVersion) setJavaVersion(getJavaVersionForMC(config.version))
@@ -64,7 +64,7 @@ fun Project.spigotNMS(
 @Ignore
 fun Project.paper(
     config: DependencyConfig,
-    spigotConfig: SpigotConfig,
+    spigotConfig: SpigotConfig = SpigotConfig(),
 ): ExternalModuleDependency {
     check(hasJavaPlugin()) { "Java plugin is not applied!" }
     if (spigotConfig.setJavaVersion) setJavaVersion(getJavaVersionForMC(config.version))
