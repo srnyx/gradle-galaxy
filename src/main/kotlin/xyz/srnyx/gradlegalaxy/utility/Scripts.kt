@@ -9,6 +9,7 @@ import org.gradle.api.Project
 import org.gradle.api.UnknownDomainObjectException
 import org.gradle.api.plugins.JavaApplication
 import org.gradle.api.plugins.JavaPluginExtension
+import org.gradle.api.publish.PublishingExtension
 import org.gradle.api.tasks.Copy
 import org.gradle.api.tasks.compile.JavaCompile
 import org.gradle.api.tasks.bundling.Jar
@@ -30,6 +31,13 @@ var hasJavaPlugin: Boolean? = null
  * This is for caching, use [hasShadowPlugin] instead
  */
 var hasShadowPlugin: Boolean? = null
+
+/**
+ * Whether the Publish plugin is applied
+ *
+ * This is for caching, use [hasPublishPlugin] instead
+ */
+var hasPublishPlugin: Boolean? = null
 
 /**
  * Makes the given package path safe to use
@@ -56,7 +64,7 @@ fun Project.hasJavaPlugin(): Boolean {
     if (hasJavaPlugin == null) hasJavaPlugin = try {
         extensions["java"]
         true
-    } catch (e: UnknownDomainObjectException) {
+    } catch (_: UnknownDomainObjectException) {
         false
     }
     return hasJavaPlugin!!
@@ -71,10 +79,20 @@ fun hasShadowPlugin(): Boolean {
     if (hasShadowPlugin == null) hasShadowPlugin = try {
         Class.forName("com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar")
         true
-    } catch (e: ClassNotFoundException) {
+    } catch (_: ClassNotFoundException) {
         false
     }
     return hasShadowPlugin!!
+}
+
+fun Project.hasPublishPlugin(): Boolean {
+    if (hasPublishPlugin == null) hasPublishPlugin = try {
+        extensions["publishing"]
+        true
+    } catch (_: UnknownDomainObjectException) {
+        false
+    }
+    return hasPublishPlugin!!
 }
 
 /**
@@ -101,6 +119,11 @@ fun Project.getJavaExtension(): JavaPluginExtension {
     return extensions["java"] as JavaPluginExtension
 }
 
+fun Project.getPublishing(): PublishingExtension {
+    check(hasPublishPlugin()) { "Publish plugin is not applied!" }
+    return extensions["publishing"] as PublishingExtension
+}
+
 /**
  * Returns the default replacements map for [addReplacementsTask]
  *
@@ -115,6 +138,15 @@ fun Project.getDefaultReplacements(): Map<String, String> = mapOf(
     "description" to description.toString(),
     "mainPackage" to getPackage(),
 )
+
+/**
+ * Gets the environment variable with the specified name
+ *
+ * @param name The name of the environment variable
+ *
+ * @return The value of the environment variable, or `null` if it is not set or is blank
+ */
+fun getEnvironmentVariable(name: String): String? = System.getenv(name).takeIf { it.isNotBlank() }
 
 /**
  * Sets the text encoding for the project

@@ -19,7 +19,7 @@ data class ScmData(
      *
      * *More information can be found in the docs of this class*
      */
-    val connection: String,
+    var connection: String,
     /**
      * This URL gives write access (does not have to be public)
      *
@@ -29,7 +29,7 @@ data class ScmData(
      *
      * *More information can be found in the docs of this class*
      */
-    val developerConnection: String,
+    var developerConnection: String,
     /**
      * This URL gives the browser access to browse the repository (does not have to be public)
      *
@@ -37,7 +37,7 @@ data class ScmData(
      *
      * *More information can be found in the docs of this class*
      */
-    val url: String? = null,
+    var url: String? = null,
     /**
      * This specifies the tag that this project lives under
      *
@@ -45,5 +45,5 @@ data class ScmData(
      *
      * *More information can be found in the docs of this class*
      */
-    val tag: String? = null,
+    var tag: String? = null,
 )

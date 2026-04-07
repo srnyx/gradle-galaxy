@@ -1,8 +1,6 @@
 package xyz.srnyx.gradlegalaxy.utility
 
 import org.gradle.api.Project
-import org.gradle.api.component.SoftwareComponent
-import org.gradle.api.publish.PublishingExtension
 import org.gradle.api.publish.maven.MavenPublication
 import org.gradle.kotlin.dsl.apply
 import org.gradle.kotlin.dsl.create
@@ -14,9 +12,11 @@ import xyz.srnyx.gradlegalaxy.data.config.DependencyConfig
 import xyz.srnyx.gradlegalaxy.data.config.JavaSetupConfig
 import xyz.srnyx.gradlegalaxy.data.config.JdaSetupConfig
 import xyz.srnyx.gradlegalaxy.data.config.MCSetupConfig
+import xyz.srnyx.gradlegalaxy.data.config.PublishingEnvConfig
+import xyz.srnyx.gradlegalaxy.data.config.PublishingSimpleConfig
 import xyz.srnyx.gradlegalaxy.data.pom.DeveloperData
-import xyz.srnyx.gradlegalaxy.data.pom.LicenseData
-import xyz.srnyx.gradlegalaxy.data.pom.ScmData
+
+import kotlin.String
 
 
 /**
@@ -152,54 +152,32 @@ fun Project.setupLazyLibrary(
  * Sets up a simple publishing configuration
  *
  * 1. Applies the `maven-publish` plugin
- * 2. Creates a [MavenPublication] with the specified parameters
- * 3. Configures the [MavenPublication] with the specified [configuration]
+ * 2. If `withJavadocSourcesJars` is true: call [addJavadocSourcesJars]
+ * 3. Creates a [MavenPublication] with the specified [config]
  *
- * @param groupId The group ID
- * @param artifactId The artifact ID
- * @param version The version
- * @param component The [SoftwareComponent] to publish
- * @param artifacts The artifacts to publish
- * @param name The name of the project
- * @param description The description of the project
- * @param url The URL of the project
- * @param licenses The licenses of the project
- * @param developers The developers of the project
- * @param scm The SCM information of the project
- * @param configuration The configuration of the [MavenPublication]
+ * @param config The configuration for setting up publishing
  *
  * @return The [MavenPublication] that was created
  */
 @Ignore
-inline fun Project.setupPublishing(
-    groupId: String? = null,
-    artifactId: String? = null,
-    version: String? = null,
-    withJavadocSourcesJars: Boolean = true,
-    component: SoftwareComponent? = components["java"],
-    artifacts: Collection<Any> = emptyList(),
-    name: String? = project.name,
-    description: String? = project.description,
-    url: String? = null,
-    licenses: List<LicenseData> = emptyList(),
-    developers: List<DeveloperData> = emptyList(),
-    scm: ScmData? = null,
-    crossinline configuration: MavenPublication.() -> Unit = {}
+fun Project.setupPublishingSimple(
+    config: PublishingSimpleConfig = PublishingSimpleConfig(this),
 ): MavenPublication {
     apply(plugin = "maven-publish")
-    if (withJavadocSourcesJars) addJavadocSourcesJars()
-    return (extensions["publishing"] as PublishingExtension).publications.create<MavenPublication>("maven") {
-        groupId?.let { this.groupId = it }
-        artifactId?.let { this.artifactId = it }
-        version?.let { this.version = it }
-        component?.let { this.from(component) }
-        artifacts.forEach(this::artifact)
+    if (config.withJavadocSourcesJars) addJavadocSourcesJars()
+
+    val publication: MavenPublication = getPublishing().publications.create<MavenPublication>("maven") {
+        config.groupId?.let { this.groupId = it }
+        config.artifactId?.let { this.artifactId = it }
+        config.version?.let { this.version = it }
+        config.component?.let { this.from(config.component) }
+        config.artifacts.forEach(this::artifact)
         pom {
-            name?.let(this.name::set)
-            description?.let(this.description::set)
-            url?.let(this.url::set)
+            config.name?.let(this.name::set)
+            config.description?.let(this.description::set)
+            config.url?.let(this.url::set)
             licenses {
-                licenses.forEach {
+                config.licenses.forEach {
                     license {
                         this.name.set(it.name)
                         this.url.set(it.url)
@@ -209,7 +187,7 @@ inline fun Project.setupPublishing(
                 }
             }
             developers {
-                developers.filterNot(DeveloperData::isEmpty).forEach {
+                config.developers.filterNot(DeveloperData::isEmpty).forEach {
                     developer {
                         it.id?.let(this.id::set)
                         it.name?.let(this.name::set)
@@ -223,13 +201,55 @@ inline fun Project.setupPublishing(
                     }
                 }
             }
-            if (scm != null) scm {
-                connection.set(scm.connection)
-                developerConnection.set(scm.developerConnection)
-                scm.url?.let(this.url::set)
-                scm.tag?.let(this.tag::set)
+            if (config.scm != null) scm {
+                connection.set(config.scm.connection)
+                developerConnection.set(config.scm.developerConnection)
+                config.scm.url?.let(this.url::set)
+                config.scm.tag?.let(this.tag::set)
             }
         }
-        configuration()
     }
+
+    config.configuration(publication)
+    return publication
+}
+
+/**
+ * Sets up a bit more advanced publishing configuration using environment variables and a custom repository
+ *
+ * 1. Applies the `maven-publish` plugin
+ * 2. Creates a repository with the specified maven URL and credential environment variables
+ * 3. Updates the version using the specified environment variables or the default version
+ * 4. Calls [setupPublishingSimple] with the specified parameters
+ *
+ * @param simpleConfig The configuration for setting up publishing using a simple configuration
+ * @param envConfig The configuration for setting up publishing using environment variables
+ *
+ * @return The [MavenPublication] that was created
+ */
+@Ignore
+fun Project.setupPublishingEnv(
+    simpleConfig: PublishingSimpleConfig = PublishingSimpleConfig(this),
+    envConfig: PublishingEnvConfig = PublishingEnvConfig(),
+): MavenPublication {
+    apply(plugin = "maven-publish")
+
+    // Create repository
+    val resolvedMavenUrl = envConfig.mavenUrl ?: getEnvironmentVariable(envConfig.mavenUrlEnv)
+    if (resolvedMavenUrl != null) getPublishing().repositories.maven {
+        url = uri(resolvedMavenUrl)
+
+        val usernameEnv = getEnvironmentVariable(envConfig.usernameEnv)
+        val passwordEnv = getEnvironmentVariable(envConfig.passwordEnv)
+        if (usernameEnv != null || passwordEnv != null) credentials {
+            if (usernameEnv != null) username = usernameEnv
+            if (passwordEnv != null) password = passwordEnv
+        }
+    }
+
+    // Set version
+    if (simpleConfig.version == null) simpleConfig.version = getEnvironmentVariable(envConfig.versionEnv) ?: envConfig.defaultVersion
+
+    // Create publication
+    return setupPublishingSimple(simpleConfig)
 }
