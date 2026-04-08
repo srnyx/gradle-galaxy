@@ -146,7 +146,7 @@ fun Project.getDefaultReplacements(): Map<String, String> = mapOf(
  *
  * @return The value of the environment variable, or `null` if it is not set or is blank
  */
-fun getEnvironmentVariable(name: String): String? = System.getenv(name).takeIf { it.isNotBlank() }
+fun getEnvironmentVariable(name: String): String? = System.getenv(name)?.takeIf { it.isNotBlank() }
 
 /**
  * Sets the text encoding for the project
