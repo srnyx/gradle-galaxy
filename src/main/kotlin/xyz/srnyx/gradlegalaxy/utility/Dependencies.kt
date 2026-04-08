@@ -88,7 +88,7 @@ fun Project.adventure(vararg dependencies: AdventureDependency, configurationAll
 }
 
 /**
- * 1. Adds the [Repository.SRNYX] and [Repository.ALESSIO_DP] (for Libby) repositories
+ * 1. Adds srnyx's repository and [Repository.ALESSIO_DP] (for Libby) repositories
  * 2. Relocates runtime packages
  * 3. Adds the dependency to the provided Annoying API version (excluding Libby and Java Utilities)
  *
@@ -97,7 +97,7 @@ fun Project.adventure(vararg dependencies: AdventureDependency, configurationAll
 fun Project.annoyingAPI(config: DependencyConfig): ExternalModuleDependency {
     check(hasJavaPlugin()) { "Java plugin is not applied!" }
     check(hasShadowPlugin()) { "Shadow plugin is not applied!" }
-    repository(Repository.SRNYX, Repository.ALESSIO_DP)
+    repository(Repository.SRNYX_RELEASES, Repository.SRNYX_SNAPSHOTS, Repository.ALESSIO_DP)
 
     // Runtime dependencies
     relocate("xyz.srnyx.annoyingapi")
@@ -126,19 +126,19 @@ fun Project.jda(config: DependencyConfig): ExternalModuleDependency {
 }
 
 /**
- * 1. Adds the [Repository.SRNYX] repository
+ * 1. Adds srnyx's repository
  * 2. Adds the dependency to the provided Lazy Library version
  *
  * @param config The configuration for the Lazy Library dependency
  */
 fun Project.lazyLibrary(config: DependencyConfig): ExternalModuleDependency {
     check(hasJavaPlugin()) { "Java plugin is not applied!" }
-    repository(Repository.SRNYX)
+    repository(Repository.SRNYX_RELEASES, Repository.SRNYX_SNAPSHOTS)
     return addDependencyTo(dependencies, config.configuration ?: "implementation", "xyz.srnyx:lazy-library:${config.version}", config.configurationAction)
 }
 
 /**
- * 1. Adds the [Repository.SRNYX] repository
+ * 1. Adds srnyx's repository
  * 2. Adds the dependency to the provided Magic Mongo version
  *
  * @param config The configuration for the Magic Mongo dependency
@@ -146,7 +146,7 @@ fun Project.lazyLibrary(config: DependencyConfig): ExternalModuleDependency {
 @Ignore
 fun Project.magicMongo(config: DependencyConfig): ExternalModuleDependency {
     check(hasJavaPlugin()) { "Java plugin is not applied!" }
-    repository(Repository.SRNYX)
+    repository(Repository.SRNYX_RELEASES, Repository.SRNYX_SNAPSHOTS)
     return addDependencyTo(dependencies, config.configuration ?: "implementation", "com.github.srnyx:magic-mongo:${config.version}", config.configurationAction)
 }
 

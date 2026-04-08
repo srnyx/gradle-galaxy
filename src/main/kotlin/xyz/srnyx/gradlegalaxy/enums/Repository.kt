@@ -19,9 +19,17 @@ enum class Repository(internal val url: String) {
      */
     MAVEN_CENTRAL(ArtifactRepositoryContainer.MAVEN_CENTRAL_URL),
     /**
-     * [https://repo.srnyx.com/](https://repo.srnyx.com/)
+     * [https://repo.srnyx.com/releases/](https://repo.srnyx.com/releases/)
      */
-    SRNYX("https://repo.srnyx.com/"),
+    SRNYX_RELEASES("https://repo.srnyx.com/releases/"),
+    /**
+     * [https://repo.srnyx.com/snapshots/](https://repo.srnyx.com/snapshots/)
+     */
+    SRNYX_SNAPSHOTS("https://repo.srnyx.com/snapshots/"),
+    /**
+     * [https://repo.srnyx.com/private/](https://repo.srnyx.com/private/)
+     */
+    SRNYX_PRIVATE("https://repo.srnyx.com/private/"),
     /**
      * [https://hub.spigotmc.org/nexus/content/repositories/public/](https://hub.spigotmc.org/nexus/content/repositories/public/)
      */
