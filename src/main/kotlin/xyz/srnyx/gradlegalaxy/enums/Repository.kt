@@ -19,6 +19,10 @@ enum class Repository(internal val url: String) {
      */
     MAVEN_CENTRAL(ArtifactRepositoryContainer.MAVEN_CENTRAL_URL),
     /**
+     * [https://repo.srnyx.com/](https://repo.srnyx.com/)
+     */
+    SRNYX("https://repo.srnyx.com/"),
+    /**
      * [https://hub.spigotmc.org/nexus/content/repositories/public/](https://hub.spigotmc.org/nexus/content/repositories/public/)
      */
     SPIGOT("https://hub.spigotmc.org/nexus/content/repositories/public/"),
