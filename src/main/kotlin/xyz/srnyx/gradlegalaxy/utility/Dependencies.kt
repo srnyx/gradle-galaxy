@@ -147,7 +147,7 @@ fun Project.lazyLibrary(config: DependencyConfig): ExternalModuleDependency {
 fun Project.magicMongo(config: DependencyConfig): ExternalModuleDependency {
     check(hasJavaPlugin()) { "Java plugin is not applied!" }
     repository(Repository.SRNYX_RELEASES, Repository.SRNYX_SNAPSHOTS)
-    return addDependencyTo(dependencies, config.configuration ?: "implementation", "com.github.srnyx:magic-mongo:${config.version}", config.configurationAction)
+    return addDependencyTo(dependencies, config.configuration ?: "implementation", "xyz.srnyx:magic-mongo:${config.version}", config.configurationAction)
 }
 
 /**
