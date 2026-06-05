@@ -1,22 +1,27 @@
 package xyz.srnyx.gradlegalaxy.utility
 
+import org.gradle.api.JavaVersion
 import org.gradle.api.Project
 import org.gradle.api.publish.maven.MavenPublication
+import org.gradle.internal.extensions.stdlib.capitalized
 import org.gradle.kotlin.dsl.apply
 import org.gradle.kotlin.dsl.create
 import org.gradle.kotlin.dsl.exclude
 import org.gradle.kotlin.dsl.get
-
 import xyz.srnyx.gradlegalaxy.annotations.Ignore
 import xyz.srnyx.gradlegalaxy.data.config.DependencyConfig
 import xyz.srnyx.gradlegalaxy.data.config.JavaSetupConfig
 import xyz.srnyx.gradlegalaxy.data.config.JdaSetupConfig
 import xyz.srnyx.gradlegalaxy.data.config.MCSetupConfig
-import xyz.srnyx.gradlegalaxy.data.config.PublishingEnvConfig
-import xyz.srnyx.gradlegalaxy.data.config.PublishingSimpleConfig
+import xyz.srnyx.gradlegalaxy.data.config.annoyingapi.AnnoyingSetupConfig
+import xyz.srnyx.gradlegalaxy.data.config.publishing.PublishingEnvConfig
+import xyz.srnyx.gradlegalaxy.data.config.publishing.PublishingSimpleConfig
 import xyz.srnyx.gradlegalaxy.data.pom.DeveloperData
+import xyz.srnyx.gradlegalaxy.enums.Repository
+import xyz.srnyx.gradlegalaxy.enums.repository
 
 import kotlin.String
+import kotlin.text.replace
 
 
 /**
@@ -64,9 +69,18 @@ fun Project.setupMC(
 /**
  * Sets up the project using Annoying API. **The [root project's name][Project.getName] must be the same as the one in plugin.yml!**
  *
- * 1. Checks if the Shadow plugin is applied
- * 2. Calls [setupMC] with the specified parameters
- * 3. Calls [annoyingAPI] with the specified parameters
+ * 1. Checks if the Java and Shadow plugins are applied
+ * 2. Adds srnyx's repositories and [Repository.ALESSIO_DP] for Libby
+ * 2. Gets and processes Annoying API metadata (if [AnnoyingSetupConfig.MetadataConfig.useMetadata] is true)
+ *    1. Sets Java version if specified
+ *    2. Adds repositories
+ *    3. For each runtime library:
+ *       1. Adds repositories
+ *       2. Adds dependency
+ *       3. Adds relocations
+ *    4. Excludes some Annoying API dependencies
+ * 3. Calls [setupMC] with the specified parameters
+ * 4. Calls [annoyingAPI] with the specified parameters
  *
  * @param javaSetupConfig The configuration for [setupJava]
  * @param mcSetupConfig The configuration for [setupMC]
@@ -76,10 +90,59 @@ fun Project.setupMC(
 fun Project.setupAnnoyingAPI(
     javaSetupConfig: JavaSetupConfig = JavaSetupConfig(),
     mcSetupConfig: MCSetupConfig = MCSetupConfig(),
+    annoyingSetupConfig: AnnoyingSetupConfig = AnnoyingSetupConfig(),
     annoyingAPIConfig: DependencyConfig,
 ) {
+    check(hasJavaPlugin()) { "Java plugin is not applied!" }
     check(hasShadowPlugin()) { "Shadow plugin is required for Annoying API!" }
+
+    // Setup Minecraft
     setupMC(javaSetupConfig, mcSetupConfig)
+
+    // Get and process Annoying API metadata
+    val metadata = annoyingSetupConfig.metadataConfig.useMetadata.takeIf { it }?.let { getAnnoyingApiMetadata(annoyingAPIConfig.version) }
+    if (metadata != null) {
+        // Relocate Annoying API
+        if (annoyingSetupConfig.metadataConfig.relocateAnnoyingAPI) relocate(metadata.packageName)
+
+        // Java version
+        if (annoyingSetupConfig.metadataConfig.setJavaVersion && metadata.javaVersion != null) setJavaVersion(JavaVersion.toVersion(metadata.javaVersion))
+
+        // Repositories
+        if (annoyingSetupConfig.metadataConfig.addRepositories) metadata.repositories.forEach { repository(it) }
+
+        // Runtime libraries
+        val getPackage = getPackage()
+        metadata.runtimeLibraries.forEach { library ->
+            // Add repositories
+            if (annoyingSetupConfig.metadataConfig.runtimeLibrariesConfig.addRepositories) library.repositories.forEach { repo -> repository(repo) }
+
+            // Add dependency
+            if (annoyingSetupConfig.metadataConfig.runtimeLibrariesConfig.addDependencies) {
+                dependencies.add("compileOnly", "${library.group}:${library.name}:${library.version}")
+            }
+
+            // Relocations
+            if (annoyingSetupConfig.metadataConfig.runtimeLibrariesConfig.relocate) library.relocations.forEach { relocation ->
+                val to = relocation.to?.replace("{package}", getPackage)
+                if (to != null) {
+                    relocate(relocation.from, to)
+                } else {
+                    relocate(relocation.from)
+                }
+            }
+        }
+    }
+
+    if (annoyingSetupConfig.metadataConfig.excludes) {
+        val original = annoyingAPIConfig.configurationAction
+        annoyingAPIConfig.configurationAction = {
+            metadata?.excludes?.forEach { exclude(it.group, it.module) }
+            original()
+        }
+    }
+
+    // Add Annoying API
     annoyingAPI(annoyingAPIConfig)
 }
 
@@ -172,6 +235,31 @@ fun Project.setupPublishingSimple(
         config.version?.let { this.version = it }
         config.component?.let { this.from(config.component) }
         config.artifacts.forEach(this::artifact)
+        config.textArtifacts.forEach { textArtifact ->
+            val taskName = "generate${textArtifact.classifier.capitalized()}TextArtifact"
+            val extensionSuffix = textArtifact.extension?.let { ".$it" } ?: ""
+            val outputFile = layout.buildDirectory.file("generated/publications/${this.artifactId}-${this.version}-${textArtifact.classifier}$extensionSuffix")
+
+            val task = tasks.register(taskName) {
+                group = "publishing"
+                description = "Generates the ${textArtifact.classifier} artifact for publication ${this.name}"
+
+                outputs.file(outputFile)
+
+                doLast {
+                    outputFile.get().asFile.apply {
+                        parentFile.mkdirs()
+                        writeText(textArtifact.text.invoke())
+                    }
+                }
+            }
+
+            artifact(outputFile) {
+                this.classifier = textArtifact.classifier
+                this.extension = textArtifact.extension
+                builtBy(task)
+            }
+        }
         pom {
             config.name?.let(this.name::set)
             config.description?.let(this.description::set)

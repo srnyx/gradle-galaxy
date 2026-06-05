@@ -5,8 +5,6 @@ import org.gradle.api.Project
 import org.gradle.api.artifacts.ExternalModuleDependency
 import org.gradle.api.artifacts.ModuleDependency
 import org.gradle.kotlin.dsl.accessors.runtime.addDependencyTo
-import org.gradle.kotlin.dsl.exclude
-
 import xyz.srnyx.gradlegalaxy.annotations.Ignore
 import xyz.srnyx.gradlegalaxy.data.AdventureDependency
 import xyz.srnyx.gradlegalaxy.data.config.DependencyConfig
@@ -88,27 +86,23 @@ fun Project.adventure(vararg dependencies: AdventureDependency, configurationAll
 }
 
 /**
- * 1. Adds srnyx's repository and [Repository.ALESSIO_DP] (for Libby) repositories
- * 2. Relocates runtime packages
- * 3. Adds the dependency to the provided Annoying API version (excluding Libby and Java Utilities)
+ * 1. Adds srnyx's repositories and [Repository.ALESSIO_DP] (for Libby) repositories
+ * 2. Relocates `xyz.srnyx.annoyingapi`
+ * 3. Adds the dependency to the provided Annoying API version
  *
  * @param config The configuration for the Annoying API dependency
+ *
+ * @return The [ExternalModuleDependency] of the Annoying API dependency
  */
 fun Project.annoyingAPI(config: DependencyConfig): ExternalModuleDependency {
     check(hasJavaPlugin()) { "Java plugin is not applied!" }
     check(hasShadowPlugin()) { "Shadow plugin is not applied!" }
-    repository(Repository.SRNYX_RELEASES, Repository.SRNYX_SNAPSHOTS, Repository.ALESSIO_DP)
 
-    // Runtime dependencies
-    relocate("xyz.srnyx.annoyingapi")
-    relocate("org.bstats")
-    relocate("javassist.", getPackage() + ".libs.javassist.")
-    relocate("org.reflections")
-    relocate("de.tr7zw.changeme.nbtapi")
+    // Add srnyx's repositories
+    repository(Repository.SRNYX_RELEASES, Repository.SRNYX_SNAPSHOTS)
 
+    // Add Annoying API dependency
     return addDependencyTo(dependencies, config.configuration ?: "implementation", "xyz.srnyx:annoying-api:${config.version}") {
-        exclude("net.byteflux", "libby-bukkit")
-        exclude("xyz.srnyx", "java-utilities")
         config.configurationAction(this)
     }
 }
@@ -162,22 +156,22 @@ fun Project.magicMongo(config: DependencyConfig): ExternalModuleDependency {
  * @return The [T] of the added dependency
  */
 @Ignore
-fun <T: ModuleDependency> Project.implementationRelocate(
+fun <T: ModuleDependency> Project.dependencyRelocate(
     dependency: T,
     relocateFrom: String,
     relocateTo: String = "${project.getPackage()}.libs.${relocateFrom.split(".").last()}",
+    configuration: String = "implementation",
     configurationAction: T.() -> Unit = {}
 ): T {
     check(hasShadowPlugin()) { "Shadow plugin is not applied!" }
     project.relocate(relocateFrom, relocateTo)
-    return addDependencyTo(dependencies, "implementation", dependency, configurationAction)
+    return addDependencyTo(dependencies, configuration, dependency, configurationAction)
 }
 
 /**
  * 1. Adds the provided dependency as an `implementation` dependency
  * 2. Relocates the dependency to the provided package
  *
- * @param project The project to relocate the dependency for
  * @param dependency The dependency to add
  * @param relocateFrom The package to relocate from
  * @param relocateTo The package to relocate to
@@ -186,19 +180,21 @@ fun <T: ModuleDependency> Project.implementationRelocate(
  * @return The [ExternalModuleDependency] of the added dependency
  */
 @Ignore
-fun Project.implementationRelocate(
+fun Project.dependencyRelocate(
     dependency: String,
     relocateFrom: String = dependency.split(":").first(),
     relocateTo: String = "${project.getPackage()}.libs.${relocateFrom.split(".").last()}",
+    configuration: String = "implementation",
     configurationAction: ExternalModuleDependency.() -> Unit = {}
 ): ExternalModuleDependency {
     check(hasShadowPlugin()) { "Shadow plugin is not applied!" }
     project.relocate(relocateFrom, relocateTo)
-    return addDependencyTo(dependencies, "implementation", dependency, configurationAction)
+    return addDependencyTo(dependencies, configuration, dependency, configurationAction)
 }
 
 /**
  * Returns the correct Java version that is required for the Minecraft version
+ * - 26.1+: Java 25
  * - 1.20.5+: Java 21
  * - 1.18+: Java 17
  * - 1.17+: Java 16
@@ -210,9 +206,15 @@ fun Project.implementationRelocate(
  */
 fun getJavaVersionForMC(minecraftVersion: String): JavaVersion {
     val version = SemanticVersion(minecraftVersion)
-    if (version.major > 1 || version.minor > 20 || (version.minor == 20 && version.patch >= 5)) return JavaVersion.VERSION_21
+    // 26.1+
+    if (version.major > 1) return JavaVersion.VERSION_25
+    // 1.20.5+
+    if (version.minor > 20 || (version.minor == 20 && version.patch >= 5)) return JavaVersion.VERSION_21
+    // 1.18+
     if (version.minor >= 18) return JavaVersion.VERSION_17
+    // 1.17+
     if (version.minor >= 17) return JavaVersion.VERSION_16
+    // Else
     return JavaVersion.VERSION_1_8
 }
 

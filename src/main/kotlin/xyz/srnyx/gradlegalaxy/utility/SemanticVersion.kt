@@ -22,7 +22,7 @@ class SemanticVersion(version: String) : Comparable<SemanticVersion> {
 
     init {
         val versionSplit = version.split('.')
-        require(versionSplit.size >= 2) { "Failed to parse Minecraft version (invalid version string): $version" }
+        require(versionSplit.size >= 2) { "Failed to parse semantic version (invalid version string): $version" }
 
         // Get patch
         try {
@@ -30,7 +30,7 @@ class SemanticVersion(version: String) : Comparable<SemanticVersion> {
             minor = versionSplit[1].toInt()
             patch = versionSplit.getOrElse(2) { "0" }.toInt()
         } catch (_: NumberFormatException) {
-            throw IllegalArgumentException("Failed to parse Minecraft version (invalid values): $version")
+            throw IllegalArgumentException("Failed to parse semantic version (invalid values): $version")
         }
     }
 

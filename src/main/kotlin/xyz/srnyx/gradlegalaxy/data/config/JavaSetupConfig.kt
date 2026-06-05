@@ -1,7 +1,6 @@
 package xyz.srnyx.gradlegalaxy.data.config
 
 import org.gradle.api.JavaVersion
-
 import xyz.srnyx.gradlegalaxy.utility.setShadowArchiveClassifier
 import xyz.srnyx.gradlegalaxy.utility.setTextEncoding
 import xyz.srnyx.gradlegalaxy.utility.setupJava

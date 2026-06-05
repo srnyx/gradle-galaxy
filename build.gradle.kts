@@ -3,16 +3,18 @@ plugins {
     `maven-publish`
     `java-gradle-plugin`
     kotlin("jvm") version "1.9.24" // Do not update
+    kotlin("plugin.serialization") version "1.9.24" // Do not update
     id("com.gradle.plugin-publish") version "1.3.1"
     id("org.jetbrains.dokka") version "1.9.20" // Do not update because of kotlin("jvm") version
 }
 
 group = "xyz.srnyx"
-version = "2.1.0"
+version = "3.0.0"
 description = "A Gradle plugin to simplify the process of creating projects"
 val projectId: String = "gradle-galaxy"
 val vcs: String = "github.com/srnyx/$projectId"
 val includeJavadocsSources: Boolean = true
+val javaVersion = 17
 
 repositories {
     mavenCentral()
@@ -22,18 +24,19 @@ repositories {
 dependencies {
     implementation(gradleApi())
     implementation(kotlin("stdlib-jdk8"))
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
 
     // Plugins
-    compileOnly("com.github.jengelman.gradle.plugins", "shadow", "6.1.0")
+    compileOnly("com.gradleup.shadow:shadow-gradle-plugin:9.0.0")
 }
 
 // Set Kotlin JVM version
-kotlin.jvmToolchain(17)
+kotlin.jvmToolchain(javaVersion)
 
 // Set Java version, text encoding, & docs/sources jar task dependencies
 tasks.withType<JavaCompile> {
-    sourceCompatibility = "17"
-    targetCompatibility = "17"
+    sourceCompatibility = javaVersion.toString()
+    targetCompatibility = javaVersion.toString()
     options.encoding = "UTF-8"
     if (includeJavadocsSources) {
         dependsOn("javadocJar")
@@ -59,7 +62,6 @@ if (includeJavadocsSources) sourceSets {
     }
 }
 
-@Suppress("UnstableApiUsage")
 gradlePlugin {
     isAutomatedPublishing = true
     website.set("https://${vcs}")

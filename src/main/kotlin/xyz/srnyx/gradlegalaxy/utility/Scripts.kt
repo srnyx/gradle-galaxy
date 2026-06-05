@@ -2,7 +2,7 @@ package xyz.srnyx.gradlegalaxy.utility
 
 import com.github.jengelman.gradle.plugins.shadow.relocation.SimpleRelocator
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
-
+import kotlinx.serialization.json.Json
 import org.gradle.api.DefaultTask
 import org.gradle.api.JavaVersion
 import org.gradle.api.Project
@@ -14,8 +14,12 @@ import org.gradle.api.tasks.Copy
 import org.gradle.api.tasks.compile.JavaCompile
 import org.gradle.api.tasks.bundling.Jar
 import org.gradle.kotlin.dsl.*
-
 import xyz.srnyx.gradlegalaxy.annotations.Ignore
+import xyz.srnyx.gradlegalaxy.data.annoyingapi.AnnoyingMetadata
+import xyz.srnyx.gradlegalaxy.enums.Repository
+import xyz.srnyx.gradlegalaxy.enums.repository
+
+import kotlin.text.replace
 
 
 /**
@@ -253,4 +257,28 @@ fun Project.relocate(
 ) {
     check(hasShadowPlugin()) { "Shadow plugin is not applied!" }
     tasks.named<ShadowJar>("shadowJar") { relocate(from, to, action) }
+}
+
+/**
+ * Gets the metadata for the Annoying API with the specified version
+ *
+ * @param version The version of the Annoying API to get metadata for
+ *
+ * @return The metadata for the Annoying API
+ */
+fun Project.getAnnoyingApiMetadata(version: String): AnnoyingMetadata? {
+    // Add srnyx's repositories
+    repository(Repository.SRNYX_RELEASES, Repository.SRNYX_SNAPSHOTS)
+
+    // Get JAR
+    val file = runCatching {
+        val metadataConfig = configurations.detachedConfiguration(dependencies.create("xyz.srnyx:annoying-api:$version:metadata@json"))
+        metadataConfig.resolve().firstOrNull()
+    }.getOrNull() ?: return null
+
+    // Get text
+    val text = file.readText()
+
+    // Decode metadata
+    return Json.decodeFromString<AnnoyingMetadata>(text)
 }
