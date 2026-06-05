@@ -105,8 +105,10 @@ fun Project.setupAnnoyingAPI(
         // Relocate Annoying API
         if (annoyingSetupConfig.metadataConfig.relocateAnnoyingAPI) relocate(metadata.packageName)
 
-        // Java version
-        if (annoyingSetupConfig.metadataConfig.setJavaVersion && metadata.javaVersion != null) setJavaVersion(JavaVersion.toVersion(metadata.javaVersion))
+        // Java version (only if custom not specified)
+        if (annoyingSetupConfig.metadataConfig.setJavaVersion && metadata.javaVersion != null && javaSetupConfig.javaVersion == null) {
+            setJavaVersion(JavaVersion.toVersion(metadata.javaVersion))
+        }
 
         // Repositories
         if (annoyingSetupConfig.metadataConfig.addRepositories) metadata.repositories.forEach { repository(it) }
