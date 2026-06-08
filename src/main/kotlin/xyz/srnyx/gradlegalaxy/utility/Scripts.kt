@@ -1,12 +1,12 @@
 package xyz.srnyx.gradlegalaxy.utility
 
+import com.github.jengelman.gradle.plugins.shadow.ShadowPlugin
 import com.github.jengelman.gradle.plugins.shadow.relocation.SimpleRelocator
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import kotlinx.serialization.json.Json
 import org.gradle.api.DefaultTask
 import org.gradle.api.JavaVersion
 import org.gradle.api.Project
-import org.gradle.api.UnknownDomainObjectException
 import org.gradle.api.plugins.JavaApplication
 import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.publish.PublishingExtension
@@ -21,27 +21,6 @@ import xyz.srnyx.gradlegalaxy.enums.repository
 
 import kotlin.text.replace
 
-
-/**
- * Whether the Java plugin is applied
- *
- * This is for caching, use [hasJavaPlugin] instead
- */
-var hasJavaPlugin: Boolean? = null
-
-/**
- * Whether the Shadow plugin is applied
- *
- * This is for caching, use [hasShadowPlugin] instead
- */
-var hasShadowPlugin: Boolean? = null
-
-/**
- * Whether the Publish plugin is applied
- *
- * This is for caching, use [hasPublishPlugin] instead
- */
-var hasPublishPlugin: Boolean? = null
 
 /**
  * Makes the given package path safe to use
@@ -64,54 +43,28 @@ fun Project.getPackage(): String = "$group.${makePackageSafe(name)}"
  *
  * @return If the `java` plugin is applied
  */
-fun Project.hasJavaPlugin(): Boolean {
-    if (hasJavaPlugin == null) hasJavaPlugin = try {
-        extensions["java"]
-        true
-    } catch (_: UnknownDomainObjectException) {
-        false
-    }
-    return hasJavaPlugin!!
-}
+fun Project.hasJavaPlugin(): Boolean = plugins.hasPlugin("java")
 
 /**
  * Checks if the Shadow plugin is applied
  *
  * @return If the Shadow plugin is applied
  */
-fun hasShadowPlugin(): Boolean {
-    if (hasShadowPlugin == null) hasShadowPlugin = try {
-        Class.forName("com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar")
-        true
-    } catch (_: ClassNotFoundException) {
-        false
-    }
-    return hasShadowPlugin!!
-}
+fun Project.hasShadowPlugin(): Boolean = plugins.hasPlugin(ShadowPlugin::class.java)
 
-fun Project.hasPublishPlugin(): Boolean {
-    if (hasPublishPlugin == null) hasPublishPlugin = try {
-        extensions["publishing"]
-        true
-    } catch (_: UnknownDomainObjectException) {
-        false
-    }
-    return hasPublishPlugin!!
-}
+/**
+ * Checks if the `maven-publish` plugin is applied
+ *
+ * @return If the `maven-publish` plugin is applied
+ */
+fun Project.hasPublishPlugin(): Boolean = plugins.hasPlugin("maven-publish")
 
 /**
  * Checks if the `application` plugin is applied
  *
  * @return If the `application` plugin is applied
  */
-fun hasApplicationPlugin(): Boolean {
-    return try {
-        Class.forName("org.gradle.api.plugins.ApplicationPlugin")
-        true
-    } catch (_: ClassNotFoundException) {
-        false
-    }
-}
+fun Project.hasApplicationPlugin(): Boolean = plugins.hasPlugin("application")
 
 /**
  * Gets the Java plugin extension
