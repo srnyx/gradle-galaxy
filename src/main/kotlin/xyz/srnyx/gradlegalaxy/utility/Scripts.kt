@@ -50,7 +50,11 @@ fun Project.hasJavaPlugin(): Boolean = plugins.hasPlugin("java")
  *
  * @return If the Shadow plugin is applied
  */
-fun Project.hasShadowPlugin(): Boolean = plugins.hasPlugin(ShadowPlugin::class.java)
+fun Project.hasShadowPlugin(): Boolean = try {
+    plugins.hasPlugin(ShadowPlugin::class.java)
+} catch (_: NoClassDefFoundError) {
+    false
+}
 
 /**
  * Checks if the `maven-publish` plugin is applied
