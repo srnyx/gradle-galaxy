@@ -9,7 +9,7 @@ plugins {
 }
 
 group = "xyz.srnyx"
-version = "3.0.1"
+version = providers.environmentVariable("VERSION").orNull?.takeIf(String::isNotBlank) ?: "3.0.1"
 description = "A Gradle plugin to simplify the process of creating projects"
 val projectId: String = "gradle-galaxy"
 val vcs: String = "github.com/srnyx/$projectId"
@@ -76,41 +76,64 @@ gradlePlugin {
     }
 }
 
-publishing.publications.create<MavenPublication>("pluginMaven") {
-    artifactId = projectId
-    pom {
-        name.set(project.name)
-        description.set(project.description)
-        url.set("https://${vcs}")
-        packaging = "jar"
-
-        licenses {
-            license {
-                name.set("MIT License")
-                url.set("https://opensource.org/licenses/MIT")
-            }
-        }
-
-        developers {
-            developer {
-                id.set("srnyx")
-                url.set("https://srnyx.com")
-                email.set("contact@srnyx.com")
-                timezone.set("America/New_York")
-                organization.set("Venox Network")
-                organizationUrl.set("https://venox.network")
-            }
-            developer {
-                id.set("dkim19375")
-                timezone.set("America/New_York")
-                roles.add("contributor")
-            }
-        }
-
-        scm {
-            connection.set("scm:git:git://${vcs}.git")
-            developerConnection.set("scm:git:ssh://${vcs}.git")
+publishing {
+    publications.create<MavenPublication>("pluginMaven") {
+        artifactId = projectId
+        pom {
+            name.set(project.name)
+            description.set(project.description)
             url.set("https://${vcs}")
+            packaging = "jar"
+
+            licenses {
+                license {
+                    name.set("MIT License")
+                    url.set("https://opensource.org/licenses/MIT")
+                }
+            }
+
+            developers {
+                developer {
+                    id.set("srnyx")
+                    url.set("https://srnyx.com")
+                    email.set("contact@srnyx.com")
+                    timezone.set("America/New_York")
+                    organization.set("Venox Network")
+                    organizationUrl.set("https://venox.network")
+                }
+                developer {
+                    id.set("dkim19375")
+                    timezone.set("America/New_York")
+                    roles.add("contributor")
+                }
+            }
+
+            scm {
+                connection.set("scm:git:git://${vcs}.git")
+                developerConnection.set("scm:git:ssh://${vcs}.git")
+                url.set("https://${vcs}")
+            }
         }
     }
+
+    // Custom/additional repository
+    providers.environmentVariable("MAVEN_URL")
+        .orNull
+        ?.takeIf(String::isNotBlank)
+        ?.let { mavenUrl -> repositories.maven {
+            name = "srnyx"
+            url = uri(mavenUrl)
+
+            // Username/password
+            val mavenName = providers.environmentVariable("MAVEN_NAME")
+                .orNull
+                ?.takeIf(String::isNotBlank)
+            val mavenSecret = providers.environmentVariable("MAVEN_SECRET")
+                .orNull
+                ?.takeIf(String::isNotBlank)
+            if (mavenName != null && mavenSecret != null) credentials {
+                username = mavenName
+                password = mavenSecret
+            }
+        } }
 }
