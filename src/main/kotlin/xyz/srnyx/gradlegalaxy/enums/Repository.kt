@@ -165,6 +165,14 @@ enum class Repository(val url: String) {
      * [https://repo.faststats.dev/snapshots/](https://repo.faststats.dev/snapshots/)
      */
     FASTSTATS_SNAPSHOTS("https://repo.faststats.dev/snapshots/"),
+    /**
+     * [https://repo.okaeri.cloud/releases/](https://repo.okaeri.cloud/releases/)
+     */
+    OKAERI_RELEASES("https://repo.okaeri.cloud/releases/"),
+    /**
+     * [https://repo.okaeri.cloud/snapshots/](https://repo.okaeri.cloud/snapshots/)
+     */
+    OKAERI_SNAPSHOTS("https://repo.okaeri.cloud/snapshots/"),
 
     // Keep these at the bottom as they include other dependencies of other repositories
     /**
