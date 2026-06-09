@@ -242,16 +242,18 @@ fun Project.setupPublishingSimple(
             val extensionSuffix = textArtifact.extension?.let { ".$it" } ?: ""
             val outputFile = layout.buildDirectory.file("generated/publications/${this.artifactId}-${this.version}-${textArtifact.classifier}$extensionSuffix")
 
+            val textProvider = project.provider { textArtifact.text.invoke() }
             val task = tasks.register(taskName) {
                 group = "publishing"
                 description = "Generates the ${textArtifact.classifier} artifact for publication ${this.name}"
 
+                inputs.property("text", textProvider)
                 outputs.file(outputFile)
 
                 doLast {
                     outputFile.get().asFile.apply {
                         parentFile.mkdirs()
-                        writeText(textArtifact.text.invoke())
+                        writeText(textProvider.get())
                     }
                 }
             }
