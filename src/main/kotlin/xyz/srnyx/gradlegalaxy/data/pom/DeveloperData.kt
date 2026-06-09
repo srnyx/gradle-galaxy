@@ -1,6 +1,6 @@
 package xyz.srnyx.gradlegalaxy.data.pom
 
-import xyz.srnyx.gradlegalaxy.annotations.Ignore
+import xyz.srnyx.gradlegalaxy.annotations.Used
 
 
 /**
@@ -45,7 +45,7 @@ data class DeveloperData(
             timezone = "America/New_York",
             organization = "Venox Network",
             organizationUrl = "https://venox.network")
-        @Ignore
+        @Used
         val dkim19375 = DeveloperData(
             id = "dkim19375",
             url = "https://github.com/dkim19375",

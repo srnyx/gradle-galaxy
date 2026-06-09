@@ -14,7 +14,6 @@ import org.gradle.api.tasks.Copy
 import org.gradle.api.tasks.compile.JavaCompile
 import org.gradle.api.tasks.bundling.Jar
 import org.gradle.kotlin.dsl.*
-import xyz.srnyx.gradlegalaxy.annotations.Ignore
 import xyz.srnyx.gradlegalaxy.data.annoyingapi.AnnoyingMetadata
 import xyz.srnyx.gradlegalaxy.enums.Repository
 import xyz.srnyx.gradlegalaxy.enums.repository
@@ -144,7 +143,6 @@ fun Project.setShadowArchiveClassifier(classifier: String = "") {
 /**
  * Adds the task that makes `gradle build` run `gradle shadowJar`
  */
-@Ignore
 fun Project.addBuildShadowTask() {
     check(hasShadowPlugin()) { "Shadow plugin is not applied!" }
     tasks.named<DefaultTask>("build") { dependsOn("shadowJar") }
@@ -156,7 +154,6 @@ fun Project.addBuildShadowTask() {
  * @param javadocClassifier The classifier for the Javadoc jar file
  * @param sourcesClassifier The classifier for the sources jar file
  */
-@Ignore
 fun Project.addJavadocSourcesJars(javadocClassifier: String? = null, sourcesClassifier: String? = null) {
     val java: JavaPluginExtension = getJavaExtension()
     java.withJavadocJar()
@@ -184,7 +181,6 @@ fun Project.addReplacementsTask(files: Set<String> = setOf("plugin.yml"), replac
  *
  * @param args The compiler arguments to add
  */
-@Ignore
 fun Project.addCompilerArgs(vararg args: String) {
     check(hasJavaPlugin()) { "Java plugin is not applied!" }
     tasks.withType<JavaCompile> { options.compilerArgs.addAll(args) }
@@ -206,7 +202,6 @@ fun Project.setMainClass(mainClassName: String? = null) {
  * @param from The package to relocate
  * @param to The package to relocate to
  */
-@Ignore
 fun Project.relocate(
     from: String,
     to: String = "${getPackage()}.libs.${makePackageSafe(from.split(".").last())}",

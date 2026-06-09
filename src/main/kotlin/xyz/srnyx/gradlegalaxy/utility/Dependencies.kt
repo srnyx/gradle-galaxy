@@ -5,7 +5,7 @@ import org.gradle.api.Project
 import org.gradle.api.artifacts.ExternalModuleDependency
 import org.gradle.api.artifacts.ModuleDependency
 import org.gradle.kotlin.dsl.accessors.runtime.addDependencyTo
-import xyz.srnyx.gradlegalaxy.annotations.Ignore
+import xyz.srnyx.gradlegalaxy.annotations.Used
 import xyz.srnyx.gradlegalaxy.data.AdventureDependency
 import xyz.srnyx.gradlegalaxy.data.config.DependencyConfig
 import xyz.srnyx.gradlegalaxy.data.config.SpigotConfig
@@ -22,7 +22,7 @@ import xyz.srnyx.gradlegalaxy.enums.repository
  *
  * @param config The configuration for the Spigot-API dependency
  */
-@Ignore
+@Used
 fun Project.spigotAPI(
     config: DependencyConfig,
     spigotConfig: SpigotConfig = SpigotConfig(),
@@ -41,7 +41,7 @@ fun Project.spigotAPI(
  *
  * @param config The configuration for the Spigot dependency
  */
-@Ignore
+@Used
 fun Project.spigotNMS(
     config: DependencyConfig,
     spigotConfig: SpigotConfig = SpigotConfig(),
@@ -59,7 +59,7 @@ fun Project.spigotNMS(
  *
  * @param config The configuration for the Paper dependency
  */
-@Ignore
+@Used
 fun Project.paper(
     config: DependencyConfig,
     spigotConfig: SpigotConfig = SpigotConfig(),
@@ -78,7 +78,7 @@ fun Project.paper(
  * @param dependencies The Adventure dependencies to add
  * @param configurationAll The configuration to use for the dependencies if they don't have one specified
  */
-@Ignore
+@Used
 fun Project.adventure(vararg dependencies: AdventureDependency, configurationAll: String? = null) {
     check(hasJavaPlugin()) { "Java plugin is not applied!" }
     repository(Repository.MAVEN_CENTRAL)
@@ -137,7 +137,7 @@ fun Project.lazyLibrary(config: DependencyConfig): ExternalModuleDependency {
  *
  * @param config The configuration for the Magic Mongo dependency
  */
-@Ignore
+@Used
 fun Project.magicMongo(config: DependencyConfig): ExternalModuleDependency {
     check(hasJavaPlugin()) { "Java plugin is not applied!" }
     repository(Repository.SRNYX_RELEASES, Repository.SRNYX_SNAPSHOTS)
@@ -155,7 +155,7 @@ fun Project.magicMongo(config: DependencyConfig): ExternalModuleDependency {
  *
  * @return The [T] of the added dependency
  */
-@Ignore
+@Used
 fun <T: ModuleDependency> Project.dependencyRelocate(
     dependency: T,
     relocateFrom: String,
@@ -179,7 +179,7 @@ fun <T: ModuleDependency> Project.dependencyRelocate(
  *
  * @return The [ExternalModuleDependency] of the added dependency
  */
-@Ignore
+@Used
 fun Project.dependencyRelocate(
     dependency: String,
     relocateFrom: String = dependency.split(":").first(),

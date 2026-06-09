@@ -4,6 +4,7 @@ import org.gradle.api.Project
 import org.gradle.api.component.SoftwareComponent
 import org.gradle.api.publish.maven.MavenPublication
 import org.gradle.kotlin.dsl.get
+import xyz.srnyx.gradlegalaxy.annotations.Used
 import xyz.srnyx.gradlegalaxy.data.pom.DeveloperData
 import xyz.srnyx.gradlegalaxy.data.pom.LicenseData
 import xyz.srnyx.gradlegalaxy.data.pom.ScmData
@@ -49,6 +50,7 @@ data class PublishingSimpleConfig(
 /**
  * See [PublishingSimpleConfig]
  */
+@Used
 fun Project.publishingSimpleConfig(
     groupId: String? = null,
     artifactId: String? = null,

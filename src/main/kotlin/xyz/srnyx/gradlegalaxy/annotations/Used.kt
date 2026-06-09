@@ -11,8 +11,6 @@ package xyz.srnyx.gradlegalaxy.annotations
     AnnotationTarget.CONSTRUCTOR,
     AnnotationTarget.FUNCTION,
     AnnotationTarget.FILE,
-    AnnotationTarget.VALUE_PARAMETER
-)
+    AnnotationTarget.VALUE_PARAMETER)
 @Retention(AnnotationRetention.SOURCE)
-@Ignore
-annotation class Ignore
+annotation class Used

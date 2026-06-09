@@ -8,12 +8,13 @@ import org.gradle.kotlin.dsl.apply
 import org.gradle.kotlin.dsl.create
 import org.gradle.kotlin.dsl.exclude
 import org.gradle.kotlin.dsl.get
-import xyz.srnyx.gradlegalaxy.annotations.Ignore
+import xyz.srnyx.gradlegalaxy.annotations.Used
 import xyz.srnyx.gradlegalaxy.data.config.DependencyConfig
 import xyz.srnyx.gradlegalaxy.data.config.JavaSetupConfig
 import xyz.srnyx.gradlegalaxy.data.config.JdaSetupConfig
 import xyz.srnyx.gradlegalaxy.data.config.MCSetupConfig
 import xyz.srnyx.gradlegalaxy.data.config.annoyingapi.AnnoyingSetupConfig
+import xyz.srnyx.gradlegalaxy.data.config.annoyingapi.MetadataConfig
 import xyz.srnyx.gradlegalaxy.data.config.publishing.PublishingEnvConfig
 import xyz.srnyx.gradlegalaxy.data.config.publishing.PublishingSimpleConfig
 import xyz.srnyx.gradlegalaxy.data.pom.DeveloperData
@@ -33,7 +34,6 @@ import kotlin.text.replace
  *
  * @param config The configuration for setting up Java
  */
-@Ignore
 fun Project.setupJava(
     config: JavaSetupConfig = JavaSetupConfig(),
 ) {
@@ -57,7 +57,6 @@ fun Project.setupJava(
  * @param javaSetupConfig The configuration for [setupJava]
  * @param mcSetupConfig The configuration for Minecraft setup
  */
-@Ignore
 fun Project.setupMC(
     javaSetupConfig: JavaSetupConfig = JavaSetupConfig(),
     mcSetupConfig: MCSetupConfig = MCSetupConfig(),
@@ -71,7 +70,7 @@ fun Project.setupMC(
  *
  * 1. Checks if the Java and Shadow plugins are applied
  * 2. Adds srnyx's repositories and [Repository.ALESSIO_DP] for Libby
- * 2. Gets and processes Annoying API metadata (if [AnnoyingSetupConfig.MetadataConfig.useMetadata] is true)
+ * 2. Gets and processes Annoying API metadata (if [MetadataConfig.useMetadata] is true)
  *    1. Sets Java version if specified
  *    2. Adds repositories
  *    3. For each runtime library:
@@ -86,7 +85,7 @@ fun Project.setupMC(
  * @param mcSetupConfig The configuration for [setupMC]
  * @param annoyingAPIConfig The configuration for [annoyingAPI]
  */
-@Ignore
+@Used
 fun Project.setupAnnoyingAPI(
     javaSetupConfig: JavaSetupConfig = JavaSetupConfig(),
     mcSetupConfig: MCSetupConfig = MCSetupConfig(),
@@ -201,7 +200,7 @@ fun Project.setupJda(
  * @param jdaConfig The configuration for [jda]
  * @param lazyLibraryConfig The configuration for [lazyLibrary]
  */
-@Ignore
+@Used
 fun Project.setupLazyLibrary(
     javaSetupConfig: JavaSetupConfig = JavaSetupConfig(),
     jdaSetupConfig: JdaSetupConfig = JdaSetupConfig(),
@@ -224,7 +223,6 @@ fun Project.setupLazyLibrary(
  *
  * @return The [MavenPublication] that was created
  */
-@Ignore
 fun Project.setupPublishingSimple(
     config: PublishingSimpleConfig = PublishingSimpleConfig(this),
 ): MavenPublication {
@@ -319,7 +317,7 @@ fun Project.setupPublishingSimple(
  *
  * @return The [MavenPublication] that was created
  */
-@Ignore
+@Used
 fun Project.setupPublishingEnv(
     simpleConfig: PublishingSimpleConfig = PublishingSimpleConfig(this),
     envConfig: PublishingEnvConfig = PublishingEnvConfig(),
