@@ -211,6 +211,10 @@ fun Project.relocate(
     tasks.named<ShadowJar>("shadowJar") { relocate(from, to, action) }
 }
 
+private val json = Json {
+    ignoreUnknownKeys = true
+}
+
 /**
  * Gets the metadata for the Annoying API with the specified version
  *
@@ -232,5 +236,5 @@ fun Project.getAnnoyingApiMetadata(version: String): AnnoyingMetadata? {
     val text = file.readText()
 
     // Decode metadata
-    return Json.decodeFromString<AnnoyingMetadata>(text)
+    return json.decodeFromString<AnnoyingMetadata>(text)
 }

@@ -12,4 +12,8 @@ data class RuntimeLibrary(
     val version: String,
     val excludes: List<Exclude> = emptyList(),
     val relocations: List<Relocation> = emptyList(),
+    /**
+     * Names of other RuntimeLibraries that this library depends on
+     */
+    val dependencies: List<String> = emptyList(),
 )

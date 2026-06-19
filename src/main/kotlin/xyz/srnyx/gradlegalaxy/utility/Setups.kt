@@ -4,6 +4,7 @@ import org.gradle.api.JavaVersion
 import org.gradle.api.Project
 import org.gradle.api.publish.maven.MavenPublication
 import org.gradle.internal.extensions.stdlib.capitalized
+import org.gradle.kotlin.dsl.add
 import org.gradle.kotlin.dsl.apply
 import org.gradle.kotlin.dsl.create
 import org.gradle.kotlin.dsl.exclude
@@ -120,7 +121,9 @@ fun Project.setupAnnoyingAPI(
 
             // Add dependency
             if (annoyingSetupConfig.metadataConfig.runtimeLibrariesConfig.addDependencies) {
-                dependencies.add("compileOnly", "${library.group}:${library.name}:${library.version}")
+                dependencies.add("compileOnly", "${library.group}:${library.name}:${library.version}") {
+                    library.excludes.forEach { exclude(it.group, it.module) }
+                }
             }
 
             // Relocations
