@@ -15,6 +15,9 @@ import org.gradle.api.tasks.compile.JavaCompile
 import org.gradle.api.tasks.bundling.Jar
 import org.gradle.kotlin.dsl.*
 import xyz.srnyx.gradlegalaxy.data.annoyingapi.AnnoyingMetadata
+import xyz.srnyx.gradlegalaxy.data.annoyingapi.RuntimeLibrary
+import xyz.srnyx.gradlegalaxy.data.config.annoyingapi.GenerateRuntimeLibraryEnumConfig
+import xyz.srnyx.gradlegalaxy.data.config.annoyingapi.RuntimeLibrariesConfig
 import xyz.srnyx.gradlegalaxy.enums.Repository
 import xyz.srnyx.gradlegalaxy.enums.repository
 
@@ -197,6 +200,16 @@ fun Project.setMainClass(mainClassName: String? = null) {
 }
 
 /**
+ * Replaces all dots in the string with `{}`
+ */
+fun String.dotsToBrackets(): String = replace(".", "{}")
+
+/**
+ * Removes `{package}.libs.` and runs [dotsToBrackets]
+ */
+fun String.processRelocationTo(): String = replace("{package}.libs.", "").dotsToBrackets()
+
+/**
  * Relocates the specified package to the specified package
  *
  * @param from The package to relocate
@@ -237,4 +250,192 @@ fun Project.getAnnoyingApiMetadata(version: String): AnnoyingMetadata? {
 
     // Decode metadata
     return json.decodeFromString<AnnoyingMetadata>(text)
+}
+
+/**
+ * Processes the specified runtime libraries
+ * 1. Adds the specified repositories
+ * 2. Adds the specified dependencies (with exclusions)
+ * 3. Relocates the specified libraries to the project's package
+ *
+ * @param libraries The runtime libraries to process
+ * @param addRepositories Whether to add the repositories
+ * @param configurations The configurations to add the dependencies to
+ * @param relocate Whether to relocate the libraries
+ */
+fun Project.processRuntimeLibraries(
+    libraries: Collection<RuntimeLibrary>,
+    runtimeLibrariesConfig: RuntimeLibrariesConfig = RuntimeLibrariesConfig(),
+) {
+    val getPackage = getPackage()
+    libraries.forEach { library ->
+        // Add repositories
+        if (runtimeLibrariesConfig.addRepositories) library.repositories.forEach { repo -> repository(repo) }
+
+        // Add dependencies
+        runtimeLibrariesConfig.configurations.forEach { configuration ->
+            dependencies.add(configuration, "${library.group}:${library.artifact}:${library.version}") {
+                // Excludes
+                library.excludes.forEach { exclude(it.group, it.module) }
+            }
+        }
+
+        // Relocations
+        if (runtimeLibrariesConfig.relocate) library.relocations.forEach { relocation ->
+            val to = relocation.to?.replace("{package}", getPackage)
+            if (to != null) {
+                relocate(relocation.from, to)
+            } else {
+                relocate(relocation.from)
+            }
+        }
+    }
+}
+
+fun Project.generateAnnoyingApiRuntimeLibraryEnum(
+    libraries: Collection<RuntimeLibrary>,
+    generateRuntimeLibraryEnumConfig: GenerateRuntimeLibraryEnumConfig = GenerateRuntimeLibraryEnumConfig(),
+    annoyingMetadata: AnnoyingMetadata? = null,
+) {
+    val packagePath = generateRuntimeLibraryEnumConfig.packagePath ?: getPackage()
+    val packageFolder = packagePath.replace(".", "/")
+    val enumName = "${name}Library"
+    val annoyingPackage = annoyingMetadata?.packageName ?: "xyz.srnyx.annoyingapi"
+
+    val enum = buildString {
+        // Package
+        append("package $packagePath.library;")
+        append("\n")
+
+        // Imports
+        val libsLibby = "${if (generateRuntimeLibraryEnumConfig.relocateImports) "$annoyingPackage.libs" else "net.byteflux"}.libby"
+        append("\nimport $libsLibby.Library;")
+        append("\nimport $libsLibby.Repositories;")
+        append("\nimport $libsLibby.relocation.Relocation;")
+        append("\nimport org.jetbrains.annotations.NotNull;")
+        append("\nimport org.jetbrains.annotations.Nullable;")
+        append("\nimport xyz.srnyx.annoyingapi.AnnoyingPlugin;")
+        append("\nimport xyz.srnyx.annoyingapi.BuildProperties;")
+        append("\nimport xyz.srnyx.annoyingapi.library.AnnoyingLibrary;")
+        append("\n")
+        append("\nimport java.util.Arrays;")
+        append("\nimport java.util.Collection;")
+        append("\nimport java.util.Collections;")
+        append("\nimport java.util.List;")
+        append("\nimport java.util.function.Function;")
+        append("\nimport java.util.function.Supplier;")
+        append("\n")
+        append("\n")
+
+        // Enum declaration
+        append("\npublic enum $enumName implements AnnoyingLibrary {")
+        append("\n")
+
+        // Libraries
+        libraries.forEachIndexed { index, library ->
+            append(buildLibraryEntry(library))
+            if (index < libraries.size - 1) append(",\n")
+        }
+        append(";\n")
+        append("\n")
+
+        // Enum variables/constructors/methods
+        append("""
+        @NotNull public final Supplier<Library.Builder> librarySupplier;
+        @Nullable public final Function<AnnoyingPlugin, Collection<Relocation>> relocations;
+        @Nullable public final Collection<AnnoyingLibrary> requiredLibraries;
+    
+        $enumName(@NotNull Supplier<Library.Builder> librarySupplier) {
+            this(librarySupplier, null, null);
+        }
+    
+        $enumName(@NotNull Supplier<Library.Builder> librarySupplier, @NotNull Function<AnnoyingPlugin, Collection<Relocation>> relocations) {
+            this(librarySupplier, relocations, null);
+        }
+    
+        $enumName(@NotNull Supplier<Library.Builder> librarySupplier, @NotNull Collection<AnnoyingLibrary> requiredLibraries) {
+            this(librarySupplier, null, requiredLibraries);
+        }
+    
+        $enumName(@NotNull Supplier<Library.Builder> librarySupplier, @Nullable Function<AnnoyingPlugin, Collection<Relocation>> relocations, @Nullable Collection<AnnoyingLibrary> requiredLibraries) {
+            this.librarySupplier = librarySupplier;
+            this.relocations = relocations;
+            this.requiredLibraries = requiredLibraries;
+        }
+    
+        @Override @NotNull
+        public Supplier<Library.Builder> getLibrarySupplier() {
+            return librarySupplier;
+        }
+    
+        @Override @Nullable
+        public Function<AnnoyingPlugin, Collection<Relocation>> getRelocations() {
+            return relocations;
+        }
+    
+        @Override @Nullable
+        public Collection<AnnoyingLibrary> getRequiredLibraries() {
+            return requiredLibraries;
+        }
+    }
+    """.trimIndent())
+    }
+
+    // Register task to generate Enum file
+    val generateEnumTask = project.tasks.register("generateRuntimeLibrary") {
+        val outputDir = project.layout.buildDirectory.dir("generated/sources/gradle-galaxy/main/java")
+        outputs.dir(outputDir)
+
+        doLast {
+            val outputFile = outputDir.get().file("$packageFolder/library/$enumName.java").asFile
+            outputFile.parentFile.mkdirs()
+            outputFile.writeText(enum)
+        }
+    }
+
+    // Wire generated directory into main Java source set
+    project.extensions.configure<JavaPluginExtension> {
+        sourceSets.named("main") {
+            java.srcDir(generateEnumTask.map { it.outputs.files })
+        }
+    }
+}
+
+private fun buildLibraryEntry(library: RuntimeLibrary): String = buildString {
+    append("    ${library.name.uppercase()}(")
+    append("\n            () -> Library.builder()")
+
+    // Repositories
+    library.repositories.forEach { repository ->
+        append("\n                    .repository(\"$repository\")")
+    }
+
+    // Core properties
+    append("\n                    .groupId(\"${library.group.dotsToBrackets()}\")")
+    append("\n                    .artifactId(\"${library.artifact}\")")
+    append("\n                    .version(\"${library.version}\")")
+
+    // Relocations
+    if (library.relocations.isNotEmpty()) {
+        append(",\n            plugin -> List.of(")
+        library.relocations.forEachIndexed { i, relocation ->
+            append("\n                    plugin.getRelocation(\"${relocation.from.dotsToBrackets()}\"")
+            relocation.to?.let { append(", \"${it.processRelocationTo()}\"") }
+            append(")")
+            if (i < library.relocations.size - 1) append(",")
+        }
+        append(")")
+    }
+
+    // Dependencies
+    if (library.dependencies.isNotEmpty()) {
+        append(",\n            List.of(")
+        library.dependencies.forEachIndexed { i, dependency ->
+            append("\n                    ${dependency.uppercase()}")
+            if (i < library.dependencies.size - 1) append(",")
+        }
+        append(")")
+    }
+
+    append(")")
 }

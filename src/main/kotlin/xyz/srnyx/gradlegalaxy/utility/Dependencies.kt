@@ -26,13 +26,21 @@ import xyz.srnyx.gradlegalaxy.enums.repository
 fun Project.spigotAPI(
     config: DependencyConfig,
     spigotConfig: SpigotConfig = SpigotConfig(),
-): ExternalModuleDependency {
+): List<ExternalModuleDependency> {
     check(hasJavaPlugin()) { "Java plugin is not applied!" }
+
+    // Java version
     if (spigotConfig.setJavaVersion) setJavaVersion(getJavaVersionForMC(config.version))
+
+    // Repositories
     val semanticVersion = SemanticVersion(config.version)
     if (semanticVersion.major <= 1 && semanticVersion.minor <= 15) repository(Repository.SONATYPE_SNAPSHOTS_OLD)
     repository(Repository.MAVEN_CENTRAL, Repository.SPIGOT, Repository.SPIGOT_SNAPSHOTS)
-    return addDependencyTo(dependencies, config.configuration ?: "compileOnly", "org.spigotmc:spigot-api:${getVersionString(config.version)}", config.configurationAction)
+
+    // Add dependency
+    return (config.configurations ?: listOf("compileOnly", "testImplementation")).map { configuration ->
+        addDependencyTo(dependencies, configuration, "org.spigotmc:spigot-api:${getVersionString(config.version)}", config.configurationAction)
+    }
 }
 
 /**
@@ -45,12 +53,20 @@ fun Project.spigotAPI(
 fun Project.spigotNMS(
     config: DependencyConfig,
     spigotConfig: SpigotConfig = SpigotConfig(),
-): ExternalModuleDependency {
+): List<ExternalModuleDependency> {
     check(hasJavaPlugin()) { "Java plugin is not applied!" }
+
+    // Java version
     if (spigotConfig.setJavaVersion) setJavaVersion(getJavaVersionForMC(config.version))
+
+    // Repositories
     repository(Repository.MAVEN_CENTRAL, Repository.SPIGOT, Repository.SPIGOT_SNAPSHOTS)
     repositories.mavenLocal()
-    return addDependencyTo(dependencies, config.configuration ?: "compileOnly", "org.spigotmc:spigot:${getVersionString(config.version)}", config.configurationAction)
+
+    // Add dependency
+    return (config.configurations ?: listOf("compileOnly", "testImplementation")).map { configuration ->
+        addDependencyTo(dependencies, configuration, "org.spigotmc:spigot:${getVersionString(config.version)}", config.configurationAction)
+    }
 }
 
 /**
@@ -63,12 +79,20 @@ fun Project.spigotNMS(
 fun Project.paper(
     config: DependencyConfig,
     spigotConfig: SpigotConfig = SpigotConfig(),
-): ExternalModuleDependency {
+): List<ExternalModuleDependency> {
     check(hasJavaPlugin()) { "Java plugin is not applied!" }
+
+    // Java version
     if (spigotConfig.setJavaVersion) setJavaVersion(getJavaVersionForMC(config.version))
+
+    // Repositories
     repository(Repository.MAVEN_CENTRAL, Repository.SONATYPE_SNAPSHOTS_OLD, Repository.PAPER)
+
+    // Add dependency
     val paperVersion: PaperVersion = PaperVersion.parse(config.version)
-    return addDependencyTo(dependencies, config.configuration ?: "compileOnly", "${paperVersion.groupId}:${paperVersion.artifactId}:${getVersionString(config.version)}", config.configurationAction)
+    return (config.configurations ?: listOf("compileOnly", "testImplementation")).map { configuration ->
+        addDependencyTo(dependencies, configuration, "${paperVersion.groupId}:${paperVersion.artifactId}:${getVersionString(config.version)}", config.configurationAction)
+    }
 }
 
 /**
@@ -81,8 +105,12 @@ fun Project.paper(
 @Used
 fun Project.adventure(vararg dependencies: AdventureDependency, configurationAll: String? = null) {
     check(hasJavaPlugin()) { "Java plugin is not applied!" }
+
+    // Repositories
     repository(Repository.MAVEN_CENTRAL)
-    dependencies.forEach { addDependencyTo(project.dependencies, it.config.configuration ?: configurationAll ?: "implementation", "net.kyori:${it.component.getComponent()}:${it.config.version}", it.config.configurationAction) }
+
+    // Add dependencies
+    dependencies.forEach { addDependencyTo(project.dependencies, it.config.configurations?.firstOrNull() ?: configurationAll ?: "implementation", "net.kyori:${it.component.getComponent()}:${it.config.version}", it.config.configurationAction) }
 }
 
 /**
@@ -94,7 +122,7 @@ fun Project.adventure(vararg dependencies: AdventureDependency, configurationAll
  *
  * @return The [ExternalModuleDependency] of the Annoying API dependency
  */
-fun Project.annoyingAPI(config: DependencyConfig): ExternalModuleDependency {
+fun Project.annoyingAPI(config: DependencyConfig): List<ExternalModuleDependency> {
     check(hasJavaPlugin()) { "Java plugin is not applied!" }
     check(hasShadowPlugin()) { "Shadow plugin is not applied!" }
 
@@ -102,8 +130,8 @@ fun Project.annoyingAPI(config: DependencyConfig): ExternalModuleDependency {
     repository(Repository.SRNYX_RELEASES, Repository.SRNYX_SNAPSHOTS)
 
     // Add Annoying API dependency
-    return addDependencyTo(dependencies, config.configuration ?: "implementation", "xyz.srnyx:annoying-api:${config.version}") {
-        config.configurationAction(this)
+    return (config.configurations ?: listOf("implementation", "testImplementation")).map { configuration ->
+        addDependencyTo(dependencies, configuration, "xyz.srnyx:annoying-api:${config.version}", config.configurationAction)
     }
 }
 
@@ -113,10 +141,16 @@ fun Project.annoyingAPI(config: DependencyConfig): ExternalModuleDependency {
  *
  * @param config The configuration for the JDA dependency
  */
-fun Project.jda(config: DependencyConfig): ExternalModuleDependency {
+fun Project.jda(config: DependencyConfig): List<ExternalModuleDependency> {
     check(hasJavaPlugin()) { "Java plugin is not applied!" }
+
+    // Repositories
     repository(Repository.MAVEN_CENTRAL)
-    return addDependencyTo(dependencies, config.configuration ?: "implementation", "net.dv8tion:JDA:${config.version}", config.configurationAction)
+
+    // Add dependency
+    return (config.configurations ?: listOf("implementation", "testImplementation")).map { configuration ->
+        addDependencyTo(dependencies, configuration, "net.dv8tion:JDA:${config.version}", config.configurationAction)
+    }
 }
 
 /**
@@ -125,10 +159,16 @@ fun Project.jda(config: DependencyConfig): ExternalModuleDependency {
  *
  * @param config The configuration for the Lazy Library dependency
  */
-fun Project.lazyLibrary(config: DependencyConfig): ExternalModuleDependency {
+fun Project.lazyLibrary(config: DependencyConfig): List<ExternalModuleDependency> {
     check(hasJavaPlugin()) { "Java plugin is not applied!" }
+
+    // Repositories
     repository(Repository.SRNYX_RELEASES, Repository.SRNYX_SNAPSHOTS)
-    return addDependencyTo(dependencies, config.configuration ?: "implementation", "xyz.srnyx:lazy-library:${config.version}", config.configurationAction)
+
+    // Add dependency
+    return (config.configurations ?: listOf("implementation", "testImplementation")).map { configuration ->
+        addDependencyTo(dependencies, configuration, "xyz.srnyx:lazy-library:${config.version}", config.configurationAction)
+    }
 }
 
 /**
@@ -138,10 +178,16 @@ fun Project.lazyLibrary(config: DependencyConfig): ExternalModuleDependency {
  * @param config The configuration for the Magic Mongo dependency
  */
 @Used
-fun Project.magicMongo(config: DependencyConfig): ExternalModuleDependency {
+fun Project.magicMongo(config: DependencyConfig): List<ExternalModuleDependency> {
     check(hasJavaPlugin()) { "Java plugin is not applied!" }
+
+    // Repositories
     repository(Repository.SRNYX_RELEASES, Repository.SRNYX_SNAPSHOTS)
-    return addDependencyTo(dependencies, config.configuration ?: "implementation", "xyz.srnyx:magic-mongo:${config.version}", config.configurationAction)
+
+    // Add dependency
+    return (config.configurations ?: listOf("implementation", "testImplementation")).map { configuration ->
+        addDependencyTo(dependencies, configuration, "xyz.srnyx:magic-mongo:${config.version}", config.configurationAction)
+    }
 }
 
 /**

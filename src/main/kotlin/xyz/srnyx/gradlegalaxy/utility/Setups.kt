@@ -3,18 +3,24 @@ package xyz.srnyx.gradlegalaxy.utility
 import org.gradle.api.JavaVersion
 import org.gradle.api.Project
 import org.gradle.api.publish.maven.MavenPublication
+import org.gradle.api.tasks.TaskProvider
+import org.gradle.api.tasks.testing.Test
 import org.gradle.internal.extensions.stdlib.capitalized
-import org.gradle.kotlin.dsl.add
+import org.gradle.kotlin.dsl.accessors.runtime.addDependencyTo
 import org.gradle.kotlin.dsl.apply
 import org.gradle.kotlin.dsl.create
+import org.gradle.kotlin.dsl.dependencies
 import org.gradle.kotlin.dsl.exclude
 import org.gradle.kotlin.dsl.get
+import org.gradle.kotlin.dsl.named
 import xyz.srnyx.gradlegalaxy.annotations.Used
+import xyz.srnyx.gradlegalaxy.data.annoyingapi.AnnoyingMetadata
 import xyz.srnyx.gradlegalaxy.data.config.DependencyConfig
 import xyz.srnyx.gradlegalaxy.data.config.JavaSetupConfig
 import xyz.srnyx.gradlegalaxy.data.config.JdaSetupConfig
 import xyz.srnyx.gradlegalaxy.data.config.MCSetupConfig
 import xyz.srnyx.gradlegalaxy.data.config.annoyingapi.AnnoyingSetupConfig
+import xyz.srnyx.gradlegalaxy.data.config.annoyingapi.CustomRuntimeLibrariesConfig
 import xyz.srnyx.gradlegalaxy.data.config.annoyingapi.MetadataConfig
 import xyz.srnyx.gradlegalaxy.data.config.publishing.PublishingEnvConfig
 import xyz.srnyx.gradlegalaxy.data.config.publishing.PublishingSimpleConfig
@@ -23,7 +29,6 @@ import xyz.srnyx.gradlegalaxy.enums.Repository
 import xyz.srnyx.gradlegalaxy.enums.repository
 
 import kotlin.String
-import kotlin.text.replace
 
 
 /**
@@ -85,14 +90,17 @@ fun Project.setupMC(
  * @param javaSetupConfig The configuration for [setupJava]
  * @param mcSetupConfig The configuration for [setupMC]
  * @param annoyingAPIConfig The configuration for [annoyingAPI]
+ *
+ * @return The metadata for Annoying API if [MetadataConfig.useMetadata] is true, otherwise null
  */
 @Used
 fun Project.setupAnnoyingAPI(
     javaSetupConfig: JavaSetupConfig = JavaSetupConfig(),
     mcSetupConfig: MCSetupConfig = MCSetupConfig(),
     annoyingSetupConfig: AnnoyingSetupConfig = AnnoyingSetupConfig(),
+    customRuntimeLibrariesConfig: CustomRuntimeLibrariesConfig = CustomRuntimeLibrariesConfig(),
     annoyingAPIConfig: DependencyConfig,
-) {
+): AnnoyingMetadata? {
     check(hasJavaPlugin()) { "Java plugin is not applied!" }
     check(hasShadowPlugin()) { "Shadow plugin is required for Annoying API!" }
 
@@ -114,30 +122,10 @@ fun Project.setupAnnoyingAPI(
         if (annoyingSetupConfig.metadataConfig.addRepositories) metadata.repositories.forEach { repository(it) }
 
         // Runtime libraries
-        val getPackage = getPackage()
-        metadata.runtimeLibraries.forEach { library ->
-            // Add repositories
-            if (annoyingSetupConfig.metadataConfig.runtimeLibrariesConfig.addRepositories) library.repositories.forEach { repo -> repository(repo) }
-
-            // Add dependency
-            if (annoyingSetupConfig.metadataConfig.runtimeLibrariesConfig.addDependencies) {
-                dependencies.add("compileOnly", "${library.group}:${library.name}:${library.version}") {
-                    library.excludes.forEach { exclude(it.group, it.module) }
-                }
-            }
-
-            // Relocations
-            if (annoyingSetupConfig.metadataConfig.runtimeLibrariesConfig.relocate) library.relocations.forEach { relocation ->
-                val to = relocation.to?.replace("{package}", getPackage)
-                if (to != null) {
-                    relocate(relocation.from, to)
-                } else {
-                    relocate(relocation.from)
-                }
-            }
-        }
+        processRuntimeLibraries(metadata.runtimeLibraries, annoyingSetupConfig.metadataConfig.runtimeLibrariesConfig)
     }
 
+    // Excludes
     if (annoyingSetupConfig.metadataConfig.excludes) {
         val original = annoyingAPIConfig.configurationAction
         annoyingAPIConfig.configurationAction = {
@@ -148,6 +136,23 @@ fun Project.setupAnnoyingAPI(
 
     // Add Annoying API
     annoyingAPI(annoyingAPIConfig)
+
+    // Custom runtime libraries
+    customRuntimeLibrariesConfig
+        .takeIf { !it.runtimeLibraries.isEmpty() }
+        ?.let { config ->
+            // Process libraries
+            config.processConfig?.let { processConfig ->
+                processRuntimeLibraries(config.runtimeLibraries, processConfig)
+            }
+
+            // Generate enum
+            config.generateRuntimeLibraryEnumConfig?.let { generateRuntimeLibraryEnumConfig ->
+                generateAnnoyingApiRuntimeLibraryEnum(config.runtimeLibraries, generateRuntimeLibraryEnumConfig, metadata)
+            }
+        }
+
+    return metadata
 }
 
 /**
@@ -213,6 +218,33 @@ fun Project.setupLazyLibrary(
     check(hasShadowPlugin()) { "Shadow plugin is required for Lazy Library!" }
     setupJda(javaSetupConfig, jdaSetupConfig, jdaConfig)
     lazyLibrary(lazyLibraryConfig)
+}
+
+/**
+ * Sets up the project for testing with JUnit
+ * 1. Adds the JUnit Jupiter and JUnit Platform dependencies
+ * 2. Configures the test task to use JUnit Platform
+ *
+ * @param junitBomConfig The configuration for the JUnit BOM dependency
+ *
+ * @return The test task that was configured
+ */
+fun Project.setupTesting(
+    junitBomConfig: DependencyConfig
+): TaskProvider<Test> {
+    // Add dependencies
+    dependencies {
+        (junitBomConfig.configurations ?: listOf("testImplementation")).forEach { configurationName ->
+            addDependencyTo(this, configurationName, platform("org.junit:junit-bom:${junitBomConfig.version}"), junitBomConfig.configurationAction)
+        }
+        add("testImplementation", "org.junit.jupiter:junit-jupiter")
+        add("testRuntimeOnly", "org.junit.platform:junit-platform-launcher")
+    }
+
+    // Configure and return test task
+    return tasks.named<Test>("test") {
+        useJUnitPlatform()
+    }
 }
 
 /**
