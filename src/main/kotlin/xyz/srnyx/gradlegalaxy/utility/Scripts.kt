@@ -20,6 +20,7 @@ import xyz.srnyx.gradlegalaxy.data.config.annoyingapi.GenerateRuntimeLibraryEnum
 import xyz.srnyx.gradlegalaxy.data.config.annoyingapi.RuntimeLibrariesConfig
 import xyz.srnyx.gradlegalaxy.enums.Repository
 import xyz.srnyx.gradlegalaxy.enums.repository
+import kotlin.apply
 
 import kotlin.text.replace
 
@@ -382,14 +383,20 @@ fun Project.generateAnnoyingApiRuntimeLibraryEnum(
     }
 
     // Register task to generate Enum file
+    val outputDir = project.layout.buildDirectory.dir("generated/sources/gradle-galaxy/main/java")
+    val outputFile = outputDir.map { it.file("$packageFolder/library/$enumName.java") }
     val generateEnumTask = project.tasks.register("generateRuntimeLibrary") {
-        val outputDir = project.layout.buildDirectory.dir("generated/sources/gradle-galaxy/main/java")
+        group = "build"
+        description = "Generates the $enumName enum for the Annoying API runtime libraries"
+
+        inputs.property("enum", enum)
         outputs.dir(outputDir)
 
         doLast {
-            val outputFile = outputDir.get().file("$packageFolder/library/$enumName.java").asFile
-            outputFile.parentFile.mkdirs()
-            outputFile.writeText(enum)
+            outputFile.get().asFile.apply {
+                parentFile.mkdirs()
+                writeText(enum)
+            }
         }
     }
 
