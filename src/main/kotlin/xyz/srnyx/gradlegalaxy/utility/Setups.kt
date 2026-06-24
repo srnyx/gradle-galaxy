@@ -22,6 +22,7 @@ import xyz.srnyx.gradlegalaxy.data.config.MCSetupConfig
 import xyz.srnyx.gradlegalaxy.data.config.annoyingapi.AnnoyingSetupConfig
 import xyz.srnyx.gradlegalaxy.data.config.annoyingapi.CustomRuntimeLibrariesConfig
 import xyz.srnyx.gradlegalaxy.data.config.annoyingapi.MetadataConfig
+import xyz.srnyx.gradlegalaxy.data.config.dependency.MockBukkitConfig
 import xyz.srnyx.gradlegalaxy.data.config.publishing.PublishingEnvConfig
 import xyz.srnyx.gradlegalaxy.data.config.publishing.PublishingSimpleConfig
 import xyz.srnyx.gradlegalaxy.data.pom.DeveloperData
@@ -226,11 +227,13 @@ fun Project.setupLazyLibrary(
  * 2. Configures the test task to use JUnit Platform
  *
  * @param junitBomConfig The configuration for the JUnit BOM dependency
+ * @param configuration The configuration for the test task
  *
  * @return The test task that was configured
  */
 fun Project.setupTesting(
-    junitBomConfig: DependencyConfig
+    junitBomConfig: DependencyConfig,
+    block: Test.() -> Unit = {},
 ): TaskProvider<Test> {
     // Add dependencies
     dependencies {
@@ -244,7 +247,42 @@ fun Project.setupTesting(
     // Configure and return test task
     return tasks.named<Test>("test") {
         useJUnitPlatform()
+
+        // For ByteBuddy/Mockito/MockBukkit
+        jvmArgs("--add-opens", "java.base/java.lang=ALL-UNNAMED")
+
+        block()
     }
+}
+
+/**
+ * Sets up the project for testing with JUnit and MockBukkit
+ *
+ * 1. Calls [mockBukkit] with the specified parameters
+ * 2. Excludes `org.spigotmc:spigot-api` from test classpath
+ * 3. Calls [setupTesting] with the specified parameters
+ *
+ * @param junitBomConfig The configuration for the JUnit BOM dependency
+ * @param mockBukkitDependencyConfig The configuration for the MockBukkit dependency
+ * @param mockBukkitConfig The configuration for MockBukkit
+ * @param block The configuration for the test task
+ *
+ * @return The test task that was configured
+ */
+fun Project.setupMockBukkit(
+    junitBomConfig: DependencyConfig,
+    mockBukkitDependencyConfig: DependencyConfig,
+    mockBukkitConfig: MockBukkitConfig = MockBukkitConfig(),
+    block: Test.() -> Unit = {},
+): TaskProvider<Test> {
+    // Add MockBukkit
+    mockBukkit(mockBukkitDependencyConfig, mockBukkitConfig)
+
+    // Exclude spigot-api from test classpath so MockBukkit's Paper takes precedence
+    configurations.named("testImplementation") { exclude("org.spigotmc", "spigot-api") }
+
+    // Setup testing
+    return setupTesting(junitBomConfig, block)
 }
 
 /**
@@ -255,16 +293,24 @@ fun Project.setupTesting(
  * 3. Creates a [MavenPublication] with the specified [config]
  *
  * @param config The configuration for setting up publishing
+ * @param configuration The configuration for the publication
  *
  * @return The [MavenPublication] that was created
  */
 fun Project.setupPublishingSimple(
     config: PublishingSimpleConfig = PublishingSimpleConfig(this),
+    configuration: MavenPublication.() -> Unit = {},
 ): MavenPublication {
     apply(plugin = "maven-publish")
+
+    // Javadocs and sources
     if (config.withJavadocSourcesJars) addJavadocSourcesJars()
 
-    val publication: MavenPublication = getPublishing().publications.create<MavenPublication>("maven") {
+    // Silence missing Javadoc warnings
+    if (config.silenceMissingJavadocWarnings) silenceMissingJavaDocWarnings()
+
+    // Create publication
+    return getPublishing().publications.create<MavenPublication>("maven") {
         config.groupId?.let { this.groupId = it }
         config.artifactId?.let { this.artifactId = it }
         config.version?.let { this.version = it }
@@ -333,10 +379,9 @@ fun Project.setupPublishingSimple(
                 config.scm.tag?.let(this.tag::set)
             }
         }
-    }
 
-    config.configuration(publication)
-    return publication
+        configuration()
+    }
 }
 
 /**

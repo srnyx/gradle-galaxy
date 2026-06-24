@@ -13,6 +13,8 @@ import org.gradle.api.publish.PublishingExtension
 import org.gradle.api.tasks.Copy
 import org.gradle.api.tasks.compile.JavaCompile
 import org.gradle.api.tasks.bundling.Jar
+import org.gradle.api.tasks.javadoc.Javadoc
+import org.gradle.external.javadoc.StandardJavadocDocletOptions
 import org.gradle.kotlin.dsl.*
 import xyz.srnyx.gradlegalaxy.data.annoyingapi.AnnoyingMetadata
 import xyz.srnyx.gradlegalaxy.data.annoyingapi.RuntimeLibrary
@@ -167,15 +169,20 @@ fun Project.addJavadocSourcesJars(javadocClassifier: String? = null, sourcesClas
 }
 
 /**
- * Configures the ProcessResources task to add replacements
+ * Configures the `processResources` and `processTestResources` tasks to add replacements
  *
- * @param replacements A [Map] of all the replacements
+ * @param   files           The files to process replacements for
+ * @param   replacements    A [Map] of all the replacements
  */
 fun Project.addReplacementsTask(files: Set<String> = setOf("plugin.yml"), replacements: Map<String, String> = getDefaultReplacements()) {
-    tasks.named<Copy>("processResources") {
-        outputs.upToDateWhen { false }
-        filesMatching(files) {
-            expand(if (replacements["defaultReplacements"] == "true") getDefaultReplacements() + replacements.minus("defaultReplacements") else replacements)
+    val actualReplacements = if (replacements["defaultReplacements"] == "true") getDefaultReplacements() + replacements.minus("defaultReplacements") else replacements
+    listOf("processResources", "processTestResources").forEach { taskName ->
+        tasks.named<Copy>(taskName) {
+            inputs.property("replacements", actualReplacements)
+
+            filesMatching(files) {
+                expand(actualReplacements)
+            }
         }
     }
 }
@@ -198,6 +205,14 @@ fun Project.addCompilerArgs(vararg args: String) {
 fun Project.setMainClass(mainClassName: String? = null) {
     check(hasApplicationPlugin()) { "Application plugin is not applied!" }
     extensions.configure<JavaApplication>("application") { mainClass.set(mainClassName ?: "${getPackage()}.${project.name}") }
+}
+
+/**
+ * Silences missing JavaDoc warnings
+ */
+fun Project.silenceMissingJavaDocWarnings() {
+    check(hasJavaPlugin()) { "Java plugin is not applied!" }
+    tasks.withType<Javadoc> { (options as StandardJavadocDocletOptions).addStringOption("Xdoclint:none", "-quiet") }
 }
 
 /**

@@ -1,4 +1,4 @@
-package xyz.srnyx.gradlegalaxy.data.config
+package xyz.srnyx.gradlegalaxy.data.config.dependency
 
 
 /**

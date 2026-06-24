@@ -8,7 +8,8 @@ import org.gradle.kotlin.dsl.accessors.runtime.addDependencyTo
 import xyz.srnyx.gradlegalaxy.annotations.Used
 import xyz.srnyx.gradlegalaxy.data.AdventureDependency
 import xyz.srnyx.gradlegalaxy.data.config.DependencyConfig
-import xyz.srnyx.gradlegalaxy.data.config.SpigotConfig
+import xyz.srnyx.gradlegalaxy.data.config.dependency.MockBukkitConfig
+import xyz.srnyx.gradlegalaxy.data.config.dependency.SpigotConfig
 import xyz.srnyx.gradlegalaxy.enums.PaperVersion
 import xyz.srnyx.gradlegalaxy.enums.Repository
 import xyz.srnyx.gradlegalaxy.enums.repository
@@ -26,6 +27,7 @@ import xyz.srnyx.gradlegalaxy.enums.repository
 fun Project.spigotAPI(
     config: DependencyConfig,
     spigotConfig: SpigotConfig = SpigotConfig(),
+    block: ExternalModuleDependency.() -> Unit = {},
 ): List<ExternalModuleDependency> {
     check(hasJavaPlugin()) { "Java plugin is not applied!" }
 
@@ -39,7 +41,10 @@ fun Project.spigotAPI(
 
     // Add dependency
     return (config.configurations ?: listOf("compileOnly", "testImplementation")).map { configuration ->
-        addDependencyTo(dependencies, configuration, "org.spigotmc:spigot-api:${getVersionString(config.version)}", config.configurationAction)
+        addDependencyTo(dependencies, configuration, "org.spigotmc:spigot-api:${getVersionString(config.version)}") {
+            config.configurationAction(this)
+            block()
+        }
     }
 }
 
@@ -53,6 +58,7 @@ fun Project.spigotAPI(
 fun Project.spigotNMS(
     config: DependencyConfig,
     spigotConfig: SpigotConfig = SpigotConfig(),
+    block: ExternalModuleDependency.() -> Unit = {},
 ): List<ExternalModuleDependency> {
     check(hasJavaPlugin()) { "Java plugin is not applied!" }
 
@@ -65,7 +71,10 @@ fun Project.spigotNMS(
 
     // Add dependency
     return (config.configurations ?: listOf("compileOnly", "testImplementation")).map { configuration ->
-        addDependencyTo(dependencies, configuration, "org.spigotmc:spigot:${getVersionString(config.version)}", config.configurationAction)
+        addDependencyTo(dependencies, configuration, "org.spigotmc:spigot:${getVersionString(config.version)}") {
+            config.configurationAction(this)
+            block()
+        }
     }
 }
 
@@ -79,6 +88,7 @@ fun Project.spigotNMS(
 fun Project.paper(
     config: DependencyConfig,
     spigotConfig: SpigotConfig = SpigotConfig(),
+    block: ExternalModuleDependency.() -> Unit = {},
 ): List<ExternalModuleDependency> {
     check(hasJavaPlugin()) { "Java plugin is not applied!" }
 
@@ -91,7 +101,10 @@ fun Project.paper(
     // Add dependency
     val paperVersion: PaperVersion = PaperVersion.parse(config.version)
     return (config.configurations ?: listOf("compileOnly", "testImplementation")).map { configuration ->
-        addDependencyTo(dependencies, configuration, "${paperVersion.groupId}:${paperVersion.artifactId}:${getVersionString(config.version)}", config.configurationAction)
+        addDependencyTo(dependencies, configuration, "${paperVersion.groupId}:${paperVersion.artifactId}:${getVersionString(config.version)}") {
+            config.configurationAction(this)
+            block()
+        }
     }
 }
 
@@ -122,7 +135,10 @@ fun Project.adventure(vararg dependencies: AdventureDependency, configurationAll
  *
  * @return The [ExternalModuleDependency] of the Annoying API dependency
  */
-fun Project.annoyingAPI(config: DependencyConfig): List<ExternalModuleDependency> {
+fun Project.annoyingAPI(
+    config: DependencyConfig,
+    block: ExternalModuleDependency.() -> Unit = {},
+): List<ExternalModuleDependency> {
     check(hasJavaPlugin()) { "Java plugin is not applied!" }
     check(hasShadowPlugin()) { "Shadow plugin is not applied!" }
 
@@ -131,7 +147,10 @@ fun Project.annoyingAPI(config: DependencyConfig): List<ExternalModuleDependency
 
     // Add Annoying API dependency
     return (config.configurations ?: listOf("implementation", "testImplementation")).map { configuration ->
-        addDependencyTo(dependencies, configuration, "xyz.srnyx:annoying-api:${config.version}", config.configurationAction)
+        addDependencyTo(dependencies, configuration, "xyz.srnyx:annoying-api:${config.version}") {
+            config.configurationAction(this)
+            block()
+        }
     }
 }
 
@@ -141,7 +160,10 @@ fun Project.annoyingAPI(config: DependencyConfig): List<ExternalModuleDependency
  *
  * @param config The configuration for the JDA dependency
  */
-fun Project.jda(config: DependencyConfig): List<ExternalModuleDependency> {
+fun Project.jda(
+    config: DependencyConfig,
+    block: ExternalModuleDependency.() -> Unit = {},
+): List<ExternalModuleDependency> {
     check(hasJavaPlugin()) { "Java plugin is not applied!" }
 
     // Repositories
@@ -149,7 +171,10 @@ fun Project.jda(config: DependencyConfig): List<ExternalModuleDependency> {
 
     // Add dependency
     return (config.configurations ?: listOf("implementation", "testImplementation")).map { configuration ->
-        addDependencyTo(dependencies, configuration, "net.dv8tion:JDA:${config.version}", config.configurationAction)
+        addDependencyTo(dependencies, configuration, "net.dv8tion:JDA:${config.version}") {
+            config.configurationAction(this)
+            block()
+        }
     }
 }
 
@@ -159,7 +184,10 @@ fun Project.jda(config: DependencyConfig): List<ExternalModuleDependency> {
  *
  * @param config The configuration for the Lazy Library dependency
  */
-fun Project.lazyLibrary(config: DependencyConfig): List<ExternalModuleDependency> {
+fun Project.lazyLibrary(
+    config: DependencyConfig,
+    block: ExternalModuleDependency.() -> Unit = {},
+): List<ExternalModuleDependency> {
     check(hasJavaPlugin()) { "Java plugin is not applied!" }
 
     // Repositories
@@ -167,7 +195,10 @@ fun Project.lazyLibrary(config: DependencyConfig): List<ExternalModuleDependency
 
     // Add dependency
     return (config.configurations ?: listOf("implementation", "testImplementation")).map { configuration ->
-        addDependencyTo(dependencies, configuration, "xyz.srnyx:lazy-library:${config.version}", config.configurationAction)
+        addDependencyTo(dependencies, configuration, "xyz.srnyx:lazy-library:${config.version}") {
+            config.configurationAction(this)
+            block()
+        }
     }
 }
 
@@ -178,7 +209,10 @@ fun Project.lazyLibrary(config: DependencyConfig): List<ExternalModuleDependency
  * @param config The configuration for the Magic Mongo dependency
  */
 @Used
-fun Project.magicMongo(config: DependencyConfig): List<ExternalModuleDependency> {
+fun Project.magicMongo(
+    config: DependencyConfig,
+    block: ExternalModuleDependency.() -> Unit = {},
+): List<ExternalModuleDependency> {
     check(hasJavaPlugin()) { "Java plugin is not applied!" }
 
     // Repositories
@@ -186,7 +220,39 @@ fun Project.magicMongo(config: DependencyConfig): List<ExternalModuleDependency>
 
     // Add dependency
     return (config.configurations ?: listOf("implementation", "testImplementation")).map { configuration ->
-        addDependencyTo(dependencies, configuration, "xyz.srnyx:magic-mongo:${config.version}", config.configurationAction)
+        addDependencyTo(dependencies, configuration, "xyz.srnyx:magic-mongo:${config.version}") {
+            config.configurationAction(this)
+            block()
+        }
+    }
+}
+
+/**
+ * 1. Adds [Repository.MAVEN_CENTRAL] and [Repository.PAPER] repositories
+ * 2. Adds the dependency to the provided MockBukkit version
+ *
+ * @param config The configuration for the MockBukkit dependency
+ * @param mockBukkitConfig The configuration for MockBukkit
+ * @param block The block to apply to the dependency
+ *
+ * @return The [ExternalModuleDependency]s of the MockBukkit dependency
+ */
+fun Project.mockBukkit(
+    config: DependencyConfig,
+    mockBukkitConfig: MockBukkitConfig = MockBukkitConfig(),
+    block: ExternalModuleDependency.() -> Unit = {},
+): List<ExternalModuleDependency> {
+    check(hasJavaPlugin()) { "Java plugin is not applied!" }
+
+    // Repositories
+    repository(Repository.MAVEN_CENTRAL, Repository.PAPER)
+
+    // Add dependency
+    return (config.configurations ?: listOf("testImplementation")).map { configuration ->
+        addDependencyTo(dependencies, configuration, "${mockBukkitConfig.group}:MockBukkit-v${mockBukkitConfig.minecraftVersion}:${config.version}") {
+            config.configurationAction(this)
+            block()
+        }
     }
 }
 

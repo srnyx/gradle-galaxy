@@ -18,6 +18,7 @@ import xyz.srnyx.gradlegalaxy.data.pom.ScmData
  * @param artifactId The artifact ID
  * @param version The version
  * @param withJavadocSourcesJars Whether to add Javadoc and Sources JARs to the publication
+ * @param silenceMissingJavadocWarnings Whether to silence missing Javadoc warnings
  * @param component The [SoftwareComponent] to publish
  * @param artifacts The artifacts to publish
  * @param textArtifacts The text artifacts to publish
@@ -27,7 +28,6 @@ import xyz.srnyx.gradlegalaxy.data.pom.ScmData
  * @param licenses The licenses of the project
  * @param developers The developers of the project
  * @param scm The SCM information of the project
- * @param configuration The configuration of the [MavenPublication]
  */
 data class PublishingSimpleConfig(
     var project: Project,
@@ -35,6 +35,7 @@ data class PublishingSimpleConfig(
     var artifactId: String? = null,
     var version: String? = null,
     var withJavadocSourcesJars: Boolean = true,
+    var silenceMissingJavadocWarnings: Boolean = false,
     var component: SoftwareComponent? = project.components["java"],
     var artifacts: Collection<Any> = emptyList(),
     var textArtifacts: Collection<TextArtifact> = emptyList(),
@@ -44,7 +45,6 @@ data class PublishingSimpleConfig(
     var licenses: List<LicenseData> = emptyList(),
     var developers: List<DeveloperData> = emptyList(),
     val scm: ScmData? = null,
-    var configuration: MavenPublication.() -> Unit = {}
 )
 
 /**
@@ -56,6 +56,7 @@ fun Project.publishingSimpleConfig(
     artifactId: String? = null,
     version: String? = null,
     withJavadocSourcesJars: Boolean = true,
+    silenceMissingJavadocWarnings: Boolean = false,
     component: SoftwareComponent? = project.components["java"],
     artifacts: Collection<Any> = emptyList(),
     textArtifacts: Collection<TextArtifact> = emptyList(),
@@ -65,5 +66,4 @@ fun Project.publishingSimpleConfig(
     licenses: List<LicenseData> = emptyList(),
     developers: List<DeveloperData> = emptyList(),
     scm: ScmData? = null,
-    configuration: MavenPublication.() -> Unit = {}
-) = PublishingSimpleConfig(project, groupId, artifactId, version, withJavadocSourcesJars, component, artifacts, textArtifacts, name, description, url, licenses, developers, scm, configuration)
+) = PublishingSimpleConfig(project, groupId, artifactId, version, withJavadocSourcesJars, silenceMissingJavadocWarnings, component, artifacts, textArtifacts, name, description, url, licenses, developers, scm)
