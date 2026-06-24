@@ -316,7 +316,6 @@ fun Project.generateAnnoyingApiRuntimeLibraryEnum(
     val packagePath = generateRuntimeLibraryEnumConfig.packagePath ?: getPackage()
     val packageFolder = packagePath.replace(".", "/")
     val enumName = "${name}Library"
-    val annoyingPackage = annoyingMetadata?.packageName ?: "xyz.srnyx.annoyingapi"
 
     val enum = buildString {
         // Package
@@ -324,19 +323,16 @@ fun Project.generateAnnoyingApiRuntimeLibraryEnum(
         append("\n")
 
         // Imports
+        val annoyingPackage = annoyingMetadata?.packageName ?: "xyz.srnyx.annoyingapi"
         val libsLibby = "${if (generateRuntimeLibraryEnumConfig.relocateImports) "$annoyingPackage.libs" else "net.byteflux"}.libby"
         append("\nimport $libsLibby.Library;")
-        append("\nimport $libsLibby.Repositories;")
         append("\nimport $libsLibby.relocation.Relocation;")
         append("\nimport org.jetbrains.annotations.NotNull;")
         append("\nimport org.jetbrains.annotations.Nullable;")
-        append("\nimport xyz.srnyx.annoyingapi.AnnoyingPlugin;")
-        append("\nimport xyz.srnyx.annoyingapi.BuildProperties;")
-        append("\nimport xyz.srnyx.annoyingapi.library.AnnoyingLibrary;")
+        append("\nimport $annoyingPackage.AnnoyingPlugin;")
+        append("\nimport $annoyingPackage.library.AnnoyingLibrary;")
         append("\n")
-        append("\nimport java.util.Arrays;")
         append("\nimport java.util.Collection;")
-        append("\nimport java.util.Collections;")
         append("\nimport java.util.List;")
         append("\nimport java.util.function.Function;")
         append("\nimport java.util.function.Supplier;")

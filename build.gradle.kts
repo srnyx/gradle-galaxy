@@ -38,14 +38,10 @@ tasks.withType<JavaCompile> {
     sourceCompatibility = javaVersion.toString()
     targetCompatibility = javaVersion.toString()
     options.encoding = "UTF-8"
-    if (includeJavadocsSources) {
-        dependsOn("javadocJar")
-        dependsOn("sourcesJar")
-    }
 }
 
 // Add docs and sources jars
-if (includeJavadocsSources) sourceSets {
+if (includeJavadocsSources) {
     tasks.register("javadocJar", Jar::class) {
         group = "build"
         description = "Assembles a jar archive containing the javadoc files"
@@ -72,7 +68,7 @@ gradlePlugin {
         version = project.version
         displayName = project.name
         description = project.description
-        tags.set(listOf("srnyx", "minecraft", "spigot"))
+        tags.set(listOf("srnyx", "minecraft", "spigot", "paper", "adventure", "jda"))
     }
 }
 

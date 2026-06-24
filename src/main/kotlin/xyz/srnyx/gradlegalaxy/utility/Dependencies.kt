@@ -123,7 +123,12 @@ fun Project.adventure(vararg dependencies: AdventureDependency, configurationAll
     repository(Repository.MAVEN_CENTRAL)
 
     // Add dependencies
-    dependencies.forEach { addDependencyTo(project.dependencies, it.config.configurations?.firstOrNull() ?: configurationAll ?: "implementation", "net.kyori:${it.component.getComponent()}:${it.config.version}", it.config.configurationAction) }
+    dependencies.forEach { dependency ->
+        val configurations = dependency.config.configurations ?: listOf(configurationAll ?: "implementation")
+        configurations.forEach { configuration ->
+            addDependencyTo(project.dependencies, configuration, "net.kyori:${dependency.component.getComponent()}:${dependency.config.version}", dependency.config.configurationAction)
+        }
+    }
 }
 
 /**

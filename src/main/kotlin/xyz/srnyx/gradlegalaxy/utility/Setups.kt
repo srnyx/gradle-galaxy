@@ -176,10 +176,10 @@ fun Project.setupJda(
     jdaConfig: DependencyConfig,
 ) {
     check(hasShadowPlugin()) { "Shadow plugin is required for JDA!" }
+
     setupJava(javaSetupConfig)
     setMainClass(jdaSetupConfig.mainClassName)
     addCompilerArgs("-parameters")
-    jda(jdaConfig)
 
     // Exclude opus-java if needed
     if (jdaSetupConfig.excludeOpus) {
@@ -189,6 +189,9 @@ fun Project.setupJda(
             original()
         }
     }
+
+    // Add JDA with new jdaConfig (excludeOpus)
+    jda(jdaConfig)
 
     // Fix some tasks
     tasks["distZip"].dependsOn("shadowJar")

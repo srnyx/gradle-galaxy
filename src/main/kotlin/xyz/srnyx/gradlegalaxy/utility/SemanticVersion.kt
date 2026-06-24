@@ -61,7 +61,7 @@ class SemanticVersion(version: String) : Comparable<SemanticVersion> {
     operator fun component3(): Int = patch
 
     override operator fun compareTo(other: SemanticVersion): Int {
-        if (major != other.minor) return major.compareTo(other.major)
+        if (major != other.major) return major.compareTo(other.major)
         if (minor != other.minor) return minor.compareTo(other.minor)
         return patch.compareTo(other.patch)
     }
