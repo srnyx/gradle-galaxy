@@ -7,10 +7,12 @@ import kotlinx.serialization.json.Json
 import org.gradle.api.DefaultTask
 import org.gradle.api.JavaVersion
 import org.gradle.api.Project
+import org.gradle.api.Task
 import org.gradle.api.plugins.JavaApplication
 import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.publish.PublishingExtension
 import org.gradle.api.tasks.Copy
+import org.gradle.api.tasks.TaskProvider
 import org.gradle.api.tasks.compile.JavaCompile
 import org.gradle.api.tasks.bundling.Jar
 import org.gradle.api.tasks.javadoc.Javadoc
@@ -20,6 +22,7 @@ import xyz.srnyx.gradlegalaxy.data.annoyingapi.AnnoyingMetadata
 import xyz.srnyx.gradlegalaxy.data.annoyingapi.RuntimeLibrary
 import xyz.srnyx.gradlegalaxy.data.config.annoyingapi.GenerateRuntimeLibraryEnumConfig
 import xyz.srnyx.gradlegalaxy.data.config.annoyingapi.RuntimeLibrariesConfig
+import xyz.srnyx.gradlegalaxy.data.platforms.PluginPlatform
 import xyz.srnyx.gradlegalaxy.enums.Repository
 import xyz.srnyx.gradlegalaxy.enums.repository
 import kotlin.apply
@@ -60,6 +63,11 @@ fun Project.hasShadowPlugin(): Boolean = try {
 } catch (_: NoClassDefFoundError) {
     false
 }
+
+/**
+ * @return  If the `me.modmuss50.mod-publish-plugin` plugin is applied
+ */
+fun Project.hasModPublishPlugin(): Boolean = plugins.hasPlugin("me.modmuss50.mod-publish-plugin")
 
 /**
  * Checks if the `maven-publish` plugin is applied
@@ -113,6 +121,16 @@ fun Project.getDefaultReplacements(): Map<String, String> = mapOf(
  * @return The value of the environment variable, or `null` if it is not set or is blank
  */
 fun getEnvironmentVariable(name: String): String? = System.getenv(name)?.takeIf { it.isNotBlank() }
+
+/**
+ * @return  Whether the project is running in a GitHub Actions workflow
+ */
+fun inGitHubWorkflow(): Boolean = getEnvironmentVariable("GITHUB_WORKFLOW") != null
+
+/**
+ * @return  Whether the project is running in a GitHub Actions release workflow
+ */
+fun inGitHubRelease(): Boolean = getEnvironmentVariable("GITHUB_REF_TYPE") == "tag"
 
 /**
  * Sets the text encoding for the project
@@ -241,7 +259,30 @@ fun Project.relocate(
 }
 
 private val json = Json {
+    prettyPrint = true
+    prettyPrintIndent = "  "
     ignoreUnknownKeys = true
+}
+
+fun Project.addPlatformsResourceFileTask(platforms: Map<PluginPlatform, String>): TaskProvider<Task> {
+    val platformsFile = project.layout.buildDirectory.file("resources/main/platforms.json").get().asFile
+    val platformsProvider = project.provider { json.encodeToString(mapOf("platforms" to platforms)) }
+
+    val task = tasks.register("writePlatformsResourceFile") {
+        group = "build"
+        description = "Writes the platforms.json file"
+
+        inputs.property("text", platformsProvider)
+        outputs.file(platformsFile)
+
+        doLast {
+            platformsFile.writeText(platformsProvider.get())
+        }
+    }
+
+    project.tasks.named("processResources") { dependsOn(task) }
+
+    return task
 }
 
 /**

@@ -28,6 +28,7 @@ dependencies {
 
     // Plugins
     compileOnly("com.gradleup.shadow:shadow-gradle-plugin:9.0.0")
+    compileOnly("me.modmuss50.mod-publish-plugin:me.modmuss50.mod-publish-plugin.gradle.plugin:2.1.1")
 }
 
 // Set Kotlin JVM version

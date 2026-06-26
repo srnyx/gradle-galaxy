@@ -1,18 +1,27 @@
 package xyz.srnyx.gradlegalaxy.utility
 
+import me.modmuss50.mpp.ModPublishExtension
+import me.modmuss50.mpp.PublishModTask
+import me.modmuss50.mpp.ReleaseType
+import me.modmuss50.mpp.platforms.curseforge.Curseforge
+import me.modmuss50.mpp.platforms.modrinth.Modrinth
+import org.gradle.api.Action
 import org.gradle.api.JavaVersion
 import org.gradle.api.Project
 import org.gradle.api.publish.maven.MavenPublication
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.api.tasks.testing.Test
 import org.gradle.internal.extensions.stdlib.capitalized
+import org.gradle.jvm.tasks.Jar
 import org.gradle.kotlin.dsl.accessors.runtime.addDependencyTo
 import org.gradle.kotlin.dsl.apply
 import org.gradle.kotlin.dsl.create
 import org.gradle.kotlin.dsl.dependencies
 import org.gradle.kotlin.dsl.exclude
 import org.gradle.kotlin.dsl.get
+import org.gradle.kotlin.dsl.invoke
 import org.gradle.kotlin.dsl.named
+import org.gradle.kotlin.dsl.withType
 import xyz.srnyx.gradlegalaxy.annotations.Used
 import xyz.srnyx.gradlegalaxy.data.annoyingapi.AnnoyingMetadata
 import xyz.srnyx.gradlegalaxy.data.config.DependencyConfig
@@ -24,7 +33,9 @@ import xyz.srnyx.gradlegalaxy.data.config.annoyingapi.CustomRuntimeLibrariesConf
 import xyz.srnyx.gradlegalaxy.data.config.annoyingapi.MetadataConfig
 import xyz.srnyx.gradlegalaxy.data.config.dependency.MockBukkitConfig
 import xyz.srnyx.gradlegalaxy.data.config.publishing.PublishingEnvConfig
+import xyz.srnyx.gradlegalaxy.data.config.publishing.PublishingPlatformConfig
 import xyz.srnyx.gradlegalaxy.data.config.publishing.PublishingSimpleConfig
+import xyz.srnyx.gradlegalaxy.data.platforms.PluginPlatform
 import xyz.srnyx.gradlegalaxy.data.pom.DeveloperData
 import xyz.srnyx.gradlegalaxy.enums.Repository
 import xyz.srnyx.gradlegalaxy.enums.repository
@@ -45,7 +56,15 @@ fun Project.setupJava(
     config: JavaSetupConfig = JavaSetupConfig(),
 ) {
     this.group = config.group ?: this.group
-    this.version = config.version ?: this.version
+    this.version = config.version
+        ?: this.version.takeIf { it != Project.DEFAULT_VERSION }
+        ?: when {
+            inGitHubWorkflow() -> getEnvironmentVariable("GITHUB_REF_NAME")
+                ?.takeIf { inGitHubRelease() }
+                ?: getEnvironmentVariable("GITHUB_SHA")?.take(7)
+            else -> null
+        }
+        ?: "dev"
     this.description = config.description ?: this.description
     config.javaVersion?.let(::setJavaVersion)
     config.textEncoding?.let(::setTextEncoding)
@@ -87,10 +106,8 @@ fun Project.setupMC(
  *    4. Excludes some Annoying API dependencies
  * 3. Calls [setupMC] with the specified parameters
  * 4. Calls [annoyingAPI] with the specified parameters
- *
- * @param javaSetupConfig The configuration for [setupJava]
- * @param mcSetupConfig The configuration for [setupMC]
- * @param annoyingAPIConfig The configuration for [annoyingAPI]
+ * 5. Calls [addPlatformsResourceFileTask] if enabled
+ * 6. Calls [setupPublishingPlatforms] with the specified parameters
  *
  * @return The metadata for Annoying API if [MetadataConfig.useMetadata] is true, otherwise null
  */
@@ -98,9 +115,11 @@ fun Project.setupMC(
 fun Project.setupAnnoyingAPI(
     javaSetupConfig: JavaSetupConfig = JavaSetupConfig(),
     mcSetupConfig: MCSetupConfig = MCSetupConfig(),
-    annoyingSetupConfig: AnnoyingSetupConfig = AnnoyingSetupConfig(),
-    customRuntimeLibrariesConfig: CustomRuntimeLibrariesConfig = CustomRuntimeLibrariesConfig(),
     annoyingAPIConfig: DependencyConfig,
+    annoyingSetupConfig: AnnoyingSetupConfig = AnnoyingSetupConfig(),
+    metadataConfig: MetadataConfig = MetadataConfig(),
+    customRuntimeLibrariesConfig: CustomRuntimeLibrariesConfig = CustomRuntimeLibrariesConfig(),
+    publishingPlatformConfig: PublishingPlatformConfig = PublishingPlatformConfig(mapOf()),
 ): AnnoyingMetadata? {
     check(hasJavaPlugin()) { "Java plugin is not applied!" }
     check(hasShadowPlugin()) { "Shadow plugin is required for Annoying API!" }
@@ -109,25 +128,25 @@ fun Project.setupAnnoyingAPI(
     setupMC(javaSetupConfig, mcSetupConfig)
 
     // Get and process Annoying API metadata
-    val metadata = annoyingSetupConfig.metadataConfig.useMetadata.takeIf { it }?.let { getAnnoyingApiMetadata(annoyingAPIConfig.version) }
+    val metadata = metadataConfig.useMetadata.takeIf { it }?.let { getAnnoyingApiMetadata(annoyingAPIConfig.version) }
     if (metadata != null) {
         // Relocate Annoying API
-        if (annoyingSetupConfig.metadataConfig.relocateAnnoyingAPI) relocate(metadata.packageName)
+        if (metadataConfig.relocateAnnoyingAPI) relocate(metadata.packageName)
 
         // Java version (only if custom not specified)
-        if (annoyingSetupConfig.metadataConfig.setJavaVersion && metadata.javaVersion != null && javaSetupConfig.javaVersion == null) {
+        if (metadataConfig.setJavaVersion && metadata.javaVersion != null && javaSetupConfig.javaVersion == null) {
             setJavaVersion(JavaVersion.toVersion(metadata.javaVersion))
         }
 
         // Repositories
-        if (annoyingSetupConfig.metadataConfig.addRepositories) metadata.repositories.forEach { repository(it) }
+        if (metadataConfig.addRepositories) metadata.repositories.forEach { repository(it) }
 
         // Runtime libraries
-        processRuntimeLibraries(metadata.runtimeLibraries, annoyingSetupConfig.metadataConfig.runtimeLibrariesConfig)
+        processRuntimeLibraries(metadata.runtimeLibraries, metadataConfig.runtimeLibrariesConfig)
     }
 
     // Excludes
-    if (annoyingSetupConfig.metadataConfig.excludes) {
+    if (metadataConfig.excludes) {
         val original = annoyingAPIConfig.configurationAction
         annoyingAPIConfig.configurationAction = {
             metadata?.excludes?.forEach { exclude(it.group, it.module) }
@@ -152,6 +171,15 @@ fun Project.setupAnnoyingAPI(
                 generateAnnoyingApiRuntimeLibraryEnum(config.runtimeLibraries, generateRuntimeLibraryEnumConfig, metadata)
             }
         }
+
+    // Platforms
+    if (!publishingPlatformConfig.platforms.isEmpty()) {
+        // Add resource file task
+        if (annoyingSetupConfig.addPlatformsResourceFile) addPlatformsResourceFileTask(publishingPlatformConfig.platforms)
+
+        // Setup publishing
+        setupPublishingPlatforms(publishingPlatformConfig)
+    }
 
     return metadata
 }
@@ -392,8 +420,7 @@ fun Project.setupPublishingSimple(
  *
  * 1. Applies the `maven-publish` plugin
  * 2. Creates a repository with the specified maven URL and credential environment variables
- * 3. Updates the version using the specified environment variables or the default version
- * 4. Calls [setupPublishingSimple] with the specified parameters
+ * 3. Calls [setupPublishingSimple] with the specified parameters
  *
  * @param simpleConfig The configuration for setting up publishing using a simple configuration
  * @param envConfig The configuration for setting up publishing using environment variables
@@ -420,9 +447,105 @@ fun Project.setupPublishingEnv(
         }
     }
 
-    // Set version
-    if (simpleConfig.version == null) simpleConfig.version = getEnvironmentVariable(envConfig.versionEnv) ?: envConfig.defaultVersion
-
     // Create publication
     return setupPublishingSimple(simpleConfig)
+}
+
+/**
+ * Sets up publishing for project platforms (GitHub, Modrinth, CurseForge)
+ *
+ * @param config The configuration for setting up publishing for project platforms
+ * @param gitHubConfig The configuration for setting up publishing for GitHub
+ * @param modrinthConfig The configuration for setting up publishing for Modrinth
+ * @param curseForgeConfig The configuration for setting up publishing for CurseForge
+ * @param action The action to perform after setting up publishing for project platforms
+ */
+fun Project.setupPublishingPlatforms(
+    config: PublishingPlatformConfig,
+    modrinthAction: Action<Modrinth> = Action {},
+    curseForgeAction: Action<Curseforge> = Action {},
+    action: Action<ModPublishExtension> = Action {},
+) {
+    check(hasModPublishPlugin()) { "Mod Publish plugin is not applied!" }
+
+    val minecraftVersionEnd = config.minecraftVersionEnd ?: "latest"
+
+    // Ensure publishing runs after building
+    tasks.withType<PublishModTask> { dependsOn(if (hasShadowPlugin()) "shadowJar" else "jar") }
+
+    // Setup publishing
+    extensions.configure<ModPublishExtension>("publishMods") {
+        displayName.set(project.version.toString())
+        modLoaders.set(config.loaders)
+
+        // Type
+        type.set(if (inGitHubRelease()) ReleaseType.STABLE else ReleaseType.ALPHA)
+
+        // Primary file (shadowJar or jar)
+        file.set(tasks.named<Jar>(if (hasShadowPlugin()) "shadowJar" else "jar").flatMap { it.archiveFile })
+
+        // Additional files (javadocJar and sourcesJar)
+        tasks.findByName("javadocJar")?.let { additionalFiles.from(it) }
+        tasks.findByName("sourcesJar")?.let { additionalFiles.from(it) }
+
+        // Changelog
+        // File exists: file contents
+        // In GitHub workflow:
+        //   Non-STABLE: "github.com/REPO/commit/SHA"
+        //   STABLE: release link
+        // Else: "No changelog specified"
+        val changelogFile = file("Changelogs/${project.version}.md")
+        changelog.set(when {
+            // File
+            changelogFile.exists() -> changelogFile.readText()
+
+            inGitHubWorkflow() -> run {
+                val gitHubRepository = getEnvironmentVariable("GITHUB_REPOSITORY") ?: return@run "No changelog specified"
+                val githubLink = "https://github.com/${gitHubRepository}"
+
+                // Non-STABLE: commit SHA
+                if (type.get() != ReleaseType.STABLE) return@run "${githubLink}/commit/${getEnvironmentVariable("GITHUB_SHA")}"
+
+                // STABLE: release link
+                "${githubLink}/releases/tag/${project.version}"
+            }
+
+            else -> "No changelog specified"
+        })
+
+        // Modrinth
+        val modrinthIdentifier = config.platforms[PluginPlatform.MODRINTH]
+        if (modrinthIdentifier != null) {
+            val token = getEnvironmentVariable("MODRINTH_TOKEN")
+            if (token != null) modrinth {
+                accessToken.set(token)
+                minecraftVersionRange {
+                    start.set(config.minecraftVersionStart)
+                    end.set(minecraftVersionEnd)
+                }
+
+                projectId.set(modrinthIdentifier)
+                modrinthAction.execute(this)
+            }
+        }
+
+        // CurseForge
+        val curseForgeIdentifier = config.platforms[PluginPlatform.CURSEFORGE]
+        if (curseForgeIdentifier != null) {
+            val token = getEnvironmentVariable("CURSEFORGE_TOKEN")
+            if (token != null) curseforge {
+                accessToken.set(getEnvironmentVariable("CURSEFORGE_TOKEN"))
+                minecraftVersionRange {
+                    start.set(config.minecraftVersionStart)
+                    end.set(minecraftVersionEnd)
+                }
+                server.set(true)
+
+                projectId.set(curseForgeIdentifier)
+                curseForgeAction.execute(this)
+            }
+        }
+
+        action(this)
+    }
 }
