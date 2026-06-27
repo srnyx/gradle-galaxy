@@ -1,8 +1,14 @@
 package xyz.srnyx.gradlegalaxy.utility
 
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import me.modmuss50.mpp.ModPublishExtension
 import me.modmuss50.mpp.PublishModTask
 import me.modmuss50.mpp.ReleaseType
+import me.modmuss50.mpp.networking.RequestContext.Default.json
 import me.modmuss50.mpp.platforms.curseforge.Curseforge
 import me.modmuss50.mpp.platforms.modrinth.Modrinth
 import org.gradle.api.Action
@@ -39,6 +45,7 @@ import xyz.srnyx.gradlegalaxy.data.platforms.PluginPlatform
 import xyz.srnyx.gradlegalaxy.data.pom.DeveloperData
 import xyz.srnyx.gradlegalaxy.enums.Repository
 import xyz.srnyx.gradlegalaxy.enums.repository
+import java.io.File
 
 import kotlin.String
 
@@ -469,16 +476,25 @@ fun Project.setupPublishingPlatforms(
     check(hasModPublishPlugin()) { "Mod Publish plugin is not applied!" }
 
     val minecraftVersionEnd = config.minecraftVersionEnd ?: "latest"
-    val jarTask = tasks.named<Jar>(if (hasShadowPlugin()) "shadowJar" else "jar")
 
     // Setup publishing
     extensions.configure<ModPublishExtension>("publishMods") {
         // Dry run
         dryRun.set(config.dryRun)
 
-        // Metadata
-        displayName.set(project.version.toString())
+        // Mod loaders
         modLoaders.set(config.loaders)
+
+        // Display name
+        val event = getEnvironmentVariable("GITHUB_EVENT_PATH")
+            ?.let { json.decodeFromString<JsonObject>(File(it).readText()) }
+        displayName.set(event
+            // Release name
+            ?.get("release")?.jsonObject?.get("name")?.jsonPrimitive?.contentOrNull
+            // Commit name
+            ?: event?.get("commits")?.jsonArray?.firstOrNull()?.jsonObject?.get("message")?.jsonPrimitive?.contentOrNull
+            // Project version
+            ?: project.version.toString())
 
         // Type
         type.set(when {
@@ -488,7 +504,7 @@ fun Project.setupPublishingPlatforms(
         })
 
         // Primary file (shadowJar or jar)
-        file.set(jarTask.flatMap { it.archiveFile })
+        file.set(tasks.named<Jar>(if (hasShadowPlugin()) "shadowJar" else "jar").flatMap { it.archiveFile })
 
         // Additional files (javadocJar and sourcesJar)
         tasks.findByName("javadocJar")?.let { additionalFiles.from(it) }
