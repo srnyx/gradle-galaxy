@@ -4,6 +4,10 @@ import com.github.jengelman.gradle.plugins.shadow.ShadowPlugin
 import com.github.jengelman.gradle.plugins.shadow.relocation.SimpleRelocator
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.booleanOrNull
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import org.gradle.api.DefaultTask
 import org.gradle.api.JavaVersion
 import org.gradle.api.Project
@@ -25,10 +29,37 @@ import xyz.srnyx.gradlegalaxy.data.config.annoyingapi.RuntimeLibrariesConfig
 import xyz.srnyx.gradlegalaxy.data.platforms.PluginPlatform
 import xyz.srnyx.gradlegalaxy.enums.Repository
 import xyz.srnyx.gradlegalaxy.enums.repository
+import java.io.File
 import kotlin.apply
 
 import kotlin.text.replace
 
+
+/**
+ * @return  Whether the project is running in a GitHub Actions workflow
+ */
+val inGitHubWorkflow: Boolean = getEnvironmentVariable("GITHUB_WORKFLOW") != null
+
+/**
+ * @return  Whether the project is running in a GitHub Actions publish (release/pre-release) workflow
+ */
+val inGitHubPublish: Boolean = getEnvironmentVariable("GITHUB_REF_TYPE") == "tag"
+
+/**
+ * @return  Whether the project is running in a GitHub Actions pre-release workflow
+ */
+val inGitHubPreRelease: Boolean by lazy {
+    if (!inGitHubPublish) return@lazy false
+    val eventPath = getEnvironmentVariable("GITHUB_EVENT_PATH") ?: return@lazy false
+    json.decodeFromString<JsonObject>(File(eventPath).readText())["release"]?.jsonObject
+        ?.get("prerelease")?.jsonPrimitive
+        ?.booleanOrNull ?: false
+}
+
+/**
+ * @return  Whether the project is running in a GitHub Actions release workflow
+ */
+val inGitHubRelease: Boolean = !inGitHubPreRelease
 
 /**
  * Makes the given package path safe to use
@@ -121,16 +152,6 @@ fun Project.getDefaultReplacements(): Map<String, String> = mapOf(
  * @return The value of the environment variable, or `null` if it is not set or is blank
  */
 fun getEnvironmentVariable(name: String): String? = System.getenv(name)?.takeIf { it.isNotBlank() }
-
-/**
- * @return  Whether the project is running in a GitHub Actions workflow
- */
-fun inGitHubWorkflow(): Boolean = getEnvironmentVariable("GITHUB_WORKFLOW") != null
-
-/**
- * @return  Whether the project is running in a GitHub Actions release workflow
- */
-fun inGitHubRelease(): Boolean = getEnvironmentVariable("GITHUB_REF_TYPE") == "tag"
 
 /**
  * Sets the text encoding for the project

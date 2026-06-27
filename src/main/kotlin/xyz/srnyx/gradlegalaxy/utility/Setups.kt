@@ -59,8 +59,8 @@ fun Project.setupJava(
     this.version = config.version
         ?: this.version.takeIf { it != Project.DEFAULT_VERSION }
         ?: when {
-            inGitHubWorkflow() -> getEnvironmentVariable("GITHUB_REF_NAME")
-                ?.takeIf { inGitHubRelease() }
+            inGitHubWorkflow -> getEnvironmentVariable("GITHUB_REF_NAME")
+                ?.takeIf { inGitHubPublish }
                 ?: getEnvironmentVariable("GITHUB_SHA")?.take(7)
             else -> null
         }
@@ -479,7 +479,11 @@ fun Project.setupPublishingPlatforms(
         modLoaders.set(config.loaders)
 
         // Type
-        type.set(if (inGitHubRelease()) ReleaseType.STABLE else ReleaseType.ALPHA)
+        type.set(when {
+            inGitHubPublish -> ReleaseType.STABLE
+            inGitHubPreRelease -> ReleaseType.BETA
+            else -> ReleaseType.ALPHA
+        })
 
         // Primary file (shadowJar or jar)
         file.set(tasks.named<Jar>(if (hasShadowPlugin()) "shadowJar" else "jar").flatMap { it.archiveFile })
@@ -499,7 +503,7 @@ fun Project.setupPublishingPlatforms(
             // File
             changelogFile.exists() -> changelogFile.readText()
 
-            inGitHubWorkflow() -> run {
+            inGitHubWorkflow -> run {
                 val gitHubRepository = getEnvironmentVariable("GITHUB_REPOSITORY") ?: return@run "No changelog specified"
                 val githubLink = "https://github.com/${gitHubRepository}"
 
