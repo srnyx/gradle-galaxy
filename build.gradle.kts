@@ -8,8 +8,16 @@ plugins {
     id("org.jetbrains.dokka") version "1.9.20" // Do not update because of kotlin("jvm") version
 }
 
+// Get version
+version =
+    System.getenv("GITHUB_REF_NAME")
+        ?.takeIf { System.getenv("GITHUB_REF_TYPE") == "tag" }
+    ?: System.getenv("GITHUB_SHA")
+        ?.takeIf { it.isNotBlank() }
+        ?.take(7)
+    ?: "dev"
+
 group = "xyz.srnyx"
-version = providers.environmentVariable("VERSION").orNull?.takeIf(String::isNotBlank) ?: "3.1.0"
 description = "A Gradle plugin to simplify the process of creating projects"
 val projectId: String = "gradle-galaxy"
 val vcs: String = "github.com/srnyx/$projectId"
