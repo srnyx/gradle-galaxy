@@ -1,0 +1,14 @@
+name: Publish
+on:
+  release:
+    types:
+      - released
+  workflow_dispatch:
+
+jobs:
+  build:
+    uses: srnyx/tools/.github/workflows/build.yml@main
+    with:
+      java: 17
+      task: publishPlugins
+    secrets: inherit

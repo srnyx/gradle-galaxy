@@ -16,7 +16,6 @@ jobs:
   build:
     uses: srnyx/tools/.github/workflows/maven_publish.yml@main
     with:
-      name: Gradle Galaxy
       channel: snapshots
       java: 17
     secrets: inherit
