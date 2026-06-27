@@ -546,6 +546,7 @@ fun Project.setupPublishingPlatforms(
                     end.set(minecraftVersionEnd)
                 }
                 server.set(true)
+                modLoaders.set(emptyList())
 
                 projectId.set(curseForgeIdentifier)
                 curseForgeAction.execute(this)
