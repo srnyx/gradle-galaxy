@@ -493,6 +493,7 @@ fun Project.setupPublishingPlatforms(
             ?.get("release")?.jsonObject?.get("name")?.jsonPrimitive?.contentOrNull
             // Commit name
             ?: event?.get("commits")?.jsonArray?.firstOrNull()?.jsonObject?.get("message")?.jsonPrimitive?.contentOrNull
+                ?.lines()?.firstOrNull() // Only use commit title/summary, remove description
             // Project version
             ?: project.version.toString())
 
