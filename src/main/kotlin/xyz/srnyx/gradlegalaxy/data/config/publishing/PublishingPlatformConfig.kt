@@ -8,4 +8,5 @@ data class PublishingPlatformConfig(
     val minecraftVersionStart: String = "1.8.8",
     val minecraftVersionEnd: String? = null,
     val loaders: List<String> = listOf("spigot", "paper", "purpur"),
+    val dryRun: Boolean = false,
 )

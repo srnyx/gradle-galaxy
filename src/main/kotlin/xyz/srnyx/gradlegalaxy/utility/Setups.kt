@@ -469,12 +469,14 @@ fun Project.setupPublishingPlatforms(
     check(hasModPublishPlugin()) { "Mod Publish plugin is not applied!" }
 
     val minecraftVersionEnd = config.minecraftVersionEnd ?: "latest"
-
-    // Ensure publishing runs after building
-    tasks.withType<PublishModTask> { dependsOn(if (hasShadowPlugin()) "shadowJar" else "jar") }
+    val jarTask = tasks.named<Jar>(if (hasShadowPlugin()) "shadowJar" else "jar")
 
     // Setup publishing
     extensions.configure<ModPublishExtension>("publishMods") {
+        // Dry run
+        dryRun.set(config.dryRun)
+
+        // Metadata
         displayName.set(project.version.toString())
         modLoaders.set(config.loaders)
 
@@ -486,7 +488,7 @@ fun Project.setupPublishingPlatforms(
         })
 
         // Primary file (shadowJar or jar)
-        file.set(tasks.named<Jar>(if (hasShadowPlugin()) "shadowJar" else "jar").flatMap { it.archiveFile })
+        file.set(jarTask.flatMap { it.archiveFile })
 
         // Additional files (javadocJar and sourcesJar)
         tasks.findByName("javadocJar")?.let { additionalFiles.from(it) }
@@ -521,7 +523,7 @@ fun Project.setupPublishingPlatforms(
         val modrinthIdentifier = config.platforms[PluginPlatform.MODRINTH]
         if (modrinthIdentifier != null) {
             val token = getEnvironmentVariable("MODRINTH_TOKEN")
-            if (token != null) modrinth {
+            if (dryRun.get() || token != null) modrinth {
                 accessToken.set(token)
                 minecraftVersionRange {
                     start.set(config.minecraftVersionStart)
@@ -537,7 +539,7 @@ fun Project.setupPublishingPlatforms(
         val curseForgeIdentifier = config.platforms[PluginPlatform.CURSEFORGE]
         if (curseForgeIdentifier != null) {
             val token = getEnvironmentVariable("CURSEFORGE_TOKEN")
-            if (token != null) curseforge {
+            if (dryRun.get() || token != null) curseforge {
                 accessToken.set(getEnvironmentVariable("CURSEFORGE_TOKEN"))
                 minecraftVersionRange {
                     start.set(config.minecraftVersionStart)
@@ -548,6 +550,12 @@ fun Project.setupPublishingPlatforms(
                 projectId.set(curseForgeIdentifier)
                 curseForgeAction.execute(this)
             }
+        }
+
+        // Ensure publishing runs after building
+        tasks.withType<PublishModTask> {
+            dependsOn("jar")
+            if (hasShadowPlugin()) dependsOn("shadowJar")
         }
 
         action(this)
