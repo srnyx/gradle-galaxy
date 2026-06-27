@@ -178,7 +178,7 @@ fun Project.setupAnnoyingAPI(
         if (annoyingSetupConfig.addPlatformsResourceFile) addPlatformsResourceFileTask(publishingPlatformConfig.platforms)
 
         // Setup publishing
-        setupPublishingPlatforms(publishingPlatformConfig)
+        if (hasModPublishPlugin()) setupPublishingPlatforms(publishingPlatformConfig)
     }
 
     return metadata
