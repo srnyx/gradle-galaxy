@@ -35,6 +35,12 @@ import kotlin.apply
 import kotlin.text.replace
 
 
+private val json by lazy { Json {
+    prettyPrint = true
+    prettyPrintIndent = "  "
+    ignoreUnknownKeys = true
+} }
+
 /**
  * @return  Whether the project is running in a GitHub Actions workflow
  */
@@ -59,7 +65,7 @@ val inGitHubPreRelease: Boolean by lazy {
 /**
  * @return  Whether the project is running in a GitHub Actions release workflow
  */
-val inGitHubRelease: Boolean = !inGitHubPreRelease
+val inGitHubRelease: Boolean by lazy { !inGitHubPreRelease }
 
 /**
  * Makes the given package path safe to use
@@ -277,12 +283,6 @@ fun Project.relocate(
 ) {
     check(hasShadowPlugin()) { "Shadow plugin is not applied!" }
     tasks.named<ShadowJar>("shadowJar") { relocate(from, to, action) }
-}
-
-private val json = Json {
-    prettyPrint = true
-    prettyPrintIndent = "  "
-    ignoreUnknownKeys = true
 }
 
 fun Project.addPlatformsResourceFileTask(platforms: Map<PluginPlatform, String>): TaskProvider<Task> {
