@@ -9,9 +9,6 @@ import me.modmuss50.mpp.ModPublishExtension
 import me.modmuss50.mpp.PublishModTask
 import me.modmuss50.mpp.ReleaseType
 import me.modmuss50.mpp.networking.RequestContext.Default.json
-import me.modmuss50.mpp.platforms.curseforge.Curseforge
-import me.modmuss50.mpp.platforms.modrinth.Modrinth
-import org.gradle.api.Action
 import org.gradle.api.JavaVersion
 import org.gradle.api.Project
 import org.gradle.api.publish.maven.MavenPublication
@@ -469,9 +466,6 @@ fun Project.setupPublishingEnv(
  */
 fun Project.setupPublishingPlatforms(
     config: PublishingPlatformConfig,
-    modrinthAction: Action<Modrinth> = Action {},
-    curseForgeAction: Action<Curseforge> = Action {},
-    action: Action<ModPublishExtension> = Action {},
 ) {
     check(hasModPublishPlugin()) { "Mod Publish plugin is not applied!" }
 
@@ -547,8 +541,10 @@ fun Project.setupPublishingPlatforms(
                     end.set(minecraftVersionEnd)
                 }
 
+                if (config.addAnnoyingApiDependency) embeds("annoying-api")
+
                 projectId.set(modrinthIdentifier)
-                modrinthAction.execute(this)
+                config.modrinthAction.execute(this)
             }
         }
 
@@ -562,11 +558,13 @@ fun Project.setupPublishingPlatforms(
                     start.set(config.minecraftVersionStart)
                     end.set(minecraftVersionEnd)
                 }
-                server.set(true)
+
                 modLoaders.set(emptyList())
+                server.set(true)
+                if (config.addAnnoyingApiDependency) embeds("annoying-api")
 
                 projectId.set(curseForgeIdentifier)
-                curseForgeAction.execute(this)
+                config.curseForgeAction.execute(this)
             }
         }
 
@@ -576,6 +574,6 @@ fun Project.setupPublishingPlatforms(
             if (hasShadowPlugin()) dependsOn("shadowJar")
         }
 
-        action(this)
+        config.action(this)
     }
 }
