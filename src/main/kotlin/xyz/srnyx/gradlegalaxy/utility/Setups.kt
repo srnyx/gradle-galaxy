@@ -559,8 +559,6 @@ fun Project.setupPublishingPlatforms(
                     end.set(minecraftVersionEnd)
                 }
 
-                modLoaders.set(emptyList())
-                server.set(true)
                 if (config.addAnnoyingApiDependency) embeds("annoying-api")
 
                 projectId.set(curseForgeIdentifier)
