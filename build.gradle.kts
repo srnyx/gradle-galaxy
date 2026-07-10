@@ -37,7 +37,7 @@ dependencies {
 
     // Plugins
     compileOnly("com.gradleup.shadow:shadow-gradle-plugin:9.0.0")
-    compileOnly("me.modmuss50.mod-publish-plugin:me.modmuss50.mod-publish-plugin.gradle.plugin:f229e09")
+    compileOnly("me.modmuss50.mod-publish-plugin:me.modmuss50.mod-publish-plugin.gradle.plugin:675051c")
 }
 
 // Set Kotlin JVM version
@@ -75,58 +75,57 @@ gradlePlugin {
     plugins.create(projectId) {
         id = "${project.group}.$projectId"
         implementationClass = "${project.group}.gradlegalaxy.GradleGalaxy"
-        version = project.version
         displayName = project.name
         description = project.description
         tags.set(listOf("srnyx", "minecraft", "spigot", "paper", "adventure", "jda"))
     }
 }
 
-publishing {
-    publications.create<MavenPublication>("pluginMaven") {
-        artifactId = projectId
-        pom {
-            name.set(project.name)
-            description.set(project.description)
-            url.set("https://${vcs}")
-            packaging = "jar"
-
-            licenses {
-                license {
-                    name.set("MIT License")
-                    url.set("https://opensource.org/licenses/MIT")
-                }
-            }
-
-            developers {
-                developer {
-                    id.set("srnyx")
-                    url.set("https://srnyx.com")
-                    email.set("contact@srnyx.com")
-                    timezone.set("America/New_York")
-                    organization.set("Venox Network")
-                    organizationUrl.set("https://venox.network")
-                }
-                developer {
-                    id.set("dkim19375")
-                    timezone.set("America/New_York")
-                    roles.add("contributor")
-                }
-            }
-
-            scm {
-                connection.set("scm:git:git://${vcs}.git")
-                developerConnection.set("scm:git:ssh://${vcs}.git")
+// Custom/additional repository
+providers.environmentVariable("MAVEN_URL")
+    .orNull
+    ?.takeIf(String::isNotBlank)
+    ?.let { mavenUrl -> publishing {
+        publications.create<MavenPublication>("pluginMaven") {
+            artifactId = projectId
+            pom {
+                name.set(project.name)
+                description.set(project.description)
                 url.set("https://${vcs}")
+                packaging = "jar"
+
+                licenses {
+                    license {
+                        name.set("MIT License")
+                        url.set("https://opensource.org/licenses/MIT")
+                    }
+                }
+
+                developers {
+                    developer {
+                        id.set("srnyx")
+                        url.set("https://srnyx.com")
+                        email.set("contact@srnyx.com")
+                        timezone.set("America/New_York")
+                        organization.set("Venox Network")
+                        organizationUrl.set("https://venox.network")
+                    }
+                    developer {
+                        id.set("dkim19375")
+                        timezone.set("America/New_York")
+                        roles.add("contributor")
+                    }
+                }
+
+                scm {
+                    connection.set("scm:git:git://${vcs}.git")
+                    developerConnection.set("scm:git:ssh://${vcs}.git")
+                    url.set("https://${vcs}")
+                }
             }
         }
-    }
 
-    // Custom/additional repository
-    providers.environmentVariable("MAVEN_URL")
-        .orNull
-        ?.takeIf(String::isNotBlank)
-        ?.let { mavenUrl -> repositories.maven {
+        repositories.maven {
             name = "srnyx"
             url = uri(mavenUrl)
 
@@ -141,5 +140,5 @@ publishing {
                 username = mavenName
                 password = mavenSecret
             }
-        } }
-}
+        }
+    } }

@@ -7,7 +7,6 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import me.modmuss50.mpp.ModPublishExtension
 import me.modmuss50.mpp.PublishModTask
-import me.modmuss50.mpp.ReleaseType
 import me.modmuss50.mpp.networking.RequestContext.Default.json
 import org.gradle.api.JavaVersion
 import org.gradle.api.Project
@@ -493,17 +492,19 @@ fun Project.setupPublishingPlatforms(
 
         // Type
         type.set(when {
-            inGitHubPublish -> ReleaseType.STABLE
-            inGitHubPreRelease -> ReleaseType.BETA
-            else -> ReleaseType.ALPHA
+            inGitHubPublish -> STABLE
+            inGitHubPreRelease -> BETA
+            else -> ALPHA
         })
 
         // Primary file (shadowJar or jar)
         file.set(tasks.named<Jar>(if (hasShadowPlugin()) "shadowJar" else "jar").flatMap { it.archiveFile })
 
         // Additional files (javadocJar and sourcesJar)
-        tasks.findByName("javadocJar")?.let { additionalFiles.from(it) }
-        tasks.findByName("sourcesJar")?.let { additionalFiles.from(it) }
+        val javadocJarTask = tasks.findByName("javadocJar") as? Jar
+        val sourcesJarTask = tasks.findByName("sourcesJar") as? Jar
+        javadocJarTask?.let { additionalFiles.from(it) }
+        sourcesJarTask?.let { additionalFiles.from(it) }
 
         // Changelog
         // File exists: file contents
@@ -521,7 +522,7 @@ fun Project.setupPublishingPlatforms(
                 val githubLink = "https://github.com/${gitHubRepository}"
 
                 // Non-STABLE: commit SHA
-                if (type.get() != ReleaseType.STABLE) return@run "${githubLink}/commit/${getEnvironmentVariable("GITHUB_SHA")}"
+                if (type.get() != STABLE) return@run "${githubLink}/commit/${getEnvironmentVariable("GITHUB_SHA")}"
 
                 // STABLE: release link
                 "${githubLink}/releases/tag/${project.version}"
@@ -541,7 +542,12 @@ fun Project.setupPublishingPlatforms(
                     end.set(minecraftVersionEnd)
                 }
 
+                // Annoying API dependency
                 if (config.addAnnoyingApiDependency) embeds("annoying-api")
+
+                // Additional file types
+                javadocJarTask?.let { additionalFile(it.archiveFile) { type.set(JAVADOC_JAR) } }
+                sourcesJarTask?.let { additionalFile(it.archiveFile) { type.set(SOURCES_JAR) } }
 
                 projectId.set(modrinthIdentifier)
                 config.modrinthAction.execute(this)
