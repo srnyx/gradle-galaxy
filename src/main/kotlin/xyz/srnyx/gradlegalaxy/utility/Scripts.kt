@@ -65,7 +65,7 @@ val inGitHubPreRelease: Boolean by lazy {
 /**
  * @return  Whether the project is running in a GitHub Actions release workflow
  */
-val inGitHubRelease: Boolean by lazy { !inGitHubPreRelease }
+val inGitHubRelease: Boolean by lazy { inGitHubPublish && !inGitHubPreRelease }
 
 /**
  * Makes the given package path safe to use
