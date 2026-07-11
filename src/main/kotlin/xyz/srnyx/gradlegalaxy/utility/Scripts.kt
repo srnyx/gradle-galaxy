@@ -10,7 +10,6 @@ import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
-import me.modmuss50.mpp.networking.RequestContext
 import org.gradle.api.DefaultTask
 import org.gradle.api.JavaVersion
 import org.gradle.api.Project
@@ -37,7 +36,6 @@ import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
-import java.util.TreeSet
 import kotlin.apply
 
 import kotlin.text.replace
@@ -288,7 +286,7 @@ fun String.processRelocationTo(): String = replace("{package}.libs.", "").dotsTo
  *
  * @param platform The platform to retrieve versions for (default: `PAPER`)
  *
- * @return The versions of the specified platform in a [TreeSet] sorted by version (highest to lowest)
+ * @return The versions of the specified platform in a [LinkedHashSet] sorted by version (highest to lowest)
  */
 fun retrieveHangarPlatformVersions(platform: String = "PAPER"): LinkedHashSet<String> {
     // Make API request
@@ -298,11 +296,13 @@ fun retrieveHangarPlatformVersions(platform: String = "PAPER"): LinkedHashSet<St
             .GET()
             .build(),
         HttpResponse.BodyHandlers.ofString())
-    if (response.statusCode() != 200) throw RuntimeException("Failed to fetch platform versions from Hangar: ${response.statusCode()} ${response.body()}")
+    if (response.statusCode() != 200) {
+        throw IllegalStateException("Failed to retrieve Hangar platform versions for $platform: ${response.statusCode()} ${response.body()}")
+    }
 
     // Flatten versions
     val versions = LinkedHashSet<String>()
-    for (element in RequestContext.Default.json.decodeFromString<JsonArray>(response.body())) {
+    for (element in json.decodeFromString<JsonArray>(response.body())) {
         val jsonObject = element.jsonObject
         // Add subVersions first as version is lowest
         for (subVersion in jsonObject["subVersions"]!!.jsonArray) versions.add(subVersion.jsonPrimitive.content)
@@ -326,6 +326,13 @@ fun Project.relocate(
     tasks.named<ShadowJar>("shadowJar") { relocate(from, to, action) }
 }
 
+/**
+ * Adds a task to generate the `platforms.json` resources file, listing out the plugin's publishing platforms
+ *
+ * @param platforms The platforms to add to the `platforms.json` file
+ *
+ * @return The task that generates the `platforms.json` resources file
+ */
 fun Project.addPlatformsResourceFileTask(platforms: Map<PluginPlatform, String>): TaskProvider<Task> {
     val platformsFile = project.layout.buildDirectory.file("resources/main/platforms.json").get().asFile
     val platformsProvider = project.provider { json.encodeToString(mapOf("platforms" to platforms)) }
