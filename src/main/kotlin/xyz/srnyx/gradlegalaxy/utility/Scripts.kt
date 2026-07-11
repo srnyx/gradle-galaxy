@@ -4,8 +4,10 @@ import com.github.jengelman.gradle.plugins.shadow.ShadowPlugin
 import com.github.jengelman.gradle.plugins.shadow.relocation.SimpleRelocator
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.booleanOrNull
+import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.gradle.api.DefaultTask
@@ -26,10 +28,14 @@ import xyz.srnyx.gradlegalaxy.data.annoyingapi.AnnoyingMetadata
 import xyz.srnyx.gradlegalaxy.data.annoyingapi.RuntimeLibrary
 import xyz.srnyx.gradlegalaxy.data.config.annoyingapi.GenerateRuntimeLibraryEnumConfig
 import xyz.srnyx.gradlegalaxy.data.config.annoyingapi.RuntimeLibrariesConfig
-import xyz.srnyx.gradlegalaxy.data.platforms.PluginPlatform
+import xyz.srnyx.gradlegalaxy.enums.PluginPlatform
 import xyz.srnyx.gradlegalaxy.enums.Repository
 import xyz.srnyx.gradlegalaxy.enums.repository
 import java.io.File
+import java.net.URI
+import java.net.http.HttpClient
+import java.net.http.HttpRequest
+import java.net.http.HttpResponse
 import kotlin.apply
 
 import kotlin.text.replace
@@ -105,6 +111,11 @@ fun Project.hasShadowPlugin(): Boolean = try {
  * @return  If the `me.modmuss50.mod-publish-plugin` plugin is applied
  */
 fun Project.hasModPublishPlugin(): Boolean = plugins.hasPlugin("me.modmuss50.mod-publish-plugin")
+
+/**
+ * @return  If the `io.papermc.hangar-publish-plugin` plugin is applied
+ */
+fun Project.hasHangarPublishPlugin(): Boolean = plugins.hasPlugin("io.papermc.hangar-publish-plugin")
 
 /**
  * Checks if the `maven-publish` plugin is applied
@@ -271,6 +282,36 @@ fun String.dotsToBrackets(): String = replace(".", "{}")
 fun String.processRelocationTo(): String = replace("{package}.libs.", "").dotsToBrackets()
 
 /**
+ * Retrieve the versions of the specified platform from Hangar
+ *
+ * @param platform The platform to retrieve versions for (default: `PAPER`)
+ *
+ * @return The versions of the specified platform in a [LinkedHashSet] sorted by version (highest to lowest)
+ */
+fun retrieveHangarPlatformVersions(platform: String = "PAPER"): LinkedHashSet<String> {
+    // Make API request
+    val response = HttpClient.newBuilder().build().send(
+        HttpRequest.newBuilder()
+            .uri(URI.create("https://hangar.papermc.io/api/v1/platforms/${platform}/versions"))
+            .GET()
+            .build(),
+        HttpResponse.BodyHandlers.ofString())
+    if (response.statusCode() != 200) {
+        throw IllegalStateException("Failed to retrieve Hangar platform versions for $platform: ${response.statusCode()} ${response.body()}")
+    }
+
+    // Flatten versions
+    val versions = LinkedHashSet<String>()
+    for (element in json.decodeFromString<JsonArray>(response.body())) {
+        val jsonObject = element.jsonObject
+        // Add subVersions first as version is lowest
+        for (subVersion in jsonObject["subVersions"]!!.jsonArray) versions.add(subVersion.jsonPrimitive.content)
+        versions.add(jsonObject["version"]!!.jsonPrimitive.content)
+    }
+    return versions
+}
+
+/**
  * Relocates the specified package to the specified package
  *
  * @param from The package to relocate
@@ -285,6 +326,13 @@ fun Project.relocate(
     tasks.named<ShadowJar>("shadowJar") { relocate(from, to, action) }
 }
 
+/**
+ * Adds a task to generate the `platforms.json` resources file, listing out the plugin's publishing platforms
+ *
+ * @param platforms The platforms to add to the `platforms.json` file
+ *
+ * @return The task that generates the `platforms.json` resources file
+ */
 fun Project.addPlatformsResourceFileTask(platforms: Map<PluginPlatform, String>): TaskProvider<Task> {
     val platformsFile = project.layout.buildDirectory.file("resources/main/platforms.json").get().asFile
     val platformsProvider = project.provider { json.encodeToString(mapOf("platforms" to platforms)) }

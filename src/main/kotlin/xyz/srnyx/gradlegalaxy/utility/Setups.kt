@@ -1,5 +1,6 @@
 package xyz.srnyx.gradlegalaxy.utility
 
+import io.papermc.hangarpublishplugin.HangarPublishExtension
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonArray
@@ -34,11 +35,13 @@ import xyz.srnyx.gradlegalaxy.data.config.annoyingapi.AnnoyingSetupConfig
 import xyz.srnyx.gradlegalaxy.data.config.annoyingapi.CustomRuntimeLibrariesConfig
 import xyz.srnyx.gradlegalaxy.data.config.annoyingapi.MetadataConfig
 import xyz.srnyx.gradlegalaxy.data.config.dependency.MockBukkitConfig
+import xyz.srnyx.gradlegalaxy.data.config.publishing.HangarAction
 import xyz.srnyx.gradlegalaxy.data.config.publishing.PublishingEnvConfig
 import xyz.srnyx.gradlegalaxy.data.config.publishing.PublishingPlatformConfig
 import xyz.srnyx.gradlegalaxy.data.config.publishing.PublishingSimpleConfig
-import xyz.srnyx.gradlegalaxy.data.platforms.PluginPlatform
 import xyz.srnyx.gradlegalaxy.data.pom.DeveloperData
+import xyz.srnyx.gradlegalaxy.enums.PluginPlatform
+import xyz.srnyx.gradlegalaxy.enums.ReleaseChannel
 import xyz.srnyx.gradlegalaxy.enums.Repository
 import xyz.srnyx.gradlegalaxy.enums.repository
 import java.io.File
@@ -455,50 +458,79 @@ fun Project.setupPublishingEnv(
 }
 
 /**
- * Sets up publishing for project platforms (GitHub, Modrinth, CurseForge)
+ * Sets up publishing for project platforms (GitHub, Modrinth, CurseForge, Hangar)
  *
  * @param config The configuration for setting up publishing for project platforms
- * @param gitHubConfig The configuration for setting up publishing for GitHub
- * @param modrinthConfig The configuration for setting up publishing for Modrinth
- * @param curseForgeConfig The configuration for setting up publishing for CurseForge
- * @param action The action to perform after setting up publishing for project platforms
  */
 fun Project.setupPublishingPlatforms(
     config: PublishingPlatformConfig,
 ) {
     check(hasModPublishPlugin()) { "Mod Publish plugin is not applied!" }
 
-    val minecraftVersionEnd = config.minecraftVersionEnd ?: "latest"
+    // Identifiers
+    val modrinthIdentifier = config.platforms[PluginPlatform.MODRINTH]
+    val curseForgeIdentifier = config.platforms[PluginPlatform.CURSEFORGE]
+    val hangarIdentifier = config.platforms[PluginPlatform.HANGAR]
+
+    // Release channel
+    val releaseChannel: ReleaseChannel = when {
+        inGitHubPublish -> ReleaseChannel.RELEASE
+        inGitHubPreRelease -> ReleaseChannel.BETA
+        else -> ReleaseChannel.ALPHA
+    }
+
+    // Primary file
+    val primaryFile = tasks.named<Jar>(if (hasShadowPlugin()) "shadowJar" else "jar").flatMap { it.archiveFile }
+
+    // Changelog
+    // File exists: file contents
+    // In GitHub workflow:
+    //   Non-STABLE: "github.com/REPO/commit/SHA"
+    //   STABLE: release link
+    // Else: "No changelog specified"
+    val changelogFile = file("Changelogs/${project.version}.md")
+    val changelogText: String = when {
+        // File
+        changelogFile.exists() -> changelogFile.readText()
+
+        inGitHubWorkflow -> run {
+            val gitHubRepository =
+                getEnvironmentVariable("GITHUB_REPOSITORY") ?: return@run "No changelog specified"
+            val githubLink = "https://github.com/${gitHubRepository}"
+
+            // Non-STABLE: commit SHA
+            if (releaseChannel != ReleaseChannel.RELEASE) return@run "${githubLink}/commit/${getEnvironmentVariable("GITHUB_SHA")}"
+
+            // STABLE: release link
+            "${githubLink}/releases/tag/${project.version}"
+        }
+
+        else -> "No changelog specified"
+    }
 
     // Setup publishing
     extensions.configure<ModPublishExtension>("publishMods") {
-        // Dry run
         dryRun.set(config.dryRun)
-
-        // Mod loaders
         modLoaders.set(config.loaders)
+        type.set(releaseChannel.mpp)
+        changelog.set(changelogText)
 
         // Display name
         val event = getEnvironmentVariable("GITHUB_EVENT_PATH")
             ?.let { json.decodeFromString<JsonObject>(File(it).readText()) }
-        displayName.set(event
-            // Release name
-            ?.get("release")?.jsonObject?.get("name")?.jsonPrimitive?.contentOrNull
+        displayName.set(
+            event
+                // Release name
+                ?.get("release")?.jsonObject?.get("name")?.jsonPrimitive?.contentOrNull
             // Commit name
-            ?: event?.get("commits")?.jsonArray?.firstOrNull()?.jsonObject?.get("message")?.jsonPrimitive?.contentOrNull
-                ?.lines()?.firstOrNull() // Only use commit title/summary, remove description
-            // Project version
-            ?: project.version.toString())
-
-        // Type
-        type.set(when {
-            inGitHubPublish -> STABLE
-            inGitHubPreRelease -> BETA
-            else -> ALPHA
-        })
+                ?: event?.get("commits")?.jsonArray?.firstOrNull()?.jsonObject?.get("message")?.jsonPrimitive?.contentOrNull
+                    ?.lines()?.firstOrNull() // Only use commit title/summary, remove description
+                // Project version
+                ?: project.version.toString()
+        )
 
         // Primary file (shadowJar or jar)
-        file.set(tasks.named<Jar>(if (hasShadowPlugin()) "shadowJar" else "jar").flatMap { it.archiveFile })
+        file.set(primaryFile)
 
         // Additional files (javadocJar and sourcesJar)
         val javadocJarTask = tasks.findByName("javadocJar") as? Jar
@@ -506,33 +538,9 @@ fun Project.setupPublishingPlatforms(
         javadocJarTask?.let { additionalFiles.from(it) }
         sourcesJarTask?.let { additionalFiles.from(it) }
 
-        // Changelog
-        // File exists: file contents
-        // In GitHub workflow:
-        //   Non-STABLE: "github.com/REPO/commit/SHA"
-        //   STABLE: release link
-        // Else: "No changelog specified"
-        val changelogFile = file("Changelogs/${project.version}.md")
-        changelog.set(when {
-            // File
-            changelogFile.exists() -> changelogFile.readText()
-
-            inGitHubWorkflow -> run {
-                val gitHubRepository = getEnvironmentVariable("GITHUB_REPOSITORY") ?: return@run "No changelog specified"
-                val githubLink = "https://github.com/${gitHubRepository}"
-
-                // Non-STABLE: commit SHA
-                if (type.get() != STABLE) return@run "${githubLink}/commit/${getEnvironmentVariable("GITHUB_SHA")}"
-
-                // STABLE: release link
-                "${githubLink}/releases/tag/${project.version}"
-            }
-
-            else -> "No changelog specified"
-        })
+        val minecraftVersionEnd = config.minecraftVersionEnd ?: "latest"
 
         // Modrinth
-        val modrinthIdentifier = config.platforms[PluginPlatform.MODRINTH]
         if (modrinthIdentifier != null) {
             val token = getEnvironmentVariable("MODRINTH_TOKEN")
             if (dryRun.get() || token != null) modrinth {
@@ -555,7 +563,6 @@ fun Project.setupPublishingPlatforms(
         }
 
         // CurseForge
-        val curseForgeIdentifier = config.platforms[PluginPlatform.CURSEFORGE]
         if (curseForgeIdentifier != null) {
             val token = getEnvironmentVariable("CURSEFORGE_TOKEN")
             if (dryRun.get() || token != null) curseforge {
@@ -579,5 +586,56 @@ fun Project.setupPublishingPlatforms(
         }
 
         config.action(this)
+    }
+
+    // Hangar Publish Plugin
+    if (hasHangarPublishPlugin() && hangarIdentifier != null) {
+        val token = getEnvironmentVariable("HANGAR_TOKEN")
+        if (token != null) {
+            extensions.configure<HangarPublishExtension>("hangarPublish") { publications.register("plugin") {
+                version.set(project.version.toString())
+                id.set(hangarIdentifier)
+                channel.set(releaseChannel.hangar)
+                changelog.set(changelogText)
+                apiKey.set(token)
+
+                platforms { paper {
+                    jar.set(primaryFile)
+
+                    // Get Hangar's supported Minecraft versions
+                    val hangarMinecraftVersions = retrieveHangarPlatformVersions("PAPER")
+                    if (!hangarMinecraftVersions.contains(config.minecraftVersionStart)) {
+                        throw IllegalArgumentException("Hangar does not support start Minecraft version ${config.minecraftVersionStart}")
+                    }
+
+                    if (config.minecraftVersionEnd != null) {
+                        // start -> end
+                        if (!hangarMinecraftVersions.contains(config.minecraftVersionEnd)) {
+                            throw IllegalArgumentException("Hangar does not support end Minecraft version ${config.minecraftVersionEnd}")
+                        }
+                        platformVersions.set(listOf(config.minecraftVersionStart + "-${config.minecraftVersionEnd}"))
+                    } else {
+                        // start -> latest
+                        val semanticVersionStart = SemanticVersion(config.minecraftVersionStart)
+                        platformVersions.set(hangarMinecraftVersions
+                            .map { SemanticVersion(it) }
+                            .filter { it >= semanticVersionStart }
+                            .map { it.toString() })
+                    }
+
+                    // Dependencies
+                    dependencies {
+                        val hangarAction = HangarAction()
+                        config.hangarAction.execute(hangarAction)
+                        hangarAction.dependencies.forEach { dependency ->
+                            hangar(dependency.id) { required.set(dependency.required) }
+                        }
+                    }
+                } }
+            } }
+
+            // Ensure publishAllPublicationsToHangar runs with/after publishMods
+            tasks.named("publishMods") { finalizedBy("publishAllPublicationsToHangar") }
+        }
     }
 }
