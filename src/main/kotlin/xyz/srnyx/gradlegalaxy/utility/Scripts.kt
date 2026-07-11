@@ -107,6 +107,11 @@ fun Project.hasShadowPlugin(): Boolean = try {
 fun Project.hasModPublishPlugin(): Boolean = plugins.hasPlugin("me.modmuss50.mod-publish-plugin")
 
 /**
+ * @return  If the `io.papermc.hangar-publish-plugin` plugin is applied
+ */
+fun Project.hasHangarPublishPlugin(): Boolean = plugins.hasPlugin("io.papermc.hangar-publish-plugin")
+
+/**
  * Checks if the `maven-publish` plugin is applied
  *
  * @return If the `maven-publish` plugin is applied

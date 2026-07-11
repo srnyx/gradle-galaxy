@@ -38,6 +38,7 @@ dependencies {
     // Plugins
     compileOnly("com.gradleup.shadow:shadow-gradle-plugin:9.0.0")
     compileOnly("me.modmuss50.mod-publish-plugin:me.modmuss50.mod-publish-plugin.gradle.plugin:675051c")
+    compileOnly("io.papermc.hangar-publish-plugin:io.papermc.hangar-publish-plugin.gradle.plugin:0.1.4")
 }
 
 // Set Kotlin JVM version
