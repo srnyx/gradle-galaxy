@@ -1,4 +1,4 @@
-package xyz.srnyx.gradlegalaxy.data.platforms
+package xyz.srnyx.gradlegalaxy.enums
 
 
 enum class PluginPlatform {

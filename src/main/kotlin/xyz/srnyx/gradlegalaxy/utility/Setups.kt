@@ -35,11 +35,12 @@ import xyz.srnyx.gradlegalaxy.data.config.annoyingapi.AnnoyingSetupConfig
 import xyz.srnyx.gradlegalaxy.data.config.annoyingapi.CustomRuntimeLibrariesConfig
 import xyz.srnyx.gradlegalaxy.data.config.annoyingapi.MetadataConfig
 import xyz.srnyx.gradlegalaxy.data.config.dependency.MockBukkitConfig
+import xyz.srnyx.gradlegalaxy.data.config.publishing.HangarAction
 import xyz.srnyx.gradlegalaxy.data.config.publishing.PublishingEnvConfig
 import xyz.srnyx.gradlegalaxy.data.config.publishing.PublishingPlatformConfig
 import xyz.srnyx.gradlegalaxy.data.config.publishing.PublishingSimpleConfig
-import xyz.srnyx.gradlegalaxy.data.platforms.PluginPlatform
 import xyz.srnyx.gradlegalaxy.data.pom.DeveloperData
+import xyz.srnyx.gradlegalaxy.enums.PluginPlatform
 import xyz.srnyx.gradlegalaxy.enums.ReleaseChannel
 import xyz.srnyx.gradlegalaxy.enums.Repository
 import xyz.srnyx.gradlegalaxy.enums.repository
@@ -457,13 +458,15 @@ fun Project.setupPublishingEnv(
 }
 
 /**
- * Sets up publishing for project platforms (GitHub, Modrinth, CurseForge)
+ * Sets up publishing for project platforms (GitHub, Modrinth, CurseForge, Hangar)
  *
  * @param config The configuration for setting up publishing for project platforms
  */
 fun Project.setupPublishingPlatforms(
     config: PublishingPlatformConfig,
 ) {
+    check(hasModPublishPlugin()) { "Mod Publish plugin is not applied!" }
+
     // Identifiers
     val modrinthIdentifier = config.platforms[PluginPlatform.MODRINTH]
     val curseForgeIdentifier = config.platforms[PluginPlatform.CURSEFORGE]
@@ -505,106 +508,134 @@ fun Project.setupPublishingPlatforms(
         else -> "No changelog specified"
     }
 
-    // Mod Publish Plugin
-    if (hasModPublishPlugin() && (modrinthIdentifier != null || curseForgeIdentifier != null)) {
+    // Setup publishing
+    extensions.configure<ModPublishExtension>("publishMods") {
+        dryRun.set(config.dryRun)
+        modLoaders.set(config.loaders)
+        type.set(releaseChannel.mpp)
+        changelog.set(changelogText)
+
+        // Display name
+        val event = getEnvironmentVariable("GITHUB_EVENT_PATH")
+            ?.let { json.decodeFromString<JsonObject>(File(it).readText()) }
+        displayName.set(
+            event
+                // Release name
+                ?.get("release")?.jsonObject?.get("name")?.jsonPrimitive?.contentOrNull
+            // Commit name
+                ?: event?.get("commits")?.jsonArray?.firstOrNull()?.jsonObject?.get("message")?.jsonPrimitive?.contentOrNull
+                    ?.lines()?.firstOrNull() // Only use commit title/summary, remove description
+                // Project version
+                ?: project.version.toString()
+        )
+
+        // Primary file (shadowJar or jar)
+        file.set(primaryFile)
+
+        // Additional files (javadocJar and sourcesJar)
+        val javadocJarTask = tasks.findByName("javadocJar") as? Jar
+        val sourcesJarTask = tasks.findByName("sourcesJar") as? Jar
+        javadocJarTask?.let { additionalFiles.from(it) }
+        sourcesJarTask?.let { additionalFiles.from(it) }
+
         val minecraftVersionEnd = config.minecraftVersionEnd ?: "latest"
 
-        // Setup publishing
-        extensions.configure<ModPublishExtension>("publishMods") {
-            dryRun.set(config.dryRun)
-            modLoaders.set(config.loaders)
-            type.set(releaseChannel.mpp)
-            changelog.set(changelogText)
-
-            // Display name
-            val event = getEnvironmentVariable("GITHUB_EVENT_PATH")
-                ?.let { json.decodeFromString<JsonObject>(File(it).readText()) }
-            displayName.set(
-                event
-                    // Release name
-                    ?.get("release")?.jsonObject?.get("name")?.jsonPrimitive?.contentOrNull
-                // Commit name
-                    ?: event?.get("commits")?.jsonArray?.firstOrNull()?.jsonObject?.get("message")?.jsonPrimitive?.contentOrNull
-                        ?.lines()?.firstOrNull() // Only use commit title/summary, remove description
-                    // Project version
-                    ?: project.version.toString()
-            )
-
-            // Primary file (shadowJar or jar)
-            file.set(primaryFile)
-
-            // Additional files (javadocJar and sourcesJar)
-            val javadocJarTask = tasks.findByName("javadocJar") as? Jar
-            val sourcesJarTask = tasks.findByName("sourcesJar") as? Jar
-            javadocJarTask?.let { additionalFiles.from(it) }
-            sourcesJarTask?.let { additionalFiles.from(it) }
-
-            // Modrinth
-            if (modrinthIdentifier != null) {
-                val token = getEnvironmentVariable("MODRINTH_TOKEN")
-                if (dryRun.get() || token != null) modrinth {
-                    accessToken.set(token)
-                    minecraftVersionRange {
-                        start.set(config.minecraftVersionStart)
-                        end.set(minecraftVersionEnd)
-                    }
-
-                    // Annoying API dependency
-                    if (config.addAnnoyingApiDependency) embeds("annoying-api")
-
-                    // Additional file types
-                    javadocJarTask?.let { additionalFile(it.archiveFile) { type.set(JAVADOC_JAR) } }
-                    sourcesJarTask?.let { additionalFile(it.archiveFile) { type.set(SOURCES_JAR) } }
-
-                    projectId.set(modrinthIdentifier)
-                    config.modrinthAction.execute(this)
+        // Modrinth
+        if (modrinthIdentifier != null) {
+            val token = getEnvironmentVariable("MODRINTH_TOKEN")
+            if (dryRun.get() || token != null) modrinth {
+                accessToken.set(token)
+                minecraftVersionRange {
+                    start.set(config.minecraftVersionStart)
+                    end.set(minecraftVersionEnd)
                 }
+
+                // Annoying API dependency
+                if (config.addAnnoyingApiDependency) embeds("annoying-api")
+
+                // Additional file types
+                javadocJarTask?.let { additionalFile(it.archiveFile) { type.set(JAVADOC_JAR) } }
+                sourcesJarTask?.let { additionalFile(it.archiveFile) { type.set(SOURCES_JAR) } }
+
+                projectId.set(modrinthIdentifier)
+                config.modrinthAction.execute(this)
             }
-
-            // CurseForge
-            if (curseForgeIdentifier != null) {
-                val token = getEnvironmentVariable("CURSEFORGE_TOKEN")
-                if (dryRun.get() || token != null) curseforge {
-                    accessToken.set(getEnvironmentVariable("CURSEFORGE_TOKEN"))
-                    minecraftVersionRange {
-                        start.set(config.minecraftVersionStart)
-                        end.set(minecraftVersionEnd)
-                    }
-
-                    if (config.addAnnoyingApiDependency) embeds("annoying-api")
-
-                    projectId.set(curseForgeIdentifier)
-                    config.curseForgeAction.execute(this)
-                }
-            }
-
-            // Ensure publishing runs after building
-            tasks.withType<PublishModTask> {
-                dependsOn("jar")
-                if (hasShadowPlugin()) dependsOn("shadowJar")
-            }
-
-            config.action(this)
         }
+
+        // CurseForge
+        if (curseForgeIdentifier != null) {
+            val token = getEnvironmentVariable("CURSEFORGE_TOKEN")
+            if (dryRun.get() || token != null) curseforge {
+                accessToken.set(getEnvironmentVariable("CURSEFORGE_TOKEN"))
+                minecraftVersionRange {
+                    start.set(config.minecraftVersionStart)
+                    end.set(minecraftVersionEnd)
+                }
+
+                if (config.addAnnoyingApiDependency) embeds("annoying-api")
+
+                projectId.set(curseForgeIdentifier)
+                config.curseForgeAction.execute(this)
+            }
+        }
+
+        // Ensure publishing runs after building
+        tasks.withType<PublishModTask> {
+            dependsOn("jar")
+            if (hasShadowPlugin()) dependsOn("shadowJar")
+        }
+
+        config.action(this)
     }
 
     // Hangar Publish Plugin
     if (hasHangarPublishPlugin() && hangarIdentifier != null) {
         val token = getEnvironmentVariable("HANGAR_TOKEN")
-        if (token != null) extensions.configure<HangarPublishExtension>("hangarPublish") { publications.register("plugin") {
-            version.set(project.version.toString())
-            id.set(hangarIdentifier)
-            channel.set(releaseChannel.hangar)
-            changelog.set(changelogText)
-            apiKey.set(token)
+        if (token != null) {
+            extensions.configure<HangarPublishExtension>("hangarPublish") { publications.register("plugin") {
+                version.set(project.version.toString())
+                id.set(hangarIdentifier)
+                channel.set(releaseChannel.hangar)
+                changelog.set(changelogText)
+                apiKey.set(token)
 
-            platforms { paper {
-                jar.set(primaryFile)
-                platformVersions.set(listOf(buildString {
-                    append(config.minecraftVersionStart)
-                    config.minecraftVersionEnd?.let { append("-$it") } ?: append("+") //TODO does hangar support "1.8.8+" notation?
-                }))
+                platforms { paper {
+                    jar.set(primaryFile)
+
+                    // Get Hangar's supported Minecraft versions
+                    val hangarMinecraftVersions = retrieveHangarPlatformVersions("PAPER")
+                    if (!hangarMinecraftVersions.contains(config.minecraftVersionStart)) {
+                        throw IllegalArgumentException("Hangar does not support start Minecraft version ${config.minecraftVersionStart}")
+                    }
+
+                    if (config.minecraftVersionEnd != null) {
+                        // start -> end
+                        if (!hangarMinecraftVersions.contains(config.minecraftVersionEnd)) {
+                            throw IllegalArgumentException("Hangar does not support end Minecraft version ${config.minecraftVersionEnd}")
+                        }
+                        platformVersions.set(listOf(config.minecraftVersionStart + "-${config.minecraftVersionEnd}"))
+                    } else {
+                        // start -> latest
+                        val semanticVersionStart = SemanticVersion(config.minecraftVersionStart)
+                        platformVersions.set(hangarMinecraftVersions
+                            .map { SemanticVersion(it) }
+                            .filter { it >= semanticVersionStart }
+                            .map { it.toString() })
+                    }
+
+                    // Dependencies
+                    dependencies {
+                        val hangarAction = HangarAction()
+                        config.hangarAction.execute(hangarAction)
+                        hangarAction.dependencies.forEach { dependency ->
+                            hangar(dependency.id) { required.set(dependency.required) }
+                        }
+                    }
+                } }
             } }
-        } }
+
+            // Ensure publishAllPublicationsToHangar runs with/after publishMods
+            tasks.named("publishMods") { finalizedBy("publishAllPublicationsToHangar") }
+        }
     }
 }
