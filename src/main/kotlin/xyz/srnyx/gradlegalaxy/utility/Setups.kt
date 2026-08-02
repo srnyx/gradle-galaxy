@@ -193,10 +193,11 @@ fun Project.setupAnnoyingAPI(
     if (hasRunPaperPlugin()) {
         // Set eula=true in run/eula.txt
         val acceptEula = tasks.register("acceptEula") {
+            group = "run paper"
+            description = "Automatically accepts the EULA"
+
             val eulaTxt = layout.projectDirectory.file("run/eula.txt")
-
             outputs.file(eulaTxt)
-
             doLast {
                 eulaTxt.asFile.parentFile.mkdirs()
                 eulaTxt.asFile.writeText("eula=true")
