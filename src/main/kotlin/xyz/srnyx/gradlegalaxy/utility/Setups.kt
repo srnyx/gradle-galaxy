@@ -25,6 +25,7 @@ import org.gradle.kotlin.dsl.get
 import org.gradle.kotlin.dsl.invoke
 import org.gradle.kotlin.dsl.named
 import org.gradle.kotlin.dsl.withType
+import xyz.jpenilla.runpaper.task.RunServer
 import xyz.srnyx.gradlegalaxy.annotations.Used
 import xyz.srnyx.gradlegalaxy.data.annoyingapi.AnnoyingMetadata
 import xyz.srnyx.gradlegalaxy.data.config.DependencyConfig
@@ -186,6 +187,10 @@ fun Project.setupAnnoyingAPI(
         // Setup publishing
         if (hasModPublishPlugin()) setupPublishingPlatforms(publishingPlatformConfig)
     }
+
+    // Setup default Run-Paper task with 1.21.11.
+    // This can be changed per-consumer with tasks { runServer { minecraftVersion("VERSION") } } (and other options)
+    if (hasRunPaperPlugin()) tasks.named<RunServer>("runServer") { minecraftVersion("1.21.11") }
 
     return metadata
 }

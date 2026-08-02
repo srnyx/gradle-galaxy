@@ -118,6 +118,11 @@ fun Project.hasModPublishPlugin(): Boolean = plugins.hasPlugin("me.modmuss50.mod
 fun Project.hasHangarPublishPlugin(): Boolean = plugins.hasPlugin("io.papermc.hangar-publish-plugin")
 
 /**
+ * @return  If the `xyz.jpenilla.run-paper` plugin is applied
+ */
+fun Project.hasRunPaperPlugin(): Boolean = plugins.hasPlugin("xyz.jpenilla.run-paper")
+
+/**
  * Checks if the `maven-publish` plugin is applied
  *
  * @return If the `maven-publish` plugin is applied
