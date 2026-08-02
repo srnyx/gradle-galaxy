@@ -190,7 +190,26 @@ fun Project.setupAnnoyingAPI(
 
     // Setup default Run-Paper task with 1.21.11.
     // This can be changed per-consumer with tasks { runServer { minecraftVersion("VERSION") } } (and other options)
-    if (hasRunPaperPlugin()) tasks.named<RunServer>("runServer") { minecraftVersion("1.21.11") }
+    if (hasRunPaperPlugin()) {
+        // Set eula=true in run/eula.txt
+        val acceptEula = tasks.register("acceptEula") {
+            val eulaTxt = layout.projectDirectory.file("run/eula.txt")
+
+            outputs.file(eulaTxt)
+
+            doLast {
+                eulaTxt.asFile.parentFile.mkdirs()
+                eulaTxt.asFile.writeText("eula=true")
+            }
+        }
+
+        tasks.named<RunServer>("runServer") {
+            dependsOn(acceptEula)
+
+            // Only set default if not already set by consumer
+            if (!version.isPresent) minecraftVersion("1.21.11")
+        }
+    }
 
     return metadata
 }
