@@ -264,7 +264,6 @@ fun Project.setupLazyLibrary(
  * 2. Configures the test task to use JUnit Platform
  *
  * @param junitBomConfig The configuration for the JUnit BOM dependency
- * @param configuration The configuration for the test task
  *
  * @return The test task that was configured
  */

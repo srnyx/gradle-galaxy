@@ -385,9 +385,6 @@ fun Project.getAnnoyingApiMetadata(version: String): AnnoyingMetadata? {
  * 3. Relocates the specified libraries to the project's package
  *
  * @param libraries The runtime libraries to process
- * @param addRepositories Whether to add the repositories
- * @param configurations The configurations to add the dependencies to
- * @param relocate Whether to relocate the libraries
  */
 fun Project.processRuntimeLibraries(
     libraries: Collection<RuntimeLibrary>,
