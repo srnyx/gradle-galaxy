@@ -1,33 +1,9 @@
 package xyz.srnyx.gradlegalaxy.utility
 
-import io.papermc.hangarpublishplugin.HangarPublishExtension
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.contentOrNull
-import kotlinx.serialization.json.jsonArray
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
-import me.modmuss50.mpp.ModPublishExtension
-import me.modmuss50.mpp.PublishModTask
-import me.modmuss50.mpp.networking.RequestContext.Default.json
-import org.gradle.api.JavaVersion
 import org.gradle.api.Project
+import org.gradle.api.artifacts.repositories.MavenArtifactRepository
 import org.gradle.api.publish.maven.MavenPublication
-import org.gradle.api.tasks.TaskProvider
 import org.gradle.api.tasks.testing.Test
-import org.gradle.internal.extensions.stdlib.capitalized
-import org.gradle.jvm.tasks.Jar
-import org.gradle.kotlin.dsl.accessors.runtime.addDependencyTo
-import org.gradle.kotlin.dsl.apply
-import org.gradle.kotlin.dsl.create
-import org.gradle.kotlin.dsl.dependencies
-import org.gradle.kotlin.dsl.exclude
-import org.gradle.kotlin.dsl.get
-import org.gradle.kotlin.dsl.invoke
-import org.gradle.kotlin.dsl.named
-import org.gradle.kotlin.dsl.withType
-import xyz.jpenilla.runpaper.task.RunServer
-import xyz.srnyx.gradlegalaxy.annotations.Used
-import xyz.srnyx.gradlegalaxy.data.annoyingapi.AnnoyingMetadata
 import xyz.srnyx.gradlegalaxy.data.config.DependencyConfig
 import xyz.srnyx.gradlegalaxy.data.config.JavaSetupConfig
 import xyz.srnyx.gradlegalaxy.data.config.JdaSetupConfig
@@ -36,18 +12,11 @@ import xyz.srnyx.gradlegalaxy.data.config.annoyingapi.AnnoyingSetupConfig
 import xyz.srnyx.gradlegalaxy.data.config.annoyingapi.CustomRuntimeLibrariesConfig
 import xyz.srnyx.gradlegalaxy.data.config.annoyingapi.MetadataConfig
 import xyz.srnyx.gradlegalaxy.data.config.dependency.MockBukkitConfig
-import xyz.srnyx.gradlegalaxy.data.config.publishing.HangarAction
 import xyz.srnyx.gradlegalaxy.data.config.publishing.PublishingEnvConfig
 import xyz.srnyx.gradlegalaxy.data.config.publishing.PublishingPlatformConfig
 import xyz.srnyx.gradlegalaxy.data.config.publishing.PublishingSimpleConfig
-import xyz.srnyx.gradlegalaxy.data.pom.DeveloperData
-import xyz.srnyx.gradlegalaxy.enums.PluginPlatform
-import xyz.srnyx.gradlegalaxy.enums.ReleaseChannel
 import xyz.srnyx.gradlegalaxy.enums.Repository
-import xyz.srnyx.gradlegalaxy.enums.repository
-import java.io.File
-
-import kotlin.String
+import xyz.srnyx.gradlegalaxy.extensions.GradleGalaxyExtension
 
 
 /**
@@ -59,25 +28,12 @@ import kotlin.String
  *
  * @param config The configuration for setting up Java
  */
+@Deprecated("Use galaxy { setup { java { ... } } } instead")
 fun Project.setupJava(
     config: JavaSetupConfig = JavaSetupConfig(),
 ) {
-    this.group = config.group ?: this.group
-    this.version = config.version
-        ?: this.version.takeIf { it != Project.DEFAULT_VERSION }
-        ?: when {
-            inGitHubWorkflow -> getEnvironmentVariable("GITHUB_REF_NAME")
-                ?.takeIf { inGitHubPublish }
-                ?: getEnvironmentVariable("GITHUB_SHA")?.take(7)
-            else -> null
-        }
-        ?: "dev"
-    this.description = config.description ?: this.description
-    config.javaVersion?.let(::setJavaVersion)
-    config.textEncoding?.let(::setTextEncoding)
-    if (hasShadowPlugin()) {
-        config.archiveClassifier?.let(::setShadowArchiveClassifier)
-        addBuildShadowTask()
+    extensions.configure<GradleGalaxyExtension>("galaxy") {
+        setup.java(config.toExtension())
     }
 }
 
@@ -90,12 +46,17 @@ fun Project.setupJava(
  * @param javaSetupConfig The configuration for [setupJava]
  * @param mcSetupConfig The configuration for Minecraft setup
  */
+@Deprecated("Use galaxy { setup { minecraft { ... } } } instead")
 fun Project.setupMC(
     javaSetupConfig: JavaSetupConfig = JavaSetupConfig(),
     mcSetupConfig: MCSetupConfig = MCSetupConfig(),
 ) {
-    setupJava(javaSetupConfig)
-    if (mcSetupConfig.replacementFiles != null && mcSetupConfig.replacements != null) addReplacementsTask(mcSetupConfig.replacementFiles, mcSetupConfig.replacements)
+    extensions.configure<GradleGalaxyExtension>("galaxy") {
+        setup {
+            java(javaSetupConfig.toExtension())
+            minecraft(mcSetupConfig.toExtension())
+        }
+    }
 }
 
 /**
@@ -118,7 +79,7 @@ fun Project.setupMC(
  *
  * @return The metadata for Annoying API if [MetadataConfig.useMetadata] is true, otherwise null
  */
-@Used
+@Deprecated("Use galaxy { setup { annoyingAPI { ... } } } instead")
 fun Project.setupAnnoyingAPI(
     javaSetupConfig: JavaSetupConfig = JavaSetupConfig(),
     mcSetupConfig: MCSetupConfig = MCSetupConfig(),
@@ -127,92 +88,28 @@ fun Project.setupAnnoyingAPI(
     metadataConfig: MetadataConfig = MetadataConfig(),
     customRuntimeLibrariesConfig: CustomRuntimeLibrariesConfig = CustomRuntimeLibrariesConfig(),
     publishingPlatformConfig: PublishingPlatformConfig = PublishingPlatformConfig(mapOf()),
-): AnnoyingMetadata? {
-    check(hasJavaPlugin()) { "Java plugin is not applied!" }
-    check(hasShadowPlugin()) { "Shadow plugin is required for Annoying API!" }
-
-    // Setup Minecraft
-    setupMC(javaSetupConfig, mcSetupConfig)
-
-    // Get and process Annoying API metadata
-    val metadata = metadataConfig.useMetadata.takeIf { it }?.let { getAnnoyingApiMetadata(annoyingAPIConfig.version) }
-    if (metadata != null) {
-        // Relocate Annoying API
-        if (metadataConfig.relocateAnnoyingAPI) relocate(metadata.packageName)
-
-        // Java version (only if custom not specified)
-        if (metadataConfig.setJavaVersion && metadata.javaVersion != null && javaSetupConfig.javaVersion == null) {
-            setJavaVersion(JavaVersion.toVersion(metadata.javaVersion))
-        }
-
-        // Repositories
-        if (metadataConfig.addRepositories) metadata.repositories.forEach { repository(it) }
-
-        // Runtime libraries
-        processRuntimeLibraries(metadata.runtimeLibraries, metadataConfig.runtimeLibrariesConfig)
-    }
-
-    // Excludes
-    if (metadataConfig.excludes) {
-        val original = annoyingAPIConfig.configurationAction
-        annoyingAPIConfig.configurationAction = {
-            metadata?.excludes?.forEach { exclude(it.group, it.module) }
-            original()
-        }
-    }
-
-    // Add Annoying API
-    annoyingAPI(annoyingAPIConfig)
-
-    // Custom runtime libraries
-    customRuntimeLibrariesConfig
-        .takeIf { !it.runtimeLibraries.isEmpty() }
-        ?.let { config ->
-            // Process libraries
-            config.processConfig?.let { processConfig ->
-                processRuntimeLibraries(config.runtimeLibraries, processConfig)
+) {
+    extensions.configure<GradleGalaxyExtension>("galaxy") {
+        setup {
+            java(javaSetupConfig.toExtension())
+            minecraft(mcSetupConfig.toExtension())
+            annoyingAPI {
+                metadata(metadataConfig.toExtension(customRuntimeLibrariesConfig.runtimeLibraries))
+                customRuntimeLibraries(customRuntimeLibrariesConfig.toExtension())
             }
-
-            // Generate enum
-            config.generateRuntimeLibraryEnumConfig?.let { generateRuntimeLibraryEnumConfig ->
-                generateAnnoyingApiRuntimeLibraryEnum(config.runtimeLibraries, generateRuntimeLibraryEnumConfig, metadata)
+            publishing {
+                platforms(publishingPlatformConfig.platforms) {
+                    publishingPlatformConfig.toExtension()(this)
+                    addResourceFile = annoyingSetupConfig.addPlatformsResourceFile
+                }
             }
+            runPaper {}
         }
 
-    // Platforms
-    if (!publishingPlatformConfig.platforms.isEmpty()) {
-        // Add resource file task
-        if (annoyingSetupConfig.addPlatformsResourceFile) addPlatformsResourceFileTask(publishingPlatformConfig.platforms)
-
-        // Setup publishing
-        if (hasModPublishPlugin()) setupPublishingPlatforms(publishingPlatformConfig)
-    }
-
-    // Setup default Run-Paper task with 1.21.11.
-    // This can be changed per-consumer with tasks { runServer { minecraftVersion("VERSION") } } (and other options)
-    if (hasRunPaperPlugin()) {
-        // Set eula=true in run/eula.txt
-        val acceptEula = tasks.register("acceptEula") {
-            group = "run paper"
-            description = "Automatically accepts the EULA"
-
-            val eulaTxt = layout.projectDirectory.file("run/eula.txt")
-            outputs.file(eulaTxt)
-            doLast {
-                eulaTxt.asFile.parentFile.mkdirs()
-                eulaTxt.asFile.writeText("eula=true")
-            }
-        }
-
-        tasks.named<RunServer>("runServer") {
-            dependsOn(acceptEula)
-
-            // Only set default if not already set by consumer
-            if (!version.isPresent) minecraftVersion("1.21.11")
+        dependencies {
+            annoyingAPI(annoyingAPIConfig.version, annoyingAPIConfig.toExtension())
         }
     }
-
-    return metadata
 }
 
 /**
@@ -229,34 +126,21 @@ fun Project.setupAnnoyingAPI(
  * @param jdaSetupConfig The configuration for JDA setup
  * @param jdaConfig The configuration for [jda]
  */
+@Deprecated("Use galaxy { setup { jda { ... } } } instead")
 fun Project.setupJda(
     javaSetupConfig: JavaSetupConfig = JavaSetupConfig(),
     jdaSetupConfig: JdaSetupConfig = JdaSetupConfig(),
     jdaConfig: DependencyConfig,
 ) {
-    check(hasShadowPlugin()) { "Shadow plugin is required for JDA!" }
+    extensions.configure<GradleGalaxyExtension>("galaxy") {
+        setup {
+            java(javaSetupConfig.toExtension())
+        }
 
-    setupJava(javaSetupConfig)
-    setMainClass(jdaSetupConfig.mainClassName)
-    addCompilerArgs("-parameters")
-
-    // Exclude opus-java if needed
-    if (jdaSetupConfig.excludeOpus) {
-        val original = jdaConfig.configurationAction
-        jdaConfig.configurationAction = {
-            exclude(module = "opus-java")
-            original()
+        dependencies {
+            jda(jdaConfig.version, jdaConfig.toExtension())
         }
     }
-
-    // Add JDA with new jdaConfig (excludeOpus)
-    jda(jdaConfig)
-
-    // Fix some tasks
-    tasks["distZip"].dependsOn("shadowJar")
-    tasks["distTar"].dependsOn("shadowJar")
-    tasks["startScripts"].dependsOn("shadowJar")
-    tasks["startShadowScripts"].dependsOn("jar")
 }
 
 /**
@@ -271,16 +155,24 @@ fun Project.setupJda(
  * @param jdaConfig The configuration for [jda]
  * @param lazyLibraryConfig The configuration for [lazyLibrary]
  */
-@Used
+@Deprecated("Use galaxy { setup { lazyLibrary { ... } } } instead")
 fun Project.setupLazyLibrary(
     javaSetupConfig: JavaSetupConfig = JavaSetupConfig(),
     jdaSetupConfig: JdaSetupConfig = JdaSetupConfig(),
     jdaConfig: DependencyConfig,
     lazyLibraryConfig: DependencyConfig,
 ) {
-    check(hasShadowPlugin()) { "Shadow plugin is required for Lazy Library!" }
-    setupJda(javaSetupConfig, jdaSetupConfig, jdaConfig)
-    lazyLibrary(lazyLibraryConfig)
+    extensions.configure<GradleGalaxyExtension>("galaxy") {
+        setup {
+            java(javaSetupConfig.toExtension())
+            jda(jdaSetupConfig.toExtension())
+        }
+
+        dependencies {
+            jda(jdaConfig.version, jdaConfig.toExtension())
+            lazyLibrary(lazyLibraryConfig.version, lazyLibraryConfig.toExtension())
+        }
+    }
 }
 
 /**
@@ -292,27 +184,23 @@ fun Project.setupLazyLibrary(
  *
  * @return The test task that was configured
  */
+@Deprecated("Use galaxy { setup { testing { ... } } } instead")
 fun Project.setupTesting(
     junitBomConfig: DependencyConfig,
     block: Test.() -> Unit = {},
-): TaskProvider<Test> {
-    // Add dependencies
-    dependencies {
-        (junitBomConfig.configurations ?: listOf("testImplementation")).forEach { configurationName ->
-            addDependencyTo(this, configurationName, platform("org.junit:junit-bom:${junitBomConfig.version}"), junitBomConfig.configurationAction)
+) {
+    extensions.configure<GradleGalaxyExtension>("galaxy") {
+        setup {
+            testing {
+                jUnit {
+                    action(block)
+                }
+            }
         }
-        add("testImplementation", "org.junit.jupiter:junit-jupiter")
-        add("testRuntimeOnly", "org.junit.platform:junit-platform-launcher")
-    }
 
-    // Configure and return test task
-    return tasks.named<Test>("test") {
-        useJUnitPlatform()
-
-        // For ByteBuddy/Mockito/MockBukkit
-        jvmArgs("--add-opens", "java.base/java.lang=ALL-UNNAMED")
-
-        block()
+        dependencies {
+            jUnitBom(junitBomConfig.version, junitBomConfig.toExtension())
+        }
     }
 }
 
@@ -330,20 +218,30 @@ fun Project.setupTesting(
  *
  * @return The test task that was configured
  */
+@Deprecated("Use galaxy { setup { mockBukkit { ... } } } instead")
 fun Project.setupMockBukkit(
     junitBomConfig: DependencyConfig,
     mockBukkitDependencyConfig: DependencyConfig,
     mockBukkitConfig: MockBukkitConfig = MockBukkitConfig(),
     block: Test.() -> Unit = {},
-): TaskProvider<Test> {
-    // Add MockBukkit
-    mockBukkit(mockBukkitDependencyConfig, mockBukkitConfig)
+) {
+    extensions.configure<GradleGalaxyExtension>("galaxy") {
+        setup {
+            testing {
+                jUnit {
+                    action(block)
+                }
+            }
+        }
 
-    // Exclude spigot-api from test classpath so MockBukkit's Paper takes precedence
-    configurations.named("testImplementation") { exclude("org.spigotmc", "spigot-api") }
-
-    // Setup testing
-    return setupTesting(junitBomConfig, block)
+        dependencies {
+            jUnitBom(junitBomConfig.version, junitBomConfig.toExtension())
+            mockBukkit(mockBukkitDependencyConfig.version) {
+                mockBukkitDependencyConfig.toExtension()(this)
+                mockBukkitConfig.toExtension()(this)
+            }
+        }
+    }
 }
 
 /**
@@ -358,90 +256,20 @@ fun Project.setupMockBukkit(
  *
  * @return The [MavenPublication] that was created
  */
+@Deprecated("Use galaxy { setup { publishing { simple { ... } } } } instead")
 fun Project.setupPublishingSimple(
     config: PublishingSimpleConfig = PublishingSimpleConfig(this),
     configuration: MavenPublication.() -> Unit = {},
-): MavenPublication {
-    apply(plugin = "maven-publish")
-
-    // Javadocs and sources
-    if (config.withJavadocSourcesJars) addJavadocSourcesJars()
-
-    // Silence missing Javadoc warnings
-    if (config.silenceMissingJavadocWarnings) silenceMissingJavaDocWarnings()
-
-    // Create publication
-    return getPublishing().publications.create<MavenPublication>("maven") {
-        config.groupId?.let { this.groupId = it }
-        config.artifactId?.let { this.artifactId = it }
-        config.version?.let { this.version = it }
-        config.component?.let { this.from(config.component) }
-        config.artifacts.forEach(this::artifact)
-        config.textArtifacts.forEach { textArtifact ->
-            val taskName = "generate${textArtifact.classifier.capitalized()}TextArtifact"
-            val extensionSuffix = textArtifact.extension?.let { ".$it" } ?: ""
-            val outputFile = layout.buildDirectory.file("generated/publications/${this.artifactId}-${this.version}-${textArtifact.classifier}$extensionSuffix")
-
-            val textProvider = project.provider { textArtifact.text.invoke() }
-            val task = tasks.register(taskName) {
-                group = "publishing"
-                description = "Generates the ${textArtifact.classifier} artifact for publication ${this.name}"
-
-                inputs.property("text", textProvider)
-                outputs.file(outputFile)
-
-                doLast {
-                    outputFile.get().asFile.apply {
-                        parentFile.mkdirs()
-                        writeText(textProvider.get())
-                    }
+) {
+    extensions.configure<GradleGalaxyExtension>("galaxy") {
+        setup {
+            publishing {
+                simple {
+                    config.toExtension()(this)
+                    publication(configuration)
                 }
-            }
-
-            artifact(outputFile) {
-                this.classifier = textArtifact.classifier
-                this.extension = textArtifact.extension
-                builtBy(task)
             }
         }
-        pom {
-            config.name?.let(this.name::set)
-            config.description?.let(this.description::set)
-            config.url?.let(this.url::set)
-            licenses {
-                config.licenses.forEach {
-                    license {
-                        this.name.set(it.name)
-                        this.url.set(it.url)
-                        it.distribution?.value?.let(this.distribution::set)
-                        it.comments?.let(this.comments::set)
-                    }
-                }
-            }
-            developers {
-                config.developers.filterNot(DeveloperData::isEmpty).forEach {
-                    developer {
-                        it.id?.let(this.id::set)
-                        it.name?.let(this.name::set)
-                        it.url?.let(this.url::set)
-                        it.email?.let(this.email::set)
-                        it.timezone?.let(this.timezone::set)
-                        it.organization?.let(this.organization::set)
-                        it.organizationUrl?.let(this.organizationUrl::set)
-                        it.roles.takeIf(List<String>::isNotEmpty)?.let(this.roles::set)
-                        it.properties.takeIf(Map<String, String>::isNotEmpty)?.let(this.properties::set)
-                    }
-                }
-            }
-            if (config.scm != null) scm {
-                connection.set(config.scm.connection)
-                developerConnection.set(config.scm.developerConnection)
-                config.scm.url?.let(this.url::set)
-                config.scm.tag?.let(this.tag::set)
-            }
-        }
-
-        configuration()
     }
 }
 
@@ -457,28 +285,19 @@ fun Project.setupPublishingSimple(
  *
  * @return The [MavenPublication] that was created
  */
-@Used
+@Deprecated("Use galaxy { setup { publishing { env { ... } } } } instead")
 fun Project.setupPublishingEnv(
     simpleConfig: PublishingSimpleConfig = PublishingSimpleConfig(this),
     envConfig: PublishingEnvConfig = PublishingEnvConfig(),
-): MavenPublication {
-    apply(plugin = "maven-publish")
-
-    // Create repository
-    val resolvedMavenUrl = envConfig.mavenUrl ?: getEnvironmentVariable(envConfig.mavenUrlEnv)
-    if (resolvedMavenUrl != null) getPublishing().repositories.maven {
-        url = uri(resolvedMavenUrl)
-
-        val usernameEnv = getEnvironmentVariable(envConfig.usernameEnv)
-        val passwordEnv = getEnvironmentVariable(envConfig.passwordEnv)
-        if (usernameEnv != null || passwordEnv != null) credentials {
-            if (usernameEnv != null) username = usernameEnv
-            if (passwordEnv != null) password = passwordEnv
+) {
+    extensions.configure<GradleGalaxyExtension>("galaxy") {
+        setup {
+            publishing {
+                simple(simpleConfig.toExtension())
+                env(envConfig.toExtension())
+            }
         }
     }
-
-    // Create publication
-    return setupPublishingSimple(simpleConfig)
 }
 
 /**
@@ -486,180 +305,15 @@ fun Project.setupPublishingEnv(
  *
  * @param config The configuration for setting up publishing for project platforms
  */
+@Deprecated("Use galaxy { setup { publishing { platforms { ... } } } instead")
 fun Project.setupPublishingPlatforms(
     config: PublishingPlatformConfig,
 ) {
-    check(hasModPublishPlugin()) { "Mod Publish plugin is not applied!" }
-
-    // Identifiers
-    val modrinthIdentifier = config.platforms[PluginPlatform.MODRINTH]
-    val curseForgeIdentifier = config.platforms[PluginPlatform.CURSEFORGE]
-    val hangarIdentifier = config.platforms[PluginPlatform.HANGAR]
-
-    // Release channel
-    val releaseChannel: ReleaseChannel = when {
-        inGitHubPublish -> ReleaseChannel.RELEASE
-        inGitHubPreRelease -> ReleaseChannel.BETA
-        else -> ReleaseChannel.ALPHA
-    }
-
-    // Primary file
-    val primaryFile = tasks.named<Jar>(if (hasShadowPlugin()) "shadowJar" else "jar").flatMap { it.archiveFile }
-
-    // Changelog
-    // File exists: file contents
-    // In GitHub workflow:
-    //   Non-STABLE: "github.com/REPO/commit/SHA"
-    //   STABLE: release link
-    // Else: "No changelog specified"
-    val changelogFile = file("Changelogs/${project.version}.md")
-    val changelogText: String = when {
-        // File
-        changelogFile.exists() -> changelogFile.readText()
-
-        inGitHubWorkflow -> run {
-            val gitHubRepository =
-                getEnvironmentVariable("GITHUB_REPOSITORY") ?: return@run "No changelog specified"
-            val githubLink = "https://github.com/${gitHubRepository}"
-
-            // Non-STABLE: commit SHA
-            if (releaseChannel != ReleaseChannel.RELEASE) return@run "${githubLink}/commit/${getEnvironmentVariable("GITHUB_SHA")}"
-
-            // STABLE: release link
-            "${githubLink}/releases/tag/${project.version}"
-        }
-
-        else -> "No changelog specified"
-    }
-
-    // Setup publishing
-    extensions.configure<ModPublishExtension>("publishMods") {
-        dryRun.set(config.dryRun)
-        modLoaders.set(config.loaders)
-        type.set(releaseChannel.mpp)
-        changelog.set(changelogText)
-
-        // Display name
-        val event = getEnvironmentVariable("GITHUB_EVENT_PATH")
-            ?.let { json.decodeFromString<JsonObject>(File(it).readText()) }
-        displayName.set(
-            event
-                // Release name
-                ?.get("release")?.jsonObject?.get("name")?.jsonPrimitive?.contentOrNull
-            // Commit name
-                ?: event?.get("commits")?.jsonArray?.firstOrNull()?.jsonObject?.get("message")?.jsonPrimitive?.contentOrNull
-                    ?.lines()?.firstOrNull() // Only use commit title/summary, remove description
-                // Project version
-                ?: project.version.toString()
-        )
-
-        // Primary file (shadowJar or jar)
-        file.set(primaryFile)
-
-        // Additional files (javadocJar and sourcesJar)
-        val javadocJarTask = tasks.findByName("javadocJar") as? Jar
-        val sourcesJarTask = tasks.findByName("sourcesJar") as? Jar
-        javadocJarTask?.let { additionalFiles.from(it) }
-        sourcesJarTask?.let { additionalFiles.from(it) }
-
-        val minecraftVersionEnd = config.minecraftVersionEnd ?: "latest"
-
-        // Modrinth
-        if (modrinthIdentifier != null) {
-            val token = getEnvironmentVariable("MODRINTH_TOKEN")
-            if (dryRun.get() || token != null) modrinth {
-                accessToken.set(token)
-                minecraftVersionRange {
-                    start.set(config.minecraftVersionStart)
-                    end.set(minecraftVersionEnd)
-                }
-
-                // Annoying API dependency
-                if (config.addAnnoyingApiDependency) embeds("annoying-api")
-
-                // Additional file types
-                javadocJarTask?.let { additionalFile(it.archiveFile) { type.set(JAVADOC_JAR) } }
-                sourcesJarTask?.let { additionalFile(it.archiveFile) { type.set(SOURCES_JAR) } }
-
-                projectId.set(modrinthIdentifier)
-                config.modrinthAction.execute(this)
+    project.extensions.configure<GradleGalaxyExtension>("galaxy") {
+        setup {
+            publishing {
+                platforms(config.platforms, config.toExtension())
             }
-        }
-
-        // CurseForge
-        if (curseForgeIdentifier != null) {
-            val token = getEnvironmentVariable("CURSEFORGE_TOKEN")
-            if (dryRun.get() || token != null) curseforge {
-                accessToken.set(getEnvironmentVariable("CURSEFORGE_TOKEN"))
-                minecraftVersionRange {
-                    start.set(config.minecraftVersionStart)
-                    end.set(minecraftVersionEnd)
-                }
-
-                if (config.addAnnoyingApiDependency) embeds("annoying-api")
-
-                projectId.set(curseForgeIdentifier)
-                config.curseForgeAction.execute(this)
-            }
-        }
-
-        // Ensure publishing runs after building
-        tasks.withType<PublishModTask> {
-            dependsOn("jar")
-            if (hasShadowPlugin()) dependsOn("shadowJar")
-        }
-
-        config.action(this)
-    }
-
-    // Hangar Publish Plugin
-    if (hasHangarPublishPlugin() && hangarIdentifier != null) {
-        val token = getEnvironmentVariable("HANGAR_TOKEN")
-        if (token != null) {
-            extensions.configure<HangarPublishExtension>("hangarPublish") { publications.register("plugin") {
-                version.set(project.version.toString())
-                id.set(hangarIdentifier)
-                channel.set(releaseChannel.hangar)
-                changelog.set(changelogText)
-                apiKey.set(token)
-
-                platforms { paper {
-                    jar.set(primaryFile)
-
-                    // Get Hangar's supported Minecraft versions
-                    val hangarMinecraftVersions = retrieveHangarPlatformVersions("PAPER")
-                    if (!hangarMinecraftVersions.contains(config.minecraftVersionStart)) {
-                        throw IllegalArgumentException("Hangar does not support start Minecraft version ${config.minecraftVersionStart}")
-                    }
-
-                    if (config.minecraftVersionEnd != null) {
-                        // start -> end
-                        if (!hangarMinecraftVersions.contains(config.minecraftVersionEnd)) {
-                            throw IllegalArgumentException("Hangar does not support end Minecraft version ${config.minecraftVersionEnd}")
-                        }
-                        platformVersions.set(listOf(config.minecraftVersionStart + "-${config.minecraftVersionEnd}"))
-                    } else {
-                        // start -> latest
-                        val semanticVersionStart = SemanticVersion(config.minecraftVersionStart)
-                        platformVersions.set(hangarMinecraftVersions
-                            .map { SemanticVersion(it) }
-                            .filter { it >= semanticVersionStart }
-                            .map { it.toString() })
-                    }
-
-                    // Dependencies
-                    dependencies {
-                        val hangarAction = HangarAction()
-                        config.hangarAction.execute(hangarAction)
-                        hangarAction.dependencies.forEach { dependency ->
-                            hangar(dependency.id) { required.set(dependency.required) }
-                        }
-                    }
-                } }
-            } }
-
-            // Ensure publishAllPublicationsToHangar runs with/after publishMods
-            tasks.named("publishMods") { finalizedBy("publishAllPublicationsToHangar") }
         }
     }
 }

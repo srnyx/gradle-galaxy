@@ -24,19 +24,19 @@ import org.gradle.api.tasks.bundling.Jar
 import org.gradle.api.tasks.javadoc.Javadoc
 import org.gradle.external.javadoc.StandardJavadocDocletOptions
 import org.gradle.kotlin.dsl.*
+import xyz.srnyx.gradlegalaxy.annotations.Used
 import xyz.srnyx.gradlegalaxy.data.annoyingapi.AnnoyingMetadata
 import xyz.srnyx.gradlegalaxy.data.annoyingapi.RuntimeLibrary
 import xyz.srnyx.gradlegalaxy.data.config.annoyingapi.GenerateRuntimeLibraryEnumConfig
-import xyz.srnyx.gradlegalaxy.data.config.annoyingapi.RuntimeLibrariesConfig
 import xyz.srnyx.gradlegalaxy.enums.PluginPlatform
 import xyz.srnyx.gradlegalaxy.enums.Repository
 import xyz.srnyx.gradlegalaxy.enums.repository
+import xyz.srnyx.gradlegalaxy.extensions.GradleGalaxyExtension
 import java.io.File
 import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
-import kotlin.apply
 
 import kotlin.text.replace
 
@@ -71,6 +71,7 @@ val inGitHubPreRelease: Boolean by lazy {
 /**
  * @return  Whether the project is running in a GitHub Actions release workflow
  */
+@Used
 val inGitHubRelease: Boolean by lazy { inGitHubPublish && !inGitHubPreRelease }
 
 /**
@@ -236,6 +237,8 @@ fun Project.addJavadocSourcesJars(javadocClassifier: String? = null, sourcesClas
  * @param   replacements    A [Map] of all the replacements
  */
 fun Project.addReplacementsTask(files: Set<String> = setOf("plugin.yml"), replacements: Map<String, String> = getDefaultReplacements()) {
+    if (files.isEmpty() || replacements.isEmpty()) return
+
     val actualReplacements = if (replacements["defaultReplacements"] == "true") getDefaultReplacements() + replacements.minus("defaultReplacements") else replacements
     listOf("processResources", "processTestResources").forEach { taskName ->
         tasks.named<Copy>(taskName) {
@@ -383,189 +386,20 @@ fun Project.getAnnoyingApiMetadata(version: String): AnnoyingMetadata? {
     return json.decodeFromString<AnnoyingMetadata>(text)
 }
 
-/**
- * Processes the specified runtime libraries
- * 1. Adds the specified repositories
- * 2. Adds the specified dependencies (with exclusions)
- * 3. Relocates the specified libraries to the project's package
- *
- * @param libraries The runtime libraries to process
- */
-fun Project.processRuntimeLibraries(
-    libraries: Collection<RuntimeLibrary>,
-    runtimeLibrariesConfig: RuntimeLibrariesConfig = RuntimeLibrariesConfig(),
-) {
-    val getPackage = getPackage()
-    libraries.forEach { library ->
-        // Add repositories
-        if (runtimeLibrariesConfig.addRepositories) library.repositories.forEach { repo -> repository(repo) }
-
-        // Add dependencies
-        runtimeLibrariesConfig.configurations.forEach { configuration ->
-            dependencies.add(configuration, "${library.group}:${library.artifact}:${library.version}") {
-                // Excludes
-                library.excludes.forEach { exclude(it.group, it.module) }
-            }
-        }
-
-        // Relocations
-        if (runtimeLibrariesConfig.relocate) library.relocations.forEach { relocation ->
-            val to = relocation.to?.replace("{package}", getPackage)
-            if (to != null) {
-                relocate(relocation.from, to)
-            } else {
-                relocate(relocation.from)
-            }
-        }
-    }
-}
-
+@Deprecated("Use galaxy { setup { annoyingAPI { customRuntimeLibraries { ... } } } } instead")
 fun Project.generateAnnoyingApiRuntimeLibraryEnum(
     libraries: Collection<RuntimeLibrary>,
     generateRuntimeLibraryEnumConfig: GenerateRuntimeLibraryEnumConfig = GenerateRuntimeLibraryEnumConfig(),
     annoyingMetadata: AnnoyingMetadata? = null,
 ) {
-    val packagePath = generateRuntimeLibraryEnumConfig.packagePath ?: getPackage()
-    val packageFolder = packagePath.replace(".", "/")
-    val enumName = "${name}Library"
-
-    val enum = buildString {
-        // Package
-        append("package $packagePath.library;")
-        append("\n")
-
-        // Imports
-        val annoyingPackage = annoyingMetadata?.packageName ?: "xyz.srnyx.annoyingapi"
-        val libsLibby = "${if (generateRuntimeLibraryEnumConfig.relocateImports) "$annoyingPackage.libs" else "net.byteflux"}.libby"
-        append("\nimport $libsLibby.Library;")
-        append("\nimport $libsLibby.relocation.Relocation;")
-        append("\nimport org.jetbrains.annotations.NotNull;")
-        append("\nimport org.jetbrains.annotations.Nullable;")
-        append("\nimport $annoyingPackage.AnnoyingPlugin;")
-        append("\nimport $annoyingPackage.library.AnnoyingLibrary;")
-        append("\n")
-        append("\nimport java.util.Collection;")
-        append("\nimport java.util.List;")
-        append("\nimport java.util.function.Function;")
-        append("\nimport java.util.function.Supplier;")
-        append("\n")
-        append("\n")
-
-        // Enum declaration
-        append("\npublic enum $enumName implements AnnoyingLibrary {")
-        append("\n")
-
-        // Libraries
-        libraries.forEachIndexed { index, library ->
-            append(buildLibraryEntry(library))
-            if (index < libraries.size - 1) append(",\n")
-        }
-        append(";\n")
-        append("\n")
-
-        // Enum variables/constructors/methods
-        append("""
-        @NotNull public final Supplier<Library.Builder> librarySupplier;
-        @Nullable public final Function<AnnoyingPlugin, Collection<Relocation>> relocations;
-        @Nullable public final Collection<AnnoyingLibrary> requiredLibraries;
-    
-        $enumName(@NotNull Supplier<Library.Builder> librarySupplier) {
-            this(librarySupplier, null, null);
-        }
-    
-        $enumName(@NotNull Supplier<Library.Builder> librarySupplier, @NotNull Function<AnnoyingPlugin, Collection<Relocation>> relocations) {
-            this(librarySupplier, relocations, null);
-        }
-    
-        $enumName(@NotNull Supplier<Library.Builder> librarySupplier, @NotNull Collection<AnnoyingLibrary> requiredLibraries) {
-            this(librarySupplier, null, requiredLibraries);
-        }
-    
-        $enumName(@NotNull Supplier<Library.Builder> librarySupplier, @Nullable Function<AnnoyingPlugin, Collection<Relocation>> relocations, @Nullable Collection<AnnoyingLibrary> requiredLibraries) {
-            this.librarySupplier = librarySupplier;
-            this.relocations = relocations;
-            this.requiredLibraries = requiredLibraries;
-        }
-    
-        @Override @NotNull
-        public Supplier<Library.Builder> getLibrarySupplier() {
-            return librarySupplier;
-        }
-    
-        @Override @Nullable
-        public Function<AnnoyingPlugin, Collection<Relocation>> getRelocations() {
-            return relocations;
-        }
-    
-        @Override @Nullable
-        public Collection<AnnoyingLibrary> getRequiredLibraries() {
-            return requiredLibraries;
-        }
-    }
-    """.trimIndent())
-    }
-
-    // Register task to generate Enum file
-    val outputDir = project.layout.buildDirectory.dir("generated/sources/gradle-galaxy/main/java")
-    val outputFile = outputDir.map { it.file("$packageFolder/library/$enumName.java") }
-    val generateEnumTask = project.tasks.register("generateRuntimeLibrary") {
-        group = "build"
-        description = "Generates the $enumName enum for the Annoying API runtime libraries"
-
-        inputs.property("enum", enum)
-        outputs.dir(outputDir)
-
-        doLast {
-            outputFile.get().asFile.apply {
-                parentFile.mkdirs()
-                writeText(enum)
+    extensions.configure<GradleGalaxyExtension>("galaxy") {
+        setup {
+            annoyingAPI {
+                customRuntimeLibraries {
+                    processing(libraries.toList())
+                    generateRuntimeLibraryEnum(generateRuntimeLibraryEnumConfig.toExtension())
+                }
             }
         }
     }
-
-    // Wire generated directory into main Java source set
-    project.extensions.configure<JavaPluginExtension> {
-        sourceSets.named("main") {
-            java.srcDir(generateEnumTask.map { it.outputs.files })
-        }
-    }
-}
-
-private fun buildLibraryEntry(library: RuntimeLibrary): String = buildString {
-    append("    ${library.name.uppercase()}(")
-    append("\n            () -> Library.builder()")
-
-    // Repositories
-    library.repositories.forEach { repository ->
-        append("\n                    .repository(\"$repository\")")
-    }
-
-    // Core properties
-    append("\n                    .groupId(\"${library.group.dotsToBrackets()}\")")
-    append("\n                    .artifactId(\"${library.artifact}\")")
-    append("\n                    .version(\"${library.version}\")")
-
-    // Relocations
-    if (library.relocations.isNotEmpty()) {
-        append(",\n            plugin -> List.of(")
-        library.relocations.forEachIndexed { i, relocation ->
-            append("\n                    plugin.getRelocation(\"${relocation.from.dotsToBrackets()}\"")
-            relocation.to?.let { append(", \"${it.processRelocationTo()}\"") }
-            append(")")
-            if (i < library.relocations.size - 1) append(",")
-        }
-        append(")")
-    }
-
-    // Dependencies
-    if (library.dependencies.isNotEmpty()) {
-        append(",\n            List.of(")
-        library.dependencies.forEachIndexed { i, dependency ->
-            append("\n                    ${dependency.uppercase()}")
-            if (i < library.dependencies.size - 1) append(",")
-        }
-        append(")")
-    }
-
-    append(")")
 }

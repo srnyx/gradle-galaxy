@@ -13,6 +13,7 @@ import xyz.srnyx.gradlegalaxy.data.config.dependency.SpigotConfig
 import xyz.srnyx.gradlegalaxy.enums.PaperVersion
 import xyz.srnyx.gradlegalaxy.enums.Repository
 import xyz.srnyx.gradlegalaxy.enums.repository
+import xyz.srnyx.gradlegalaxy.extensions.GradleGalaxyExtension
 
 
 /**
@@ -140,21 +141,17 @@ fun Project.adventure(vararg dependencies: AdventureDependency, configurationAll
  *
  * @return The [ExternalModuleDependency] of the Annoying API dependency
  */
+@Deprecated("Use galaxy { dependencies { annoyingAPI { ... } } } instead")
 fun Project.annoyingAPI(
     config: DependencyConfig,
     block: ExternalModuleDependency.() -> Unit = {},
-): List<ExternalModuleDependency> {
-    check(hasJavaPlugin()) { "Java plugin is not applied!" }
-    check(hasShadowPlugin()) { "Shadow plugin is not applied!" }
-
-    // Add srnyx's repositories
-    repository(Repository.SRNYX_RELEASES, Repository.SRNYX_SNAPSHOTS)
-
-    // Add Annoying API dependency
-    return (config.configurations ?: listOf("implementation", "testImplementation")).map { configuration ->
-        addDependencyTo(dependencies, configuration, "xyz.srnyx:annoying-api:${config.version}") {
-            config.configurationAction(this)
-            block()
+) {
+    extensions.configure<GradleGalaxyExtension>("galaxy") {
+        dependencies {
+            annoyingAPI(config.version) {
+                config.toExtension()(this)
+                action(block)
+            }
         }
     }
 }
@@ -165,20 +162,17 @@ fun Project.annoyingAPI(
  *
  * @param config The configuration for the JDA dependency
  */
+@Deprecated("Use galaxy { dependencies { jda { ... } } } instead")
 fun Project.jda(
     config: DependencyConfig,
     block: ExternalModuleDependency.() -> Unit = {},
-): List<ExternalModuleDependency> {
-    check(hasJavaPlugin()) { "Java plugin is not applied!" }
-
-    // Repositories
-    repository(Repository.MAVEN_CENTRAL)
-
-    // Add dependency
-    return (config.configurations ?: listOf("implementation", "testImplementation")).map { configuration ->
-        addDependencyTo(dependencies, configuration, "net.dv8tion:JDA:${config.version}") {
-            config.configurationAction(this)
-            block()
+) {
+    extensions.configure<GradleGalaxyExtension>("galaxy") {
+        dependencies {
+            jda(config.version) {
+                config.toExtension()(this)
+                action(block)
+            }
         }
     }
 }
@@ -189,20 +183,17 @@ fun Project.jda(
  *
  * @param config The configuration for the Lazy Library dependency
  */
+@Deprecated("Use galaxy { dependencies { lazyLibrary { ... } } } instead")
 fun Project.lazyLibrary(
     config: DependencyConfig,
     block: ExternalModuleDependency.() -> Unit = {},
-): List<ExternalModuleDependency> {
-    check(hasJavaPlugin()) { "Java plugin is not applied!" }
-
-    // Repositories
-    repository(Repository.SRNYX_RELEASES, Repository.SRNYX_SNAPSHOTS)
-
-    // Add dependency
-    return (config.configurations ?: listOf("implementation", "testImplementation")).map { configuration ->
-        addDependencyTo(dependencies, configuration, "xyz.srnyx:lazy-library:${config.version}") {
-            config.configurationAction(this)
-            block()
+) {
+    extensions.configure<GradleGalaxyExtension>("galaxy") {
+        dependencies {
+            lazyLibrary(config.version) {
+                config.toExtension()(this)
+                action(block)
+            }
         }
     }
 }
@@ -213,21 +204,17 @@ fun Project.lazyLibrary(
  *
  * @param config The configuration for the Magic Mongo dependency
  */
-@Used
+@Deprecated("Use galaxy { dependencies { magicMongo { ... } } } instead")
 fun Project.magicMongo(
     config: DependencyConfig,
     block: ExternalModuleDependency.() -> Unit = {},
-): List<ExternalModuleDependency> {
-    check(hasJavaPlugin()) { "Java plugin is not applied!" }
-
-    // Repositories
-    repository(Repository.SRNYX_RELEASES, Repository.SRNYX_SNAPSHOTS)
-
-    // Add dependency
-    return (config.configurations ?: listOf("implementation", "testImplementation")).map { configuration ->
-        addDependencyTo(dependencies, configuration, "xyz.srnyx:magic-mongo:${config.version}") {
-            config.configurationAction(this)
-            block()
+) {
+    extensions.configure<GradleGalaxyExtension>("galaxy") {
+        dependencies {
+            magicMongo(config.version) {
+                config.toExtension()(this)
+                action(block)
+            }
         }
     }
 }
@@ -242,21 +229,19 @@ fun Project.magicMongo(
  *
  * @return The [ExternalModuleDependency]s of the MockBukkit dependency
  */
+@Deprecated("Use galaxy { dependencies { mockBukkit { ... } } } instead")
 fun Project.mockBukkit(
     config: DependencyConfig,
     mockBukkitConfig: MockBukkitConfig = MockBukkitConfig(),
     block: ExternalModuleDependency.() -> Unit = {},
-): List<ExternalModuleDependency> {
-    check(hasJavaPlugin()) { "Java plugin is not applied!" }
-
-    // Repositories
-    repository(Repository.MAVEN_CENTRAL, Repository.PAPER)
-
-    // Add dependency
-    return (config.configurations ?: listOf("testImplementation")).map { configuration ->
-        addDependencyTo(dependencies, configuration, "${mockBukkitConfig.group}:MockBukkit-v${mockBukkitConfig.minecraftVersion}:${config.version}") {
-            config.configurationAction(this)
-            block()
+) {
+    extensions.configure<GradleGalaxyExtension>("galaxy") {
+        dependencies {
+            mockBukkit(config.version) {
+                config.toExtension()(this)
+                mockBukkitConfig.toExtension()(this)
+                action(block)
+            }
         }
     }
 }
