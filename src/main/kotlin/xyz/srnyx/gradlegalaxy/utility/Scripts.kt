@@ -190,9 +190,15 @@ fun Project.setTextEncoding(encoding: String = "UTF-8") {
  * Sets the Java version for the project
  *
  * @param version The java version to set (example: [JavaVersion.VERSION_1_8])
+ * @param force Whether to set the version even if the user already set an explicit `galaxy { java { javaVersion = ... } } }`
  */
-fun Project.setJavaVersion(version: JavaVersion = JavaVersion.VERSION_1_8) {
+fun Project.setJavaVersion(version: JavaVersion = JavaVersion.VERSION_1_8, force: Boolean = false) {
     check(hasJavaPlugin()) { "Java plugin is not applied!" }
+
+    // Let an explicit `galaxy { java { javaVersion = ... } }` always win over version defaults
+    // inferred elsewhere (Paper/Spigot Minecraft-version detection, Annoying API metadata, etc.)
+    if (!force && extensions.findByType(GradleGalaxyExtension::class.java)?.java?.javaVersion?.isPresent == true) return
+
     val java: JavaPluginExtension = getJavaExtension()
     java.sourceCompatibility = version
     java.targetCompatibility = version
@@ -386,19 +392,17 @@ fun Project.getAnnoyingApiMetadata(version: String): AnnoyingMetadata? {
     return json.decodeFromString<AnnoyingMetadata>(text)
 }
 
-@Deprecated("Use galaxy { setup { annoyingAPI { customRuntimeLibraries { ... } } } } instead")
+@Deprecated("Use galaxy { annoyingAPI(version) { customRuntimeLibraries { ... } } } instead")
 fun Project.generateAnnoyingApiRuntimeLibraryEnum(
     libraries: Collection<RuntimeLibrary>,
     generateRuntimeLibraryEnumConfig: GenerateRuntimeLibraryEnumConfig = GenerateRuntimeLibraryEnumConfig(),
     annoyingMetadata: AnnoyingMetadata? = null,
 ) {
     extensions.configure<GradleGalaxyExtension>("galaxy") {
-        setup {
-            annoyingAPI {
-                customRuntimeLibraries {
-                    processing(libraries.toList())
-                    generateRuntimeLibraryEnum(generateRuntimeLibraryEnumConfig.toExtension())
-                }
+        minecraft {
+            annoyingAPI.customRuntimeLibraries {
+                addRawLibraries(libraries.toList())
+                generateRuntimeLibraryEnum(generateRuntimeLibraryEnumConfig.toExtension())
             }
         }
     }

@@ -181,7 +181,10 @@ enum class Repository(val url: String) {
     /**
      * [https://repo.essentialsx.net/snapshots/](https://repo.essentialsx.net/snapshots/)
      */
-    ESSENTIALS_SNAPSHOTS("https://repo.essentialsx.net/snapshots/"),
+    ESSENTIALS_SNAPSHOTS("https://repo.essentialsx.net/snapshots/");
+
+
+    override fun toString(): String = url
 }
 
 /**

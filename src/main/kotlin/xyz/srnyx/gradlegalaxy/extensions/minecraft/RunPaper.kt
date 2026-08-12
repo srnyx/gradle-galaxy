@@ -1,4 +1,4 @@
-package xyz.srnyx.gradlegalaxy.extensions.setup
+package xyz.srnyx.gradlegalaxy.extensions
 
 import org.gradle.api.Project
 import org.gradle.api.model.ObjectFactory
@@ -14,14 +14,21 @@ import javax.inject.Inject
 abstract class RunPaperExtension @Inject constructor(
     objects: ObjectFactory
 ) {
-    var configured: Boolean = false
-
     @get:Input @get:Optional
     val minecraftVersion: Property<String> = objects.property(String::class.java).convention("1.21.11")
     @get:Input @get:Optional
     var autoAcceptEula: Property<Boolean> = objects.property(Boolean::class.java).convention(true)
 
-    fun setup(project: Project) {
+    private var applied = false
+
+    /**
+     * Idempotent: multiple `galaxy { }` entries (top-level `runPaper { }`, and any entry that bundles
+     * runPaper setup in automatically, like `annoyingAPI { }`) may all call this. Only the first actually applies.
+     */
+    internal fun setup(project: Project) {
+        if (applied) return
+        applied = true
+
         // Setup default Run-Paper task with 1.21.11.
         // This can be changed per-consumer with tasks { runServer { minecraftVersion("VERSION") } } (and other options)
         if (project.hasRunPaperPlugin()) {

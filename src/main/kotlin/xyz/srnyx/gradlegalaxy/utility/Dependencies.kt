@@ -10,7 +10,6 @@ import xyz.srnyx.gradlegalaxy.data.AdventureDependency
 import xyz.srnyx.gradlegalaxy.data.config.DependencyConfig
 import xyz.srnyx.gradlegalaxy.data.config.dependency.MockBukkitConfig
 import xyz.srnyx.gradlegalaxy.data.config.dependency.SpigotConfig
-import xyz.srnyx.gradlegalaxy.enums.PaperVersion
 import xyz.srnyx.gradlegalaxy.enums.Repository
 import xyz.srnyx.gradlegalaxy.enums.repository
 import xyz.srnyx.gradlegalaxy.extensions.GradleGalaxyExtension
@@ -24,27 +23,19 @@ import xyz.srnyx.gradlegalaxy.extensions.GradleGalaxyExtension
  *
  * @param config The configuration for the Spigot-API dependency
  */
-@Used
+@Deprecated("Use galaxy { spigotAPI(version) { ... } } instead")
 fun Project.spigotAPI(
     config: DependencyConfig,
     spigotConfig: SpigotConfig = SpigotConfig(),
-    block: ExternalModuleDependency.() -> Unit = {},
-): List<ExternalModuleDependency> {
-    check(hasJavaPlugin()) { "Java plugin is not applied!" }
-
-    // Java version
-    if (spigotConfig.setJavaVersion) setJavaVersion(getJavaVersionForMC(config.version))
-
-    // Repositories
-    val semanticVersion = SemanticVersion(config.version)
-    if (semanticVersion.major <= 1 && semanticVersion.minor <= 15) repository(Repository.SONATYPE_SNAPSHOTS_OLD)
-    repository(Repository.MAVEN_CENTRAL, Repository.SPIGOT, Repository.SPIGOT_SNAPSHOTS)
-
-    // Add dependency
-    return (config.configurations ?: listOf("compileOnly", "testImplementation")).map { configuration ->
-        addDependencyTo(dependencies, configuration, "org.spigotmc:spigot-api:${getVersionString(config.version)}") {
-            config.configurationAction(this)
-            block()
+    block: ModuleDependency.() -> Unit = {},
+) {
+    extensions.configure<GradleGalaxyExtension>("galaxy") {
+        minecraft {
+            spigotAPI(config.version) {
+                config.toExtension()(this)
+                setJavaVersion.set(spigotConfig.setJavaVersion)
+                action(block)
+            }
         }
     }
 }
@@ -55,56 +46,42 @@ fun Project.spigotAPI(
  *
  * @param config The configuration for the Spigot dependency
  */
-@Used
+@Deprecated("Use galaxy { spigotNMS(version) { ... } } instead")
 fun Project.spigotNMS(
     config: DependencyConfig,
     spigotConfig: SpigotConfig = SpigotConfig(),
-    block: ExternalModuleDependency.() -> Unit = {},
-): List<ExternalModuleDependency> {
-    check(hasJavaPlugin()) { "Java plugin is not applied!" }
-
-    // Java version
-    if (spigotConfig.setJavaVersion) setJavaVersion(getJavaVersionForMC(config.version))
-
-    // Repositories
-    repository(Repository.MAVEN_CENTRAL, Repository.SPIGOT, Repository.SPIGOT_SNAPSHOTS)
-    repositories.mavenLocal()
-
-    // Add dependency
-    return (config.configurations ?: listOf("compileOnly", "testImplementation")).map { configuration ->
-        addDependencyTo(dependencies, configuration, "org.spigotmc:spigot:${getVersionString(config.version)}") {
-            config.configurationAction(this)
-            block()
+    block: ModuleDependency.() -> Unit = {},
+) {
+    extensions.configure<GradleGalaxyExtension>("galaxy") {
+        minecraft {
+            spigotNMS(config.version) {
+                config.toExtension()(this)
+                setJavaVersion.set(spigotConfig.setJavaVersion)
+                action(block)
+            }
         }
     }
 }
 
 /**
  * 1. Adds the [Repository.MAVEN_CENTRAL], [Repository.SONATYPE_SNAPSHOTS_OLD], and [Repository.PAPER] repositories
- * 2. Adds the Paper dependency ([PaperVersion.groupId]:[PaperVersion.artifactId]:`version`-R0.1-SNAPSHOT)
+ * 2. Adds the Paper dependency (`group`:`artifact`:`version`-R0.1-SNAPSHOT)
  *
  * @param config The configuration for the Paper dependency
  */
-@Used
+@Deprecated("Use galaxy { paper(version) { ... } } instead")
 fun Project.paper(
     config: DependencyConfig,
     spigotConfig: SpigotConfig = SpigotConfig(),
-    block: ExternalModuleDependency.() -> Unit = {},
-): List<ExternalModuleDependency> {
-    check(hasJavaPlugin()) { "Java plugin is not applied!" }
-
-    // Java version
-    if (spigotConfig.setJavaVersion) setJavaVersion(getJavaVersionForMC(config.version))
-
-    // Repositories
-    repository(Repository.MAVEN_CENTRAL, Repository.SONATYPE_SNAPSHOTS_OLD, Repository.PAPER)
-
-    // Add dependency
-    val paperVersion: PaperVersion = PaperVersion.parse(config.version)
-    return (config.configurations ?: listOf("compileOnly", "testImplementation")).map { configuration ->
-        addDependencyTo(dependencies, configuration, "${paperVersion.groupId}:${paperVersion.artifactId}:${getVersionString(config.version)}") {
-            config.configurationAction(this)
-            block()
+    block: ModuleDependency.() -> Unit = {},
+) {
+    extensions.configure<GradleGalaxyExtension>("galaxy") {
+        minecraft {
+            paper(config.version) {
+                config.toExtension()(this)
+                setJavaVersion.set(spigotConfig.setJavaVersion)
+                action(block)
+            }
         }
     }
 }
@@ -138,16 +115,14 @@ fun Project.adventure(vararg dependencies: AdventureDependency, configurationAll
  * 3. Adds the dependency to the provided Annoying API version
  *
  * @param config The configuration for the Annoying API dependency
- *
- * @return The [ExternalModuleDependency] of the Annoying API dependency
  */
-@Deprecated("Use galaxy { dependencies { annoyingAPI { ... } } } instead")
+@Deprecated("Use galaxy { annoyingAPI(version) { ... } } instead")
 fun Project.annoyingAPI(
     config: DependencyConfig,
-    block: ExternalModuleDependency.() -> Unit = {},
+    block: ModuleDependency.() -> Unit = {},
 ) {
     extensions.configure<GradleGalaxyExtension>("galaxy") {
-        dependencies {
+        minecraft {
             annoyingAPI(config.version) {
                 config.toExtension()(this)
                 action(block)
@@ -162,13 +137,13 @@ fun Project.annoyingAPI(
  *
  * @param config The configuration for the JDA dependency
  */
-@Deprecated("Use galaxy { dependencies { jda { ... } } } instead")
+@Deprecated("Use galaxy { jda(version) { ... } } instead")
 fun Project.jda(
     config: DependencyConfig,
-    block: ExternalModuleDependency.() -> Unit = {},
+    block: ModuleDependency.() -> Unit = {},
 ) {
     extensions.configure<GradleGalaxyExtension>("galaxy") {
-        dependencies {
+        discord {
             jda(config.version) {
                 config.toExtension()(this)
                 action(block)
@@ -183,13 +158,13 @@ fun Project.jda(
  *
  * @param config The configuration for the Lazy Library dependency
  */
-@Deprecated("Use galaxy { dependencies { lazyLibrary { ... } } } instead")
+@Deprecated("Use galaxy { lazyLibrary(version) { ... } } instead")
 fun Project.lazyLibrary(
     config: DependencyConfig,
-    block: ExternalModuleDependency.() -> Unit = {},
+    block: ModuleDependency.() -> Unit = {},
 ) {
     extensions.configure<GradleGalaxyExtension>("galaxy") {
-        dependencies {
+        discord {
             lazyLibrary(config.version) {
                 config.toExtension()(this)
                 action(block)
@@ -204,17 +179,15 @@ fun Project.lazyLibrary(
  *
  * @param config The configuration for the Magic Mongo dependency
  */
-@Deprecated("Use galaxy { dependencies { magicMongo { ... } } } instead")
+@Deprecated("Use galaxy { magicMongo(version) { ... } } instead")
 fun Project.magicMongo(
     config: DependencyConfig,
-    block: ExternalModuleDependency.() -> Unit = {},
+    block: ModuleDependency.() -> Unit = {},
 ) {
     extensions.configure<GradleGalaxyExtension>("galaxy") {
-        dependencies {
-            magicMongo(config.version) {
-                config.toExtension()(this)
-                action(block)
-            }
+        magicMongo(config.version) {
+            config.toExtension()(this)
+            action(block)
         }
     }
 }
@@ -226,17 +199,15 @@ fun Project.magicMongo(
  * @param config The configuration for the MockBukkit dependency
  * @param mockBukkitConfig The configuration for MockBukkit
  * @param block The block to apply to the dependency
- *
- * @return The [ExternalModuleDependency]s of the MockBukkit dependency
  */
-@Deprecated("Use galaxy { dependencies { mockBukkit { ... } } } instead")
+@Deprecated("Use galaxy { mockBukkit(version) { ... } } instead")
 fun Project.mockBukkit(
     config: DependencyConfig,
     mockBukkitConfig: MockBukkitConfig = MockBukkitConfig(),
-    block: ExternalModuleDependency.() -> Unit = {},
+    block: ModuleDependency.() -> Unit = {},
 ) {
     extensions.configure<GradleGalaxyExtension>("galaxy") {
-        dependencies {
+        testing {
             mockBukkit(config.version) {
                 config.toExtension()(this)
                 mockBukkitConfig.toExtension()(this)

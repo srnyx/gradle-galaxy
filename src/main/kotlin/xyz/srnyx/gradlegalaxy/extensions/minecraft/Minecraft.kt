@@ -1,0 +1,73 @@
+package xyz.srnyx.gradlegalaxy.extensions
+
+import org.gradle.api.Project
+import org.gradle.api.model.ObjectFactory
+import xyz.srnyx.gradlegalaxy.annotations.Used
+import xyz.srnyx.gradlegalaxy.utility.addReplacementsTask
+import javax.inject.Inject
+
+
+abstract class MinecraftExtension @Inject internal constructor(
+    private val project: Project,
+    private val deferred: DeferredActions,
+    private val java: JavaExtension,
+    objects: ObjectFactory,
+) {
+    var replacementFiles: Set<String> = setOf("plugin.yml")
+    var replacements: Map<String, String> = mapOf("defaultReplacements" to "true")
+
+    // Project-wide setup
+    val runPaper = objects.newInstance(RunPaperExtension::class.java)
+    // Pure dependencies
+    val spigotAPI = objects.newInstance(SpigotApiExtension::class.java)
+    val spigotNMS = objects.newInstance(SpigotNmsExtension::class.java)
+    val paper = objects.newInstance(PaperExtension::class.java)
+    // Dependency + setup merged onto one type
+    val annoyingAPI = objects.newInstance(AnnoyingApiExtension::class.java, java, this)
+
+    private var applied = false
+
+
+    @Used
+    fun runPaper(action: RunPaperExtension.() -> Unit = {}) {
+        runPaper.action()
+        deferred.defer(Phase.WIRE) { runPaper.setup(project) }
+    }
+
+    fun spigotAPI(version: String, action: SpigotApiExtension.() -> Unit = {}) {
+        spigotAPI.version = version
+        spigotAPI.action()
+        deferred.defer(Phase.WIRE) { spigotAPI.setup(project) }
+        deferred.defer(Phase.FINALIZE) { spigotAPI.add(project) }
+    }
+    fun spigotNMS(version: String, action: SpigotNmsExtension.() -> Unit = {}) {
+        spigotNMS.version = version
+        spigotNMS.action()
+        deferred.defer(Phase.WIRE) { spigotNMS.setup(project) }
+        deferred.defer(Phase.FINALIZE) { spigotNMS.add(project) }
+    }
+    fun paper(version: String, action: PaperExtension.() -> Unit = {}) {
+        paper.version = version
+        paper.action()
+        deferred.defer(Phase.WIRE) { paper.setup(project) }
+        deferred.defer(Phase.FINALIZE) { paper.add(project) }
+    }
+
+    fun annoyingAPI(version: String, action: AnnoyingApiExtension.() -> Unit = {}) {
+        annoyingAPI.version = version
+        annoyingAPI.action()
+        deferred.defer(Phase.WIRE) { annoyingAPI.setup(project) }
+        deferred.defer(Phase.FINALIZE) { annoyingAPI.add(project) }
+    }
+
+    /**
+     * Idempotent: multiple `galaxy { }` entries (top-level `minecraft { }`, and any entry that bundles
+     * minecraft setup in automatically, like `annoyingAPI { }`) may all call this. Only the first actually applies.
+     */
+    internal fun setup(project: Project) {
+        if (applied) return
+        applied = true
+
+        project.addReplacementsTask(replacementFiles, replacements)
+    }
+}

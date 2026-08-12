@@ -1,7 +1,6 @@
 package xyz.srnyx.gradlegalaxy.utility
 
 import org.gradle.api.Project
-import org.gradle.api.artifacts.repositories.MavenArtifactRepository
 import org.gradle.api.publish.maven.MavenPublication
 import org.gradle.api.tasks.testing.Test
 import xyz.srnyx.gradlegalaxy.data.config.DependencyConfig
@@ -28,12 +27,12 @@ import xyz.srnyx.gradlegalaxy.extensions.GradleGalaxyExtension
  *
  * @param config The configuration for setting up Java
  */
-@Deprecated("Use galaxy { setup { java { ... } } } instead")
+@Deprecated("Use galaxy { java { ... } } instead")
 fun Project.setupJava(
     config: JavaSetupConfig = JavaSetupConfig(),
 ) {
     extensions.configure<GradleGalaxyExtension>("galaxy") {
-        setup.java(config.toExtension())
+        java(config.toExtension())
     }
 }
 
@@ -46,16 +45,14 @@ fun Project.setupJava(
  * @param javaSetupConfig The configuration for [setupJava]
  * @param mcSetupConfig The configuration for Minecraft setup
  */
-@Deprecated("Use galaxy { setup { minecraft { ... } } } instead")
+@Deprecated("Use galaxy { java { ... }; minecraft { ... } } instead")
 fun Project.setupMC(
     javaSetupConfig: JavaSetupConfig = JavaSetupConfig(),
     mcSetupConfig: MCSetupConfig = MCSetupConfig(),
 ) {
     extensions.configure<GradleGalaxyExtension>("galaxy") {
-        setup {
-            java(javaSetupConfig.toExtension())
-            minecraft(mcSetupConfig.toExtension())
-        }
+        java(javaSetupConfig.toExtension())
+        minecraft(mcSetupConfig.toExtension())
     }
 }
 
@@ -79,7 +76,7 @@ fun Project.setupMC(
  *
  * @return The metadata for Annoying API if [MetadataConfig.useMetadata] is true, otherwise null
  */
-@Deprecated("Use galaxy { setup { annoyingAPI { ... } } } instead")
+@Deprecated("Use galaxy { annoyingAPI(version) { ... } } instead")
 fun Project.setupAnnoyingAPI(
     javaSetupConfig: JavaSetupConfig = JavaSetupConfig(),
     mcSetupConfig: MCSetupConfig = MCSetupConfig(),
@@ -90,24 +87,21 @@ fun Project.setupAnnoyingAPI(
     publishingPlatformConfig: PublishingPlatformConfig = PublishingPlatformConfig(mapOf()),
 ) {
     extensions.configure<GradleGalaxyExtension>("galaxy") {
-        setup {
-            java(javaSetupConfig.toExtension())
-            minecraft(mcSetupConfig.toExtension())
-            annoyingAPI {
-                metadata(metadataConfig.toExtension(customRuntimeLibrariesConfig.runtimeLibraries))
+        minecraft {
+            annoyingAPI(annoyingAPIConfig.version) {
+                annoyingAPIConfig.toExtension()(this)
+                java(javaSetupConfig.toExtension())
+                minecraft(mcSetupConfig.toExtension())
+                metadata(metadataConfig.toExtension())
                 customRuntimeLibraries(customRuntimeLibrariesConfig.toExtension())
             }
-            publishing {
-                platforms(publishingPlatformConfig.platforms) {
-                    publishingPlatformConfig.toExtension()(this)
-                    addResourceFile = annoyingSetupConfig.addPlatformsResourceFile
-                }
-            }
-            runPaper {}
         }
-
-        dependencies {
-            annoyingAPI(annoyingAPIConfig.version, annoyingAPIConfig.toExtension())
+        publishing {
+            platforms {
+                publishingPlatformConfig.platforms.forEach { (pluginPlatform, identifier) -> platform(pluginPlatform, identifier) }
+                publishingPlatformConfig.toExtension()(this)
+                addResourceFile.set(annoyingSetupConfig.addPlatformsResourceFile)
+            }
         }
     }
 }
@@ -126,19 +120,19 @@ fun Project.setupAnnoyingAPI(
  * @param jdaSetupConfig The configuration for JDA setup
  * @param jdaConfig The configuration for [jda]
  */
-@Deprecated("Use galaxy { setup { jda { ... } } } instead")
+@Deprecated("Use galaxy { jda(version) { ... } } instead")
 fun Project.setupJda(
     javaSetupConfig: JavaSetupConfig = JavaSetupConfig(),
     jdaSetupConfig: JdaSetupConfig = JdaSetupConfig(),
     jdaConfig: DependencyConfig,
 ) {
     extensions.configure<GradleGalaxyExtension>("galaxy") {
-        setup {
-            java(javaSetupConfig.toExtension())
-        }
-
-        dependencies {
-            jda(jdaConfig.version, jdaConfig.toExtension())
+        java(javaSetupConfig.toExtension())
+        discord {
+            jda(jdaConfig.version) {
+                jdaConfig.toExtension()(this)
+                jdaSetupConfig.toExtension()(this)
+            }
         }
     }
 }
@@ -155,7 +149,7 @@ fun Project.setupJda(
  * @param jdaConfig The configuration for [jda]
  * @param lazyLibraryConfig The configuration for [lazyLibrary]
  */
-@Deprecated("Use galaxy { setup { lazyLibrary { ... } } } instead")
+@Deprecated("Use galaxy { jda(version) { ... }; lazyLibrary(version) { ... } } instead")
 fun Project.setupLazyLibrary(
     javaSetupConfig: JavaSetupConfig = JavaSetupConfig(),
     jdaSetupConfig: JdaSetupConfig = JdaSetupConfig(),
@@ -163,13 +157,12 @@ fun Project.setupLazyLibrary(
     lazyLibraryConfig: DependencyConfig,
 ) {
     extensions.configure<GradleGalaxyExtension>("galaxy") {
-        setup {
-            java(javaSetupConfig.toExtension())
-            jda(jdaSetupConfig.toExtension())
-        }
-
-        dependencies {
-            jda(jdaConfig.version, jdaConfig.toExtension())
+        java(javaSetupConfig.toExtension())
+        discord {
+            jda(jdaConfig.version) {
+                jdaConfig.toExtension()(this)
+                jdaSetupConfig.toExtension()(this)
+            }
             lazyLibrary(lazyLibraryConfig.version, lazyLibraryConfig.toExtension())
         }
     }
@@ -184,22 +177,17 @@ fun Project.setupLazyLibrary(
  *
  * @return The test task that was configured
  */
-@Deprecated("Use galaxy { setup { testing { ... } } } instead")
+@Deprecated("Use galaxy { testing { jUnit { ... } }; jUnitBom(version) { ... } } instead")
 fun Project.setupTesting(
     junitBomConfig: DependencyConfig,
     block: Test.() -> Unit = {},
 ) {
     extensions.configure<GradleGalaxyExtension>("galaxy") {
-        setup {
-            testing {
-                jUnit {
-                    action(block)
-                }
+        testing {
+            jUnit(junitBomConfig.version) {
+                junitBomConfig.toExtension()(this)
+                testAction(block)
             }
-        }
-
-        dependencies {
-            jUnitBom(junitBomConfig.version, junitBomConfig.toExtension())
         }
     }
 }
@@ -218,7 +206,7 @@ fun Project.setupTesting(
  *
  * @return The test task that was configured
  */
-@Deprecated("Use galaxy { setup { mockBukkit { ... } } } instead")
+@Deprecated("Use galaxy { testing { jUnit { ... } }; jUnitBom(version) { ... }; mockBukkit(version) { ... } } instead")
 fun Project.setupMockBukkit(
     junitBomConfig: DependencyConfig,
     mockBukkitDependencyConfig: DependencyConfig,
@@ -226,16 +214,11 @@ fun Project.setupMockBukkit(
     block: Test.() -> Unit = {},
 ) {
     extensions.configure<GradleGalaxyExtension>("galaxy") {
-        setup {
-            testing {
-                jUnit {
-                    action(block)
-                }
+        testing {
+            jUnit(junitBomConfig.version) {
+                junitBomConfig.toExtension()(this)
+                testAction(block)
             }
-        }
-
-        dependencies {
-            jUnitBom(junitBomConfig.version, junitBomConfig.toExtension())
             mockBukkit(mockBukkitDependencyConfig.version) {
                 mockBukkitDependencyConfig.toExtension()(this)
                 mockBukkitConfig.toExtension()(this)
@@ -256,18 +239,16 @@ fun Project.setupMockBukkit(
  *
  * @return The [MavenPublication] that was created
  */
-@Deprecated("Use galaxy { setup { publishing { simple { ... } } } } instead")
+@Deprecated("Use galaxy { publishing { simple { ... } } } instead")
 fun Project.setupPublishingSimple(
     config: PublishingSimpleConfig = PublishingSimpleConfig(this),
     configuration: MavenPublication.() -> Unit = {},
 ) {
     extensions.configure<GradleGalaxyExtension>("galaxy") {
-        setup {
-            publishing {
-                simple {
-                    config.toExtension()(this)
-                    publication(configuration)
-                }
+        publishing {
+            simple {
+                config.toExtension()(this)
+                publication(configuration)
             }
         }
     }
@@ -285,17 +266,15 @@ fun Project.setupPublishingSimple(
  *
  * @return The [MavenPublication] that was created
  */
-@Deprecated("Use galaxy { setup { publishing { env { ... } } } } instead")
+@Deprecated("Use galaxy { publishing { simple { ... }; env { ... } } } instead")
 fun Project.setupPublishingEnv(
     simpleConfig: PublishingSimpleConfig = PublishingSimpleConfig(this),
     envConfig: PublishingEnvConfig = PublishingEnvConfig(),
 ) {
     extensions.configure<GradleGalaxyExtension>("galaxy") {
-        setup {
-            publishing {
-                simple(simpleConfig.toExtension())
-                env(envConfig.toExtension())
-            }
+        publishing {
+            simple(simpleConfig.toExtension())
+            env(envConfig.toExtension())
         }
     }
 }
@@ -305,15 +284,13 @@ fun Project.setupPublishingEnv(
  *
  * @param config The configuration for setting up publishing for project platforms
  */
-@Deprecated("Use galaxy { setup { publishing { platforms { ... } } } instead")
+@Deprecated("Use galaxy { publishing { platforms { ... } } } instead")
 fun Project.setupPublishingPlatforms(
     config: PublishingPlatformConfig,
 ) {
     project.extensions.configure<GradleGalaxyExtension>("galaxy") {
-        setup {
-            publishing {
-                platforms(config.platforms, config.toExtension())
-            }
+        publishing {
+            platforms(config.toExtension())
         }
     }
 }

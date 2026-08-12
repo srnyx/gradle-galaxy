@@ -9,6 +9,6 @@ import xyz.srnyx.gradlegalaxy.extensions.GradleGalaxyExtension
 @Used
 class GradleGalaxy : Plugin<Project> {
     override fun apply(project: Project) {
-        project.extensions.create("galaxy", GradleGalaxyExtension::class.java).process(project)
+        project.extensions.create("galaxy", GradleGalaxyExtension::class.java)
     }
 }
