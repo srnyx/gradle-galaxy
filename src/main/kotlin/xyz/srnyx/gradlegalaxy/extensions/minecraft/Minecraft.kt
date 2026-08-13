@@ -2,6 +2,10 @@ package xyz.srnyx.gradlegalaxy.extensions.minecraft
 
 import org.gradle.api.Project
 import org.gradle.api.model.ObjectFactory
+import org.gradle.api.provider.MapProperty
+import org.gradle.api.provider.SetProperty
+import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.Optional
 import xyz.srnyx.gradlegalaxy.annotations.Used
 import xyz.srnyx.gradlegalaxy.extensions.DeferredActions
 import xyz.srnyx.gradlegalaxy.extensions.JavaExtension
@@ -16,8 +20,11 @@ abstract class MinecraftExtension @Inject internal constructor(
     private val java: JavaExtension,
     objects: ObjectFactory,
 ) {
-    var replacementFiles: Set<String> = setOf("plugin.yml")
-    var replacements: Map<String, String> = mapOf("defaultReplacements" to "true")
+    //TODO generate majority of plugin.yml automatically instead of using replacements
+    @get:Input @get:Optional
+    var replacementFiles: SetProperty<String> = objects.setProperty(String::class.java).convention(listOf("plugin.yml"))
+    @get:Input @get:Optional
+    var replacements: MapProperty<String, String> = objects.mapProperty(String::class.java, String::class.java).convention(mapOf("defaultReplacements" to "true"))
 
     // Project-wide setup
     val runPaper = RunPaperExtension(objects)
@@ -78,6 +85,8 @@ abstract class MinecraftExtension @Inject internal constructor(
         // themselves (e.g. a separate top-level `galaxy { java { } }`).
         java.setup(project)
 
-        project.addReplacementsTask(replacementFiles, replacements)
+        if (replacementFiles.orNull != null && replacements.orNull != null) {
+            project.addReplacementsTask(replacementFiles.get(), replacements.get())
+        }
     }
 }

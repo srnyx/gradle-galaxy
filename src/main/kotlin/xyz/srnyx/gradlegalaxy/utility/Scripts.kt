@@ -49,29 +49,33 @@ private val json by lazy { Json {
 /**
  * @return  Whether the project is running in a GitHub Actions workflow
  */
-val inGitHubWorkflow: Boolean = getEnvironmentVariable("GITHUB_WORKFLOW") != null
+val Project.inGitHubWorkflow: Boolean
+    get() = project.getEnvironmentVariable("GITHUB_WORKFLOW") != null
 
 /**
  * @return  Whether the project is running in a GitHub Actions publish (release/pre-release) workflow
  */
-val inGitHubPublish: Boolean = getEnvironmentVariable("GITHUB_REF_TYPE") == "tag"
+val Project.inGitHubPublish: Boolean
+    get() = project.getEnvironmentVariable("GITHUB_REF_TYPE") == "tag"
 
 /**
  * @return  Whether the project is running in a GitHub Actions pre-release workflow
  */
-val inGitHubPreRelease: Boolean by lazy {
-    if (!inGitHubPublish) return@lazy false
-    val eventPath = getEnvironmentVariable("GITHUB_EVENT_PATH") ?: return@lazy false
-    json.decodeFromString<JsonObject>(File(eventPath).readText())["release"]?.jsonObject
-        ?.get("prerelease")?.jsonPrimitive
-        ?.booleanOrNull ?: false
-}
+val Project.inGitHubPreRelease: Boolean
+    get() {
+        if (!inGitHubPublish) return false
+        val eventPath = project.getEnvironmentVariable("GITHUB_EVENT_PATH") ?: return false
+        return json.decodeFromString<JsonObject>(File(eventPath).readText())["release"]?.jsonObject
+            ?.get("prerelease")?.jsonPrimitive
+            ?.booleanOrNull ?: false
+    }
 
 /**
  * @return  Whether the project is running in a GitHub Actions release workflow
  */
 @Used
-val inGitHubRelease: Boolean by lazy { inGitHubPublish && !inGitHubPreRelease }
+val Project.inGitHubRelease: Boolean
+    get() = inGitHubPublish && !inGitHubPreRelease
 
 /**
  * Makes the given package path safe to use
@@ -166,6 +170,31 @@ fun Project.getDefaultReplacements(): Map<String, String> = mapOf(
     "mainPackage" to getPackage(),
 )
 
+private var dotEnv: MutableMap<String, String>? = null
+
+/**
+ * Loads environment variables from the `.env` file
+ *
+ * Returns cached map if already loaded
+ */
+fun Project.dotEnv(): Map<String, String> {
+    if (dotEnv != null) return dotEnv!!
+    dotEnv = mutableMapOf()
+
+    val file = layout.projectDirectory.file(".env").asFile
+    if (file.exists()) file.forEachLine { line ->
+        // Skip comments and empty lines
+        if (line.isNotBlank() && !line.startsWith("#") && line.contains("=")) {
+            val parts = line.split("=", limit = 2)
+            val key = parts[0].trim()
+            val value = parts[1].trim().removeSurrounding("\"") // Remove quotes
+
+            if (value.isNotBlank()) dotEnv?.set(key, value)
+        }
+    }
+    return dotEnv!!
+}
+
 /**
  * Gets the environment variable with the specified name
  *
@@ -173,7 +202,8 @@ fun Project.getDefaultReplacements(): Map<String, String> = mapOf(
  *
  * @return The value of the environment variable, or `null` if it is not set or is blank
  */
-fun getEnvironmentVariable(name: String): String? = System.getenv(name)?.takeIf { it.isNotBlank() }
+fun Project.getEnvironmentVariable(name: String): String? = System.getenv(name)?.takeIf { it.isNotBlank() }
+    ?: run { dotEnv()[name]?.takeIf { it.isNotBlank() } }
 
 /**
  * Sets the text encoding for the project
@@ -398,7 +428,7 @@ fun Project.getAnnoyingApiMetadata(version: String): AnnoyingMetadata? {
 fun Project.generateAnnoyingApiRuntimeLibraryEnum(
     libraries: Collection<RuntimeLibrary>,
     generateRuntimeLibraryEnumConfig: GenerateRuntimeLibraryEnumConfig = GenerateRuntimeLibraryEnumConfig(),
-    annoyingMetadata: AnnoyingMetadata? = null,
+    annoyingMetadata: AnnoyingMetadata? = null, // Keep for backwards compatibility
 ) {
     extensions.configure<GradleGalaxyExtension>("galaxy") {
         minecraft {

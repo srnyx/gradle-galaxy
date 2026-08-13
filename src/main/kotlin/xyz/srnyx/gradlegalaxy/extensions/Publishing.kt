@@ -65,7 +65,7 @@ abstract class PublishingExtension @Inject internal constructor(
 ) {
     val simple = objects.newInstance(PublishingSimpleExtension::class.java)
     val env = objects.newInstance(PublishingEnvExtension::class.java)
-    val platforms = PublishingPlatformExtension(objects)
+    val platforms = PublishingPlatformExtension(project, objects)
 
     fun simple(action: PublishingSimpleExtension.() -> Unit = {}) {
         simple.action()
@@ -220,12 +220,12 @@ abstract class PublishingEnvExtension @Inject constructor(
         project.apply(plugin = "maven-publish")
 
         // Create repository
-        val resolvedMavenUrl = extension.mavenUrl.orNull ?: getEnvironmentVariable(extension.mavenUrlEnv.get())
+        val resolvedMavenUrl = extension.mavenUrl.orNull ?: project.getEnvironmentVariable(extension.mavenUrlEnv.get())
         if (resolvedMavenUrl != null) project.getPublishing().repositories.maven {
             url = project.uri(resolvedMavenUrl)
 
-            val usernameEnv = getEnvironmentVariable(extension.usernameEnv.get())
-            val passwordEnv = getEnvironmentVariable(extension.passwordEnv.get())
+            val usernameEnv = project.getEnvironmentVariable(extension.usernameEnv.get())
+            val passwordEnv = project.getEnvironmentVariable(extension.passwordEnv.get())
             if (usernameEnv != null || passwordEnv != null) credentials {
                 if (usernameEnv != null) username = usernameEnv
                 if (passwordEnv != null) password = passwordEnv
@@ -235,7 +235,8 @@ abstract class PublishingEnvExtension @Inject constructor(
 }
 
 class PublishingPlatformExtension(
-   objects: ObjectFactory
+    project: Project,
+    objects: ObjectFactory
 ) {
     val FOLIA = "folia"
     val PURPUR = "purpur"
@@ -259,7 +260,7 @@ class PublishingPlatformExtension(
 
     @get:Input
     val platforms: MapProperty<PluginPlatform, String> = objects.mapProperty(PluginPlatform::class.java, String::class.java)
-    @get:Input
+    @get:Input //TODO convention: spigot/paper dependency minecraft version
     val minecraftVersionStart: Property<String> = objects.property(String::class.java).convention("1.8.8")
     @get:Input @get:Optional
     val minecraftVersionEnd: Property<String> = objects.property(String::class.java)
@@ -287,7 +288,7 @@ class PublishingPlatformExtension(
     val dryRun: Property<Boolean> = objects.property(Boolean::class.java).convention(false)
 
     val dependency: PublishingPlatformsDependencyExtension = objects.newInstance(PublishingPlatformsDependencyExtension::class.java)
-    val projectData: PublishingPlatformsProjectDataExtension = objects.newInstance(PublishingPlatformsProjectDataExtension::class.java, this)
+    val projectData: PublishingPlatformsProjectDataExtension = objects.newInstance(PublishingPlatformsProjectDataExtension::class.java, project, this)
 
     var modPublishPlugin: (ModPublishExtension.() -> Unit)? = null
     var modrinth: (Modrinth.() -> Unit)? = null
@@ -375,8 +376,8 @@ class PublishingPlatformExtension(
 
         // Release channel
         val releaseChannel: ReleaseChannel = when {
-            inGitHubPublish -> ReleaseChannel.RELEASE
-            inGitHubPreRelease -> ReleaseChannel.BETA
+            project.inGitHubPublish -> ReleaseChannel.RELEASE
+            project.inGitHubPreRelease -> ReleaseChannel.BETA
             else -> ReleaseChannel.ALPHA
         }
 
@@ -394,13 +395,13 @@ class PublishingPlatformExtension(
             // File
             changelogFile.exists() -> changelogFile.readText()
 
-            inGitHubWorkflow -> run {
+            project.inGitHubWorkflow -> run {
                 val gitHubRepository =
-                    getEnvironmentVariable("GITHUB_REPOSITORY") ?: return@run "No changelog specified"
+                    project.getEnvironmentVariable("GITHUB_REPOSITORY") ?: return@run "No changelog specified"
                 val githubLink = "https://github.com/${gitHubRepository}"
 
                 // Non-STABLE: commit SHA
-                if (releaseChannel != ReleaseChannel.RELEASE) return@run "${githubLink}/commit/${getEnvironmentVariable("GITHUB_SHA")}"
+                if (releaseChannel != ReleaseChannel.RELEASE) return@run "${githubLink}/commit/${project.getEnvironmentVariable("GITHUB_SHA")}"
 
                 // STABLE: release link
                 "${githubLink}/releases/tag/${project.version}"
@@ -417,7 +418,7 @@ class PublishingPlatformExtension(
             changelog.set(changelogText)
 
             // Display name
-            val event = getEnvironmentVariable("GITHUB_EVENT_PATH")
+            val event = project.getEnvironmentVariable("GITHUB_EVENT_PATH")
                 ?.let { json.decodeFromString<JsonObject>(File(it).readText()) }
             displayName.set(
                 event
@@ -443,7 +444,7 @@ class PublishingPlatformExtension(
 
             // Modrinth
             if (modrinthIdentifier != null) {
-                val token = getEnvironmentVariable("MODRINTH_TOKEN")
+                val token = project.getEnvironmentVariable("MODRINTH_TOKEN")
                 if (dryRun.get() || token != null) modrinth {
                     accessToken.set(token)
                     minecraftVersionRange {
@@ -472,9 +473,9 @@ class PublishingPlatformExtension(
 
             // CurseForge
             if (curseForgeIdentifier != null) {
-                val token = getEnvironmentVariable("CURSEFORGE_TOKEN")
+                val token = project.getEnvironmentVariable("CURSEFORGE_TOKEN")
                 if (dryRun.get() || token != null) curseforge {
-                    accessToken.set(getEnvironmentVariable("CURSEFORGE_TOKEN"))
+                    accessToken.set(project.getEnvironmentVariable("CURSEFORGE_TOKEN"))
                     minecraftVersionRange {
                         start.set(minecraftVersionStart.get())
                         end.set(minecraftVersionEnd)
@@ -506,7 +507,7 @@ class PublishingPlatformExtension(
 
         // Hangar Publish Plugin
         if (project.hasHangarPublishPlugin() && hangarIdentifier != null) {
-            val token = getEnvironmentVariable("HANGAR_TOKEN")
+            val token = project.getEnvironmentVariable("HANGAR_TOKEN")
             if (token != null) {
                 project.extensions.configure<HangarPublishExtension>("hangarPublish") { publications.register("plugin") {
                     version.set(project.version.toString())
@@ -619,6 +620,7 @@ abstract class UniversalDependency @Inject constructor(
 }
 
 abstract class PublishingPlatformsProjectDataExtension @Inject constructor(
+    project: Project,
     private val publishingPlatforms: PublishingPlatformExtension,
     objects: ObjectFactory,
 ) {
@@ -627,7 +629,7 @@ abstract class PublishingPlatformsProjectDataExtension @Inject constructor(
     @get:Input
     val url: Property<String> = objects.property(String::class.java).convention("https://srnyx.com/projects/data")
     @get:Input
-    val token: Property<String> = objects.property(String::class.java).convention(getEnvironmentVariable("PUBLISHING_PROJECT_DATA_TOKEN"))
+    val token: Property<String> = objects.property(String::class.java).convention(project.getEnvironmentVariable("PUBLISHING_PROJECT_DATA_TOKEN"))
 
     fun setup(project: Project) {
         if (token.orNull == null) return
@@ -669,7 +671,7 @@ abstract class PublishingPlatformsProjectDataExtension @Inject constructor(
         }
 
         // Only publish project data if running in a GitHub Release
-        if (inGitHubRelease) project.tasks.named("publishMods") { finalizedBy(publishProjectData) }
+        if (project.inGitHubRelease) project.tasks.named("publishMods") { finalizedBy(publishProjectData) }
     }
 }
 

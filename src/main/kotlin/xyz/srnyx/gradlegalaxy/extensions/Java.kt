@@ -53,9 +53,9 @@ abstract class JavaExtension @Inject constructor(
         project.version = version.orNull
             ?: project.version.takeIf { it != Project.DEFAULT_VERSION }
             ?: when {
-                inGitHubWorkflow -> getEnvironmentVariable("GITHUB_REF_NAME")
-                    ?.takeIf { inGitHubPublish }
-                    ?: getEnvironmentVariable("GITHUB_SHA")?.take(7)
+                project.inGitHubWorkflow -> project.getEnvironmentVariable("GITHUB_REF_NAME")
+                    ?.takeIf { project.inGitHubPublish }
+                    ?: project.getEnvironmentVariable("GITHUB_SHA")?.take(7)
                 else -> null
             }
             ?: "snapshot"

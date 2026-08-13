@@ -14,12 +14,14 @@ data class MCSetupConfig(
     val replacements: Map<String, String>? = mapOf("defaultReplacements" to "true"),
 ) {
     internal fun toExtension(): MinecraftExtension.() -> Unit = {
-        if (this@MCSetupConfig.replacementFiles == null || this@MCSetupConfig.replacements == null) {
-            replacementFiles = emptySet()
-            replacements = emptyMap()
+        val config: MCSetupConfig = this@MCSetupConfig
+
+        if (config.replacementFiles == null || config.replacements == null) {
+            replacementFiles.set(emptySet())
+            replacements.set(emptyMap())
         } else {
-            replacementFiles = this@MCSetupConfig.replacementFiles
-            replacements = this@MCSetupConfig.replacements
+            replacementFiles.set(config.replacementFiles)
+            replacements.set(config.replacements)
         }
     }
 }
