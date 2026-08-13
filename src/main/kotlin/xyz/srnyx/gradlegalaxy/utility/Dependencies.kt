@@ -10,20 +10,20 @@ import xyz.srnyx.gradlegalaxy.data.AdventureDependency
 import xyz.srnyx.gradlegalaxy.data.config.DependencyConfig
 import xyz.srnyx.gradlegalaxy.data.config.dependency.MockBukkitConfig
 import xyz.srnyx.gradlegalaxy.data.config.dependency.SpigotConfig
-import xyz.srnyx.gradlegalaxy.enums.Repository
-import xyz.srnyx.gradlegalaxy.enums.repository
 import xyz.srnyx.gradlegalaxy.extensions.GradleGalaxyExtension
+import xyz.srnyx.gradlegalaxy.extensions.Phase
+import xyz.srnyx.gradlegalaxy.extensions.Repositories
 
 
 /**
  * 1. Sets the Java version for the project depending on the version
- * 2. Adds the [Repository.SONATYPE_SNAPSHOTS_OLD] repository if the version is 1.15 or below
- * 3. Adds the [Repository.MAVEN_CENTRAL] and [Repository.SPIGOT] repositories
+ * 2. Adds the [Repositories.SONATYPE_SNAPSHOTS_OLD] repository if the version is 1.15 or below
+ * 3. Adds the [Repositories.MAVEN_CENTRAL] and [Repositories.SPIGOT] repositories
  * 4. Adds the Spigot-API dependency (org.spigotmc:spigot-api:[getVersionString])
  *
  * @param config The configuration for the Spigot-API dependency
  */
-@Deprecated("Use galaxy { spigotAPI(version) { ... } } instead")
+@Deprecated("Use galaxy { minecraft { spigotAPI(version) { ... } } } instead")
 fun Project.spigotAPI(
     config: DependencyConfig,
     spigotConfig: SpigotConfig = SpigotConfig(),
@@ -41,12 +41,12 @@ fun Project.spigotAPI(
 }
 
 /**
- * 1. Adds the [Repository.MAVEN_CENTRAL], maven local, and [Repository.SPIGOT] repositories
+ * 1. Adds the [Repositories.MAVEN_CENTRAL], maven local, and [Repositories.SPIGOT] repositories
  * 2. Adds the Spigot dependency (org.spigotmc:spigot:[getVersionString])
  *
  * @param config The configuration for the Spigot dependency
  */
-@Deprecated("Use galaxy { spigotNMS(version) { ... } } instead")
+@Deprecated("Use galaxy { minecraft { spigotNMS(version) { ... } } } instead")
 fun Project.spigotNMS(
     config: DependencyConfig,
     spigotConfig: SpigotConfig = SpigotConfig(),
@@ -64,12 +64,12 @@ fun Project.spigotNMS(
 }
 
 /**
- * 1. Adds the [Repository.MAVEN_CENTRAL], [Repository.SONATYPE_SNAPSHOTS_OLD], and [Repository.PAPER] repositories
+ * 1. Adds the [Repositories.MAVEN_CENTRAL], [Repositories.SONATYPE_SNAPSHOTS_OLD], and [Repositories.PAPER] repositories
  * 2. Adds the Paper dependency (`group`:`artifact`:`version`-R0.1-SNAPSHOT)
  *
  * @param config The configuration for the Paper dependency
  */
-@Deprecated("Use galaxy { paper(version) { ... } } instead")
+@Deprecated("Use galaxy { minecraft { paper(version) { ... } } } instead")
 fun Project.paper(
     config: DependencyConfig,
     spigotConfig: SpigotConfig = SpigotConfig(),
@@ -87,36 +87,32 @@ fun Project.paper(
 }
 
 /**
- * 1. Adds the [Repository.MAVEN_CENTRAL] repository
+ * 1. Adds the [Repositories.MAVEN_CENTRAL] repository
  * 2. Adds the dependencies to the provided Adventure components
  *
  * @param dependencies The Adventure dependencies to add
  * @param configurationAll The configuration to use for the dependencies if they don't have one specified
  */
-@Used
+@Deprecated("Use galaxy { minecraft { adventure { ... } } } instead")
 fun Project.adventure(vararg dependencies: AdventureDependency, configurationAll: String? = null) {
-    check(hasJavaPlugin()) { "Java plugin is not applied!" }
+    // configurationAll
+    if (configurationAll != null) dependencies.forEach { dependency ->
+        if (dependency.config.configurations == null) dependency.config.configurations = listOf(configurationAll)
+    }
 
-    // Repositories
-    repository(Repository.MAVEN_CENTRAL)
-
-    // Add dependencies
-    dependencies.forEach { dependency ->
-        val configurations = dependency.config.configurations ?: listOf(configurationAll ?: "implementation")
-        configurations.forEach { configuration ->
-            addDependencyTo(project.dependencies, configuration, "net.kyori:${dependency.component.getComponent()}:${dependency.config.version}", dependency.config.configurationAction)
-        }
+    extensions.configure<GradleGalaxyExtension>("galaxy") {
+        deferred.defer(Phase.FINALIZE) { dependencies.forEach { it.toExtension().add(project) } }
     }
 }
 
 /**
- * 1. Adds srnyx's repositories and [Repository.ALESSIO_DP] (for Libby) repositories
+ * 1. Adds srnyx's repositories and [Repositories.ALESSIO_DP] (for Libby) repositories
  * 2. Relocates `xyz.srnyx.annoyingapi`
  * 3. Adds the dependency to the provided Annoying API version
  *
  * @param config The configuration for the Annoying API dependency
  */
-@Deprecated("Use galaxy { annoyingAPI(version) { ... } } instead")
+@Deprecated("Use galaxy { minecraft { annoyingAPI(version) { ... } } } instead")
 fun Project.annoyingAPI(
     config: DependencyConfig,
     block: ModuleDependency.() -> Unit = {},
@@ -132,12 +128,12 @@ fun Project.annoyingAPI(
 }
 
 /**
- * 1. Adds the [Repository.MAVEN_CENTRAL] repository
+ * 1. Adds the [Repositories.MAVEN_CENTRAL] repository
  * 2. Adds the dependency to the provided JDA version
  *
  * @param config The configuration for the JDA dependency
  */
-@Deprecated("Use galaxy { jda(version) { ... } } instead")
+@Deprecated("Use galaxy { discord { jda(version) { ... } } } instead")
 fun Project.jda(
     config: DependencyConfig,
     block: ModuleDependency.() -> Unit = {},
@@ -158,7 +154,7 @@ fun Project.jda(
  *
  * @param config The configuration for the Lazy Library dependency
  */
-@Deprecated("Use galaxy { lazyLibrary(version) { ... } } instead")
+@Deprecated("Use galaxy { discord { lazyLibrary(version) { ... } } } instead")
 fun Project.lazyLibrary(
     config: DependencyConfig,
     block: ModuleDependency.() -> Unit = {},
@@ -193,14 +189,14 @@ fun Project.magicMongo(
 }
 
 /**
- * 1. Adds [Repository.MAVEN_CENTRAL] and [Repository.PAPER] repositories
+ * 1. Adds [Repositories.MAVEN_CENTRAL] and [Repositories.PAPER] repositories
  * 2. Adds the dependency to the provided MockBukkit version
  *
  * @param config The configuration for the MockBukkit dependency
  * @param mockBukkitConfig The configuration for MockBukkit
  * @param block The block to apply to the dependency
  */
-@Deprecated("Use galaxy { mockBukkit(version) { ... } } instead")
+@Deprecated("Use galaxy { testing { mockBukkit(version) { ... } } } instead")
 fun Project.mockBukkit(
     config: DependencyConfig,
     mockBukkitConfig: MockBukkitConfig = MockBukkitConfig(),

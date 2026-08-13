@@ -1,6 +1,6 @@
 package xyz.srnyx.gradlegalaxy.data.config.annoyingapi
 
-import xyz.srnyx.gradlegalaxy.extensions.MetadataExtension
+import xyz.srnyx.gradlegalaxy.extensions.minecraft.MetadataExtension
 
 
 open class MetadataConfig(

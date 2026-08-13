@@ -2,6 +2,8 @@ package xyz.srnyx.gradlegalaxy.extensions
 
 import io.papermc.hangarpublishplugin.HangarPublishExtension
 import io.papermc.hangarpublishplugin.model.HangarPublication
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonArray
@@ -33,6 +35,7 @@ import xyz.srnyx.gradlegalaxy.data.config.publishing.TextArtifact
 import xyz.srnyx.gradlegalaxy.data.pom.DeveloperData
 import xyz.srnyx.gradlegalaxy.data.pom.LicenseData
 import xyz.srnyx.gradlegalaxy.data.pom.ScmData
+import xyz.srnyx.gradlegalaxy.enums.Loader
 import xyz.srnyx.gradlegalaxy.enums.PluginPlatform
 import xyz.srnyx.gradlegalaxy.enums.ReleaseChannel
 import xyz.srnyx.gradlegalaxy.utility.SemanticVersion
@@ -59,7 +62,7 @@ abstract class PublishingExtension @Inject internal constructor(
 ) {
     val simple = objects.newInstance(PublishingSimpleExtension::class.java)
     val env = objects.newInstance(PublishingEnvExtension::class.java)
-    val platforms = objects.newInstance(PublishingPlatformExtension::class.java)
+    val platforms = PublishingPlatformExtension(objects)
 
     fun simple(action: PublishingSimpleExtension.() -> Unit = {}) {
         simple.action()
@@ -228,51 +231,15 @@ abstract class PublishingEnvExtension @Inject constructor(
     }
 }
 
-data class HangarDependency(
-    val id: String,
-    val required: Boolean,
-)
-
-class HangarExtension {
-    var dependencies: MutableList<HangarDependency> = mutableListOf()
-
-    internal fun apply(hangar: HangarPublication) {
-        hangar.platforms.paper {
-            dependencies {
-                this@HangarExtension.dependencies.forEach { dependency ->
-                    hangar(dependency.id) { required.set(dependency.required) }
-                }
-            }
-        }
-    }
-
-    @Used
-    fun optional(id: String) {
-        dependencies.add(HangarDependency(id, false))
-    }
-
-    @Used
-    fun required(id: String) {
-        dependencies.add(HangarDependency(id, true))
-    }
-}
-
-abstract class UniversalDependency @Inject constructor(
-    objects: ObjectFactory,
+class PublishingPlatformExtension(
+   objects: ObjectFactory
 ) {
-    @get:Input
-    val required: Property<Boolean> = objects.property(Boolean::class.java)
-    @get:Input @get:Optional
-    val modrinth: Property<String> = objects.property(String::class.java)
-    @get:Input @get:Optional
-    val curseforge: Property<String> = objects.property(String::class.java)
-    @get:Input @get:Optional
-    val hangar: Property<String> = objects.property(String::class.java)
-}
+    val FOLIA = Loader.FOLIA
+    val PURPUR = Loader.PURPUR
+    val PAPER = Loader.PAPER
+    val SPIGOT = Loader.SPIGOT
+    val BUKKIT = Loader.BUKKIT
 
-abstract class PublishingPlatformExtension @Inject constructor(
-    val objects: ObjectFactory,
-) {
     @get:Input
     val platforms: MapProperty<PluginPlatform, String> = objects.mapProperty(PluginPlatform::class.java, String::class.java)
     @get:Input
@@ -280,39 +247,36 @@ abstract class PublishingPlatformExtension @Inject constructor(
     @get:Input @get:Optional
     val minecraftVersionEnd: Property<String> = objects.property(String::class.java)
     @get:Input
-    val loaders: ListProperty<String> = objects.listProperty(String::class.java).convention(listOf("spigot", "paper", "purpur"))
+    val apiCompatibility: ListProperty<Loader> = objects.listProperty(Loader::class.java).convention(listOf(SPIGOT))
     @get:Input
     val addResourceFile: Property<Boolean> = objects.property(Boolean::class.java).convention(true)
     @get:Input
-    val addAnnoyingApiDependency: Property<Boolean> = objects.property(Boolean::class.java).convention(true)
-    @get:Input @get:Optional
-    val universalDependencies: ListProperty<UniversalDependency> = objects.listProperty(UniversalDependency::class.java)
-    @get:Input
     val dryRun: Property<Boolean> = objects.property(Boolean::class.java).convention(false)
 
-    var modPublishPlugin: ModPublishExtension.() -> Unit = {}
-    var modrinth: Modrinth.() -> Unit = {}
-    var curseforge: Curseforge.() -> Unit = {}
+    var dependency: PublishingPlatformsDependencyExtension = objects.newInstance(PublishingPlatformsDependencyExtension::class.java)
+    var modPublishPlugin: (ModPublishExtension.() -> Unit)? = null
+    var modrinth: (Modrinth.() -> Unit)? = null
+    var curseforge: (Curseforge.() -> Unit)? = null
     val hangar: HangarExtension = HangarExtension()
+
+    fun dependency(action: PublishingPlatformsDependencyExtension.() -> Unit) = dependency.action()
 
     fun modPublishPlugin(action: ModPublishExtension.() -> Unit) {
         val before = modPublishPlugin
         modPublishPlugin = {
-            before()
+            before?.invoke(this)
             action()
         }
     }
 
-    fun platform(platform: PluginPlatform, identifier: String) {
-        platforms.put(platform, identifier)
-    }
+    fun platform(platform: PluginPlatform, identifier: String) = platforms.put(platform, identifier)
 
     fun modrinth(modrinth: String, action: Modrinth.() -> Unit = {}) {
         platform(PluginPlatform.MODRINTH, modrinth)
 
         val before = this.modrinth
         this.modrinth = {
-            before()
+            before?.invoke(this)
             action()
         }
     }
@@ -322,41 +286,21 @@ abstract class PublishingPlatformExtension @Inject constructor(
         this.hangar.apply(action)
     }
 
-    fun spigot(spigot: String) {
-        platform(PluginPlatform.SPIGOT, spigot)
-    }
+    fun spigot(spigot: String) = platform(PluginPlatform.SPIGOT, spigot)
 
     fun curseforge(curseforge: String, action: Curseforge.() -> Unit = {}) {
         platform(PluginPlatform.CURSEFORGE, curseforge)
 
         val before = this.curseforge
         this.curseforge = {
-            before()
+            before?.invoke(this)
             action()
         }
     }
 
-    fun external(external: String) {
-        platform(PluginPlatform.EXTERNAL, external)
-    }
+    fun external(external: String) = platform(PluginPlatform.EXTERNAL, external)
 
-    fun manual(manual: String) {
-        platform(PluginPlatform.MANUAL, manual)
-    }
-
-    //TODO maybe move optional and required to nested "dependencies" (or similar) extension
-    @Used
-    fun optional(action: UniversalDependency.() -> Unit) = universalDependency(false, action)
-
-    @Used
-    fun required(action: UniversalDependency.() -> Unit) = universalDependency(true, action)
-
-    private fun universalDependency(required: Boolean, action: UniversalDependency.() -> Unit) {
-        val dependency = objects.newInstance(UniversalDependency::class.java)
-        dependency.required.set(required)
-        dependency.action()
-        universalDependencies.add(dependency)
-    }
+    fun manual(manual: String) = platform(PluginPlatform.MANUAL, manual)
 
     internal fun setup(project: Project) {
         if (platforms.orNull?.isEmpty() == true) return
@@ -372,6 +316,9 @@ abstract class PublishingPlatformExtension @Inject constructor(
         val modrinthIdentifier = platforms.get()[PluginPlatform.MODRINTH]
         val curseForgeIdentifier = platforms.get()[PluginPlatform.CURSEFORGE]
         val hangarIdentifier = platforms.get()[PluginPlatform.HANGAR]
+
+        // Loaders
+        val loaders: List<Loader> = Loader.getSupportedLoaders(apiCompatibility.get())
 
         // Release channel
         val releaseChannel: ReleaseChannel = when {
@@ -412,7 +359,7 @@ abstract class PublishingPlatformExtension @Inject constructor(
         // Setup publishing
         project.extensions.configure<ModPublishExtension>("publishMods") {
             dryRun.set(this@PublishingPlatformExtension.dryRun)
-            modLoaders.set(loaders)
+            modLoaders.set(loaders.map(Loader::getModPublishPluginName))
             type.set(releaseChannel.mpp)
             changelog.set(changelogText)
 
@@ -452,10 +399,10 @@ abstract class PublishingPlatformExtension @Inject constructor(
                     }
 
                     // Annoying API dependency
-                    if (addAnnoyingApiDependency.get()) embeds("annoying-api")
+                    if (dependency.addAnnoyingApiDependency.get()) embeds("annoying-api")
 
                     // Universal dependencies
-                    universalDependencies.orNull?.forEach { dependency ->
+                    dependency.universalDependencies.orNull?.forEach { dependency ->
                         dependency.modrinth.orNull?.let {
                             if (dependency.required.get()) requires(it) else optional(it)
                         }
@@ -466,7 +413,7 @@ abstract class PublishingPlatformExtension @Inject constructor(
                     sourcesJarTask?.let { additionalFile(it.archiveFile) { type.set(SOURCES_JAR) } }
 
                     projectId.set(modrinthIdentifier)
-                    modrinth()
+                    this@PublishingPlatformExtension.modrinth?.invoke(this)
                 }
             }
 
@@ -481,17 +428,17 @@ abstract class PublishingPlatformExtension @Inject constructor(
                     }
 
                     // Annoying API dependency
-                    if (addAnnoyingApiDependency.get()) embeds("annoying-api")
+                    if (dependency.addAnnoyingApiDependency.get()) embeds("annoying-api")
 
                     // Universal dependencies
-                    universalDependencies.orNull?.forEach { dependency ->
+                    dependency.universalDependencies.orNull?.forEach { dependency ->
                         dependency.curseforge.orNull?.let {
                             if (dependency.required.get()) requires(it) else optional(it)
                         }
                     }
 
                     projectId.set(curseForgeIdentifier)
-                    curseforge()
+                    this@PublishingPlatformExtension.curseforge?.invoke(this)
                 }
             }
 
@@ -501,7 +448,7 @@ abstract class PublishingPlatformExtension @Inject constructor(
                 if (project.hasShadowPlugin()) dependsOn("shadowJar")
             }
 
-            modPublishPlugin()
+            this@PublishingPlatformExtension.modPublishPlugin?.invoke(this)
         }
 
         // Hangar Publish Plugin
@@ -541,7 +488,7 @@ abstract class PublishingPlatformExtension @Inject constructor(
                     } }
 
                     // Universal dependencies (add to custom action)
-                    universalDependencies.orNull?.forEach { dependency ->
+                    dependency.universalDependencies.orNull?.forEach { dependency ->
                         dependency.hangar.orNull?.let {
                             hangar.dependencies += HangarDependency(it, dependency.required.get())
                         }
@@ -557,3 +504,97 @@ abstract class PublishingPlatformExtension @Inject constructor(
         }
     }
 }
+
+abstract class PublishingPlatformsDependencyExtension @Inject constructor(
+    private val objects: ObjectFactory,
+) {
+    @get:Input
+    val addAnnoyingApiDependency: Property<Boolean> = objects.property(Boolean::class.java).convention(true)
+    @get:Input @get:Optional
+    val universalDependencies: ListProperty<UniversalDependency> = objects.listProperty(UniversalDependency::class.java)
+
+    @Used
+    fun optional(action: UniversalDependency.() -> Unit) = universalDependency(false, action)
+
+    @Used
+    fun required(action: UniversalDependency.() -> Unit) = universalDependency(true, action)
+
+    private fun universalDependency(required: Boolean, action: UniversalDependency.() -> Unit) {
+        val dependency = objects.newInstance(UniversalDependency::class.java)
+        dependency.required.set(required)
+        dependency.action()
+        universalDependencies.add(dependency)
+    }
+}
+
+class HangarExtension {
+    var dependencies: MutableList<HangarDependency> = mutableListOf()
+
+    internal fun apply(hangar: HangarPublication) {
+        hangar.platforms.paper {
+            dependencies {
+                this@HangarExtension.dependencies.forEach { dependency ->
+                    hangar(dependency.id) { required.set(dependency.required) }
+                }
+            }
+        }
+    }
+
+    @Used
+    fun optional(id: String) = dependencies.add(HangarDependency(id, false))
+
+    @Used
+    fun required(id: String) = dependencies.add(HangarDependency(id, true))
+}
+
+data class HangarDependency(
+    val id: String,
+    val required: Boolean,
+)
+
+abstract class UniversalDependency @Inject constructor(
+    objects: ObjectFactory,
+) {
+    @get:Input
+    val required: Property<Boolean> = objects.property(Boolean::class.java)
+    @get:Input @get:Optional
+    val modrinth: Property<String> = objects.property(String::class.java)
+    @get:Input @get:Optional
+    val curseforge: Property<String> = objects.property(String::class.java)
+    @get:Input @get:Optional
+    val hangar: Property<String> = objects.property(String::class.java)
+}
+
+abstract class PublishingPlatformsProjectDataExtension @Inject constructor(
+    private val publishingPlatforms: PublishingPlatformExtension,
+    objects: ObjectFactory,
+) {
+    @get:Input
+    val url: Property<String> = objects.property(String::class.java).convention("https://srnyx.com/projects/data")
+    @get:Input
+    val token: Property<String> = objects.property(String::class.java).convention(getEnvironmentVariable("PUBLISHING_PROJECT_DATA_TOKEN"))
+    @get:Input
+    val id: Property<String> = objects.property(String::class.java)
+
+    fun setup(project: Project) {
+        if (token.orNull == null || id.orNull == null) return
+
+        val data = ProjectData(
+            platforms = publishingPlatforms.platforms.get(),
+            apiCompatibility = publishingPlatforms.apiCompatibility.get(),
+            minecraftVersions = publishingPlatforms.minecraftVersionEnd.orNull?.let { listOf(it) } ?: publishingPlatforms.minecraftVersionStart.get().split("-").map { it.trim() },
+        )
+    }
+}
+
+@Serializable
+data class ProjectData(
+    val platforms: Map<PluginPlatform, String>,
+    @SerialName("api-compatibility")
+    val apiCompatibility: List<Loader>,
+    /**
+     * Supports `1.8.8+` (greater than or equal), `1.21.11-` (less than or equal), `1.13-1.21.11` (range)
+     */
+    @SerialName("minecraft-versions")
+    val minecraftVersions: List<String>,
+)

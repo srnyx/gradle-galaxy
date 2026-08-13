@@ -1,11 +1,14 @@
-package xyz.srnyx.gradlegalaxy.extensions
+package xyz.srnyx.gradlegalaxy.extensions.testing
 
 import org.gradle.api.Project
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.tasks.testing.Test
 import org.gradle.kotlin.dsl.dependencies
 import org.gradle.kotlin.dsl.named
-import xyz.srnyx.gradlegalaxy.enums.Repository
+import xyz.srnyx.gradlegalaxy.extensions.DeferredActions
+import xyz.srnyx.gradlegalaxy.extensions.DependencyExtension
+import xyz.srnyx.gradlegalaxy.extensions.Repositories.Companion.REPOSITORIES
+import xyz.srnyx.gradlegalaxy.extensions.Phase
 import javax.inject.Inject
 
 
@@ -41,7 +44,7 @@ abstract class TestingExtension @Inject internal constructor(
 }
 
 abstract class JUnitExtension @Inject constructor() : DependencyExtension(
-    repositories = listOf(Repository.MAVEN_CENTRAL.url),
+    repositories = listOf(REPOSITORIES.MAVEN_CENTRAL),
     group = "org.junit",
     name = "junit-bom",
     configurations = listOf("testImplementation"),

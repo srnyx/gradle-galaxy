@@ -14,8 +14,8 @@ import xyz.srnyx.gradlegalaxy.data.config.dependency.MockBukkitConfig
 import xyz.srnyx.gradlegalaxy.data.config.publishing.PublishingEnvConfig
 import xyz.srnyx.gradlegalaxy.data.config.publishing.PublishingPlatformConfig
 import xyz.srnyx.gradlegalaxy.data.config.publishing.PublishingSimpleConfig
-import xyz.srnyx.gradlegalaxy.enums.Repository
 import xyz.srnyx.gradlegalaxy.extensions.GradleGalaxyExtension
+import xyz.srnyx.gradlegalaxy.extensions.Repositories
 
 
 /**
@@ -27,7 +27,11 @@ import xyz.srnyx.gradlegalaxy.extensions.GradleGalaxyExtension
  *
  * @param config The configuration for setting up Java
  */
-@Deprecated("Use galaxy { java { ... } } instead")
+@Deprecated(
+    "Use galaxy { java { ... } } instead",
+    ReplaceWith(
+        "extensions.configure<GradleGalaxyExtension>(\"galaxy\") { java(config.toExtension()) }",
+        "xyz.srnyx.gradlegalaxy.extensions.GradleGalaxyExtension"))
 fun Project.setupJava(
     config: JavaSetupConfig = JavaSetupConfig(),
 ) {
@@ -45,7 +49,7 @@ fun Project.setupJava(
  * @param javaSetupConfig The configuration for [setupJava]
  * @param mcSetupConfig The configuration for Minecraft setup
  */
-@Deprecated("Use galaxy { java { ... }; minecraft { ... } } instead")
+@Deprecated("Use galaxy { minecraft { ... } } instead")
 fun Project.setupMC(
     javaSetupConfig: JavaSetupConfig = JavaSetupConfig(),
     mcSetupConfig: MCSetupConfig = MCSetupConfig(),
@@ -60,7 +64,7 @@ fun Project.setupMC(
  * Sets up the project using Annoying API. **The [root project's name][Project.getName] must be the same as the one in plugin.yml!**
  *
  * 1. Checks if the Java and Shadow plugins are applied
- * 2. Adds srnyx's repositories and [Repository.ALESSIO_DP] for Libby
+ * 2. Adds srnyx's repositories and [Repositories.ALESSIO_DP] for Libby
  * 2. Gets and processes Annoying API metadata (if [MetadataConfig.useMetadata] is true)
  *    1. Sets Java version if specified
  *    2. Adds repositories
@@ -76,7 +80,7 @@ fun Project.setupMC(
  *
  * @return The metadata for Annoying API if [MetadataConfig.useMetadata] is true, otherwise null
  */
-@Deprecated("Use galaxy { annoyingAPI(version) { ... } } instead")
+@Deprecated("Use galaxy { minecraft { annoyingAPI(version) { ... } }; publishing { platforms { ... } } } instead")
 fun Project.setupAnnoyingAPI(
     javaSetupConfig: JavaSetupConfig = JavaSetupConfig(),
     mcSetupConfig: MCSetupConfig = MCSetupConfig(),
@@ -87,15 +91,18 @@ fun Project.setupAnnoyingAPI(
     publishingPlatformConfig: PublishingPlatformConfig = PublishingPlatformConfig(mapOf()),
 ) {
     extensions.configure<GradleGalaxyExtension>("galaxy") {
+        java(javaSetupConfig.toExtension())
+
         minecraft {
+            mcSetupConfig.toExtension()(this)
+
             annoyingAPI(annoyingAPIConfig.version) {
                 annoyingAPIConfig.toExtension()(this)
-                java(javaSetupConfig.toExtension())
-                minecraft(mcSetupConfig.toExtension())
                 metadata(metadataConfig.toExtension())
                 customRuntimeLibraries(customRuntimeLibrariesConfig.toExtension())
             }
         }
+
         publishing {
             platforms {
                 publishingPlatformConfig.platforms.forEach { (pluginPlatform, identifier) -> platform(pluginPlatform, identifier) }
@@ -120,7 +127,7 @@ fun Project.setupAnnoyingAPI(
  * @param jdaSetupConfig The configuration for JDA setup
  * @param jdaConfig The configuration for [jda]
  */
-@Deprecated("Use galaxy { jda(version) { ... } } instead")
+@Deprecated("Use galaxy { discord { jda(version) { ... } } } instead")
 fun Project.setupJda(
     javaSetupConfig: JavaSetupConfig = JavaSetupConfig(),
     jdaSetupConfig: JdaSetupConfig = JdaSetupConfig(),
@@ -149,7 +156,7 @@ fun Project.setupJda(
  * @param jdaConfig The configuration for [jda]
  * @param lazyLibraryConfig The configuration for [lazyLibrary]
  */
-@Deprecated("Use galaxy { jda(version) { ... }; lazyLibrary(version) { ... } } instead")
+@Deprecated("Use galaxy { discord { lazyLibrary(version) { ... } } } instead")
 fun Project.setupLazyLibrary(
     javaSetupConfig: JavaSetupConfig = JavaSetupConfig(),
     jdaSetupConfig: JdaSetupConfig = JdaSetupConfig(),
@@ -177,7 +184,7 @@ fun Project.setupLazyLibrary(
  *
  * @return The test task that was configured
  */
-@Deprecated("Use galaxy { testing { jUnit { ... } }; jUnitBom(version) { ... } } instead")
+@Deprecated("Use galaxy { testing { jUnit(version) { ... } } } instead")
 fun Project.setupTesting(
     junitBomConfig: DependencyConfig,
     block: Test.() -> Unit = {},
@@ -206,7 +213,7 @@ fun Project.setupTesting(
  *
  * @return The test task that was configured
  */
-@Deprecated("Use galaxy { testing { jUnit { ... } }; jUnitBom(version) { ... }; mockBukkit(version) { ... } } instead")
+@Deprecated("Use galaxy { testing { jUnit(version) { ... } }; mockBukkit(version) { ... } } instead")
 fun Project.setupMockBukkit(
     junitBomConfig: DependencyConfig,
     mockBukkitDependencyConfig: DependencyConfig,
@@ -284,7 +291,11 @@ fun Project.setupPublishingEnv(
  *
  * @param config The configuration for setting up publishing for project platforms
  */
-@Deprecated("Use galaxy { publishing { platforms { ... } } } instead")
+@Deprecated(
+    "Use galaxy { publishing { platforms { ... } } } instead",
+    ReplaceWith(
+        "project.extensions.configure<GradleGalaxyExtension>(\"galaxy\") { publishing { platforms(config.toExtension()) } }",
+        "xyz.srnyx.gradlegalaxy.extensions.GradleGalaxyExtension"))
 fun Project.setupPublishingPlatforms(
     config: PublishingPlatformConfig,
 ) {

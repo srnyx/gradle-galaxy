@@ -4,13 +4,13 @@ import org.gradle.api.Project
 import org.gradle.api.artifacts.ModuleDependency
 import org.gradle.api.artifacts.dsl.DependencyHandler
 import org.gradle.kotlin.dsl.add
-import xyz.srnyx.gradlegalaxy.enums.repository
+import org.gradle.kotlin.dsl.maven
 import xyz.srnyx.gradlegalaxy.utility.hasJavaPlugin
 import javax.inject.Inject
 
 
 /**
- * Subclasses override [add] to layer on version-dependent behavior (e.g. [xyz.srnyx.gradlegalaxy.extensions.PaperExtension]
+ * Subclasses override [add] to layer on version-dependent behavior (e.g. [xyz.srnyx.gradlegalaxy.extensions.minecraft.PaperExtension]
  * resolving `group`/`name` from the Minecraft version) before delegating to `super.add(project)`.
  */
 open class DependencyExtension @Inject constructor(
@@ -37,7 +37,7 @@ open class DependencyExtension @Inject constructor(
         check(project.hasJavaPlugin()) { "Java plugin is not applied!" }
 
         // Repositories
-        repositories.forEach { project.repository(it) }
+        repositories.forEach { project.repositories.maven(it) }
 
         // Add dependency
         val notation = "${group}:${name}:${version}"

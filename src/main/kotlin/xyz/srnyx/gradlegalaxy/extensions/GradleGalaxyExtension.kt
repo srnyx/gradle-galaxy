@@ -2,8 +2,10 @@ package xyz.srnyx.gradlegalaxy.extensions
 
 import org.gradle.api.Project
 import org.gradle.api.model.ObjectFactory
-import xyz.srnyx.gradlegalaxy.enums.Repository
-import xyz.srnyx.gradlegalaxy.enums.repository
+import org.gradle.kotlin.dsl.maven
+import xyz.srnyx.gradlegalaxy.extensions.discord.DiscordExtension
+import xyz.srnyx.gradlegalaxy.extensions.minecraft.MinecraftExtension
+import xyz.srnyx.gradlegalaxy.extensions.testing.TestingExtension
 import javax.inject.Inject
 
 
@@ -14,32 +16,25 @@ abstract class GradleGalaxyExtension @Inject constructor(
     private val project: Project,
     objects: ObjectFactory
 ) {
-    private val deferred = DeferredActions(project)
+    internal val deferred = DeferredActions(project)
 
     // Project-wide setup
+    val repository = objects.newInstance(RepositoryHolder::class.java, project)
     val java = objects.newInstance(JavaExtension::class.java)
     val minecraft = objects.newInstance(MinecraftExtension::class.java, deferred, java)
-    val discord = objects.newInstance(DiscordExtension::class.java, deferred)
+    val discord = objects.newInstance(DiscordExtension::class.java, deferred, java)
     val testing = objects.newInstance(TestingExtension::class.java, deferred)
     val publishing = objects.newInstance(PublishingExtension::class.java, deferred)
 
     // Pure dependencies
     val magicMongo: DependencyExtension = DependencyExtension(
-        repositories = listOf(Repository.SRNYX_SNAPSHOTS.url, Repository.SRNYX_RELEASES.url),
+        repositories = listOf("https://repo.srnyx.com/snapshots/", "https://repo.srnyx.com/releases/"),
         group = "xyz.srnyx",
         name = "magic-mongo",
         configurations = listOf("implementation", "testImplementation"))
 
 
-    fun repository(vararg repository: Any) = repository.forEach {
-        // Repository has special handling, can't just use toString on it
-        if (it is Repository) {
-            project.repository(it)
-        } else {
-            project.repository(it.toString())
-        }
-    }
-
+    fun repository(action: RepositoryHolder.() -> Unit) = repository.action()
     fun java(action: JavaExtension.() -> Unit) {
         java.action()
         java.setup(project) // eager: only writes plain Project state, see JavaExtension's KDoc
@@ -57,4 +52,13 @@ abstract class GradleGalaxyExtension @Inject constructor(
         magicMongo.action()
         deferred.defer(Phase.FINALIZE) { magicMongo.add(project) }
     }
+}
+
+abstract class RepositoryHolder @Inject constructor(
+    private val project: Project,
+) : Repositories() {
+    fun add(repositories: Iterable<String>) = repositories.forEach {
+        if (it == MAVEN_LOCAL) project.repositories.mavenLocal() else project.repositories.maven(it)
+    }
+    fun add(vararg repositories: String) = add(repositories.asIterable())
 }

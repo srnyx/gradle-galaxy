@@ -1,8 +1,11 @@
-package xyz.srnyx.gradlegalaxy.extensions
+package xyz.srnyx.gradlegalaxy.extensions.minecraft
 
 import org.gradle.api.Project
 import org.gradle.api.model.ObjectFactory
 import xyz.srnyx.gradlegalaxy.annotations.Used
+import xyz.srnyx.gradlegalaxy.extensions.DeferredActions
+import xyz.srnyx.gradlegalaxy.extensions.JavaExtension
+import xyz.srnyx.gradlegalaxy.extensions.Phase
 import xyz.srnyx.gradlegalaxy.utility.addReplacementsTask
 import javax.inject.Inject
 
@@ -17,7 +20,8 @@ abstract class MinecraftExtension @Inject internal constructor(
     var replacements: Map<String, String> = mapOf("defaultReplacements" to "true")
 
     // Project-wide setup
-    val runPaper = objects.newInstance(RunPaperExtension::class.java)
+    val runPaper = RunPaperExtension(objects)
+    val adventure = objects.newInstance(AdventureExtension::class.java, deferred)
     // Pure dependencies
     val spigotAPI = objects.newInstance(SpigotApiExtension::class.java)
     val spigotNMS = objects.newInstance(SpigotNmsExtension::class.java)
@@ -33,6 +37,7 @@ abstract class MinecraftExtension @Inject internal constructor(
         runPaper.action()
         deferred.defer(Phase.WIRE) { runPaper.setup(project) }
     }
+    fun adventure(action: AdventureExtension.() -> Unit) = adventure.action()
 
     fun spigotAPI(version: String, action: SpigotApiExtension.() -> Unit = {}) {
         spigotAPI.version = version
@@ -67,6 +72,11 @@ abstract class MinecraftExtension @Inject internal constructor(
     internal fun setup(project: Project) {
         if (applied) return
         applied = true
+
+        // Every Minecraft project needs these — applied unconditionally. Each has its own
+        // idempotency guard, so this is a no-op wherever the consumer already triggered them
+        // themselves (e.g. a separate top-level `galaxy { java { } }`).
+        java.setup(project)
 
         project.addReplacementsTask(replacementFiles, replacements)
     }

@@ -1,6 +1,6 @@
 package xyz.srnyx.gradlegalaxy.data.config
 
-import xyz.srnyx.gradlegalaxy.extensions.JdaExtension
+import xyz.srnyx.gradlegalaxy.extensions.discord.JdaExtension
 
 
 /**

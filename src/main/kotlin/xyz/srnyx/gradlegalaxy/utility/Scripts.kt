@@ -29,9 +29,8 @@ import xyz.srnyx.gradlegalaxy.data.annoyingapi.AnnoyingMetadata
 import xyz.srnyx.gradlegalaxy.data.annoyingapi.RuntimeLibrary
 import xyz.srnyx.gradlegalaxy.data.config.annoyingapi.GenerateRuntimeLibraryEnumConfig
 import xyz.srnyx.gradlegalaxy.enums.PluginPlatform
-import xyz.srnyx.gradlegalaxy.enums.Repository
-import xyz.srnyx.gradlegalaxy.enums.repository
 import xyz.srnyx.gradlegalaxy.extensions.GradleGalaxyExtension
+import xyz.srnyx.gradlegalaxy.extensions.Repositories.Companion.REPOSITORIES
 import java.io.File
 import java.net.URI
 import java.net.http.HttpClient
@@ -377,7 +376,10 @@ fun Project.addPlatformsResourceFileTask(platforms: Map<PluginPlatform, String>)
  */
 fun Project.getAnnoyingApiMetadata(version: String): AnnoyingMetadata? {
     // Add srnyx's repositories
-    repository(Repository.SRNYX_RELEASES, Repository.SRNYX_SNAPSHOTS)
+    repositories {
+        maven(REPOSITORIES.SRNYX_RELEASES)
+        maven(REPOSITORIES.SRNYX_SNAPSHOTS)
+    }
 
     // Get JAR
     val file = runCatching {
@@ -392,7 +394,7 @@ fun Project.getAnnoyingApiMetadata(version: String): AnnoyingMetadata? {
     return json.decodeFromString<AnnoyingMetadata>(text)
 }
 
-@Deprecated("Use galaxy { annoyingAPI(version) { customRuntimeLibraries { ... } } } instead")
+@Deprecated("Use galaxy { minecraft { annoyingAPI(version) { customRuntimeLibraries { ... } } } } instead")
 fun Project.generateAnnoyingApiRuntimeLibraryEnum(
     libraries: Collection<RuntimeLibrary>,
     generateRuntimeLibraryEnumConfig: GenerateRuntimeLibraryEnumConfig = GenerateRuntimeLibraryEnumConfig(),

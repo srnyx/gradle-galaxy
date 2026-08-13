@@ -1,4 +1,4 @@
-package xyz.srnyx.gradlegalaxy.extensions
+package xyz.srnyx.gradlegalaxy.extensions.minecraft
 
 import org.gradle.api.Project
 import org.gradle.api.model.ObjectFactory
@@ -8,12 +8,9 @@ import org.gradle.api.tasks.Optional
 import org.gradle.kotlin.dsl.named
 import xyz.jpenilla.runpaper.task.RunServer
 import xyz.srnyx.gradlegalaxy.utility.hasRunPaperPlugin
-import javax.inject.Inject
 
 
-abstract class RunPaperExtension @Inject constructor(
-    objects: ObjectFactory
-) {
+class RunPaperExtension(objects: ObjectFactory) {
     @get:Input @get:Optional
     val minecraftVersion: Property<String> = objects.property(String::class.java).convention("1.21.11")
     @get:Input @get:Optional

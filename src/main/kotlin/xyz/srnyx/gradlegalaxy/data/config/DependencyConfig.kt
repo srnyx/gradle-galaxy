@@ -17,13 +17,13 @@ import xyz.srnyx.gradlegalaxy.extensions.DependencyExtension
 data class DependencyConfig(
     val version: String,
     @Deprecated("Use configurations instead") val configuration: String? = null,
-    val configurations: List<String>? = configuration?.let { listOf(it) },
+    var configurations: List<String>? = configuration?.let { listOf(it) },
     var configurationAction: ModuleDependency.() -> Unit = {}
 ) {
     internal fun toExtension(): DependencyExtension.() -> Unit = {
         val config: DependencyConfig = this@DependencyConfig
 
-        (config.configurations ?: configuration?.let { listOf(it) })
+        config.configurations
             ?.takeIf { it.isNotEmpty() }
             ?.let { configurations = it }
         action = config.configurationAction

@@ -1,6 +1,6 @@
 package xyz.srnyx.gradlegalaxy.data.config.annoyingapi
 
-import xyz.srnyx.gradlegalaxy.extensions.GenerateRuntimeLibraryEnumExtension
+import xyz.srnyx.gradlegalaxy.extensions.minecraft.GenerateRuntimeLibraryEnumExtension
 
 
 /** Configuration for `galaxy { annoyingAPI { customRuntimeLibraries { generateRuntimeLibraryEnum { } } } }` */

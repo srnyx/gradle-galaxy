@@ -1,4 +1,4 @@
-package xyz.srnyx.gradlegalaxy.extensions
+package xyz.srnyx.gradlegalaxy.extensions.minecraft
 
 import org.gradle.api.JavaVersion
 import org.gradle.api.Project
@@ -12,13 +12,15 @@ import org.gradle.api.tasks.Optional
 import org.gradle.kotlin.dsl.add
 import org.gradle.kotlin.dsl.configure
 import org.gradle.kotlin.dsl.exclude
+import org.gradle.kotlin.dsl.maven
 import xyz.srnyx.gradlegalaxy.annotations.Used
 import xyz.srnyx.gradlegalaxy.data.annoyingapi.AnnoyingMetadata
 import xyz.srnyx.gradlegalaxy.data.annoyingapi.Exclude
 import xyz.srnyx.gradlegalaxy.data.annoyingapi.Relocation
 import xyz.srnyx.gradlegalaxy.data.annoyingapi.RuntimeLibrary
-import xyz.srnyx.gradlegalaxy.enums.Repository
-import xyz.srnyx.gradlegalaxy.enums.repository
+import xyz.srnyx.gradlegalaxy.extensions.DependencyExtension
+import xyz.srnyx.gradlegalaxy.extensions.Repositories.Companion.REPOSITORIES
+import xyz.srnyx.gradlegalaxy.extensions.JavaExtension
 import xyz.srnyx.gradlegalaxy.utility.dotsToBrackets
 import xyz.srnyx.gradlegalaxy.utility.getAnnoyingApiMetadata
 import xyz.srnyx.gradlegalaxy.utility.getPackage
@@ -39,7 +41,7 @@ abstract class AnnoyingApiExtension @Inject constructor(
     private val java: JavaExtension,
     private val minecraft: MinecraftExtension,
 ) : DependencyExtension(
-    repositories = listOf(Repository.SRNYX_SNAPSHOTS.url, Repository.SRNYX_RELEASES.url),
+    repositories = listOf(REPOSITORIES.SRNYX_SNAPSHOTS, REPOSITORIES.SRNYX_RELEASES),
     group = "xyz.srnyx",
     name = "annoying-api",
     configurations = listOf("implementation", "testImplementation"),
@@ -57,7 +59,6 @@ abstract class AnnoyingApiExtension @Inject constructor(
         // Every Annoying API project needs these — applied unconditionally. Each has its own
         // idempotency guard, so this is a no-op wherever the consumer already triggered them
         // themselves (e.g. a separate top-level `galaxy { java { } }`).
-        java.setup(project)
         minecraft.setup(project)
         minecraft.runPaper.setup(project)
 
@@ -101,7 +102,7 @@ abstract class MetadataExtension @Inject constructor(
             }
 
             // Repositories
-            if (addRepositories.get()) metadata.repositories.forEach { project.repository(it) }
+            if (addRepositories.get()) metadata.repositories.forEach { project.repositories.maven(it) }
 
             // Runtime libraries
             runtimeLibraries.libraries.set(metadata.runtimeLibraries)
@@ -180,8 +181,6 @@ class RuntimeLibraryBuilder internal constructor(
     @get:Input
     val relocations: ListProperty<Relocation> = objects.listProperty(Relocation::class.java).convention(emptyList())
 
-    fun repositories(vararg repositories: Repository) = repositories.forEach { this@RuntimeLibraryBuilder.repositories.add(it.url) }
-
     @Used
     fun exclude(group: String, module: String) {
         excludes.add(Exclude(group, module))
@@ -258,7 +257,7 @@ abstract class RuntimeLibrariesExtension @Inject constructor(
         val getPackage = project.getPackage()
         libraries.get().forEach { library ->
             // Add repositories
-            if (addRepositories.get()) library.repositories.forEach { repo -> project.repository(repo) }
+            if (addRepositories.get()) library.repositories.forEach { repo -> project.repositories.maven(repo) }
 
             // Add dependencies
             configurations.get().forEach { configuration ->

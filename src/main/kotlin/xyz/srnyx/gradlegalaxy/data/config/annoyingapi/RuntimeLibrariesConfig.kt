@@ -1,6 +1,6 @@
 package xyz.srnyx.gradlegalaxy.data.config.annoyingapi
 
-import xyz.srnyx.gradlegalaxy.extensions.RuntimeLibrariesExtension
+import xyz.srnyx.gradlegalaxy.extensions.minecraft.RuntimeLibrariesExtension
 
 
 /** Configuration for a set of runtime library dependencies */

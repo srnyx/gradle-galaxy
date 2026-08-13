@@ -1,6 +1,6 @@
 package xyz.srnyx.gradlegalaxy.data.config
 
-import xyz.srnyx.gradlegalaxy.extensions.MinecraftExtension
+import xyz.srnyx.gradlegalaxy.extensions.minecraft.MinecraftExtension
 
 
 /**

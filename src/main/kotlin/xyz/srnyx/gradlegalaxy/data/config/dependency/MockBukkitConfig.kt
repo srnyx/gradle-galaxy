@@ -1,6 +1,6 @@
 package xyz.srnyx.gradlegalaxy.data.config.dependency
 
-import xyz.srnyx.gradlegalaxy.extensions.MockBukkitExtension
+import xyz.srnyx.gradlegalaxy.extensions.testing.MockBukkitExtension
 
 
 /** Configuration for `galaxy { mockBukkit { } }` */

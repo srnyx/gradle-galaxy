@@ -26,8 +26,8 @@ data class PublishingPlatformConfig(
         minecraftVersionStart.set(config.minecraftVersionStart)
         minecraftVersionEnd.set(config.minecraftVersionEnd)
         loaders.set(config.loaders)
-        addAnnoyingApiDependency.set(config.addAnnoyingApiDependency)
         dryRun.set(config.dryRun)
+        dependency.addAnnoyingApiDependency.set(config.addAnnoyingApiDependency)
 
         modPublishPlugin(action)
         config.platforms[PluginPlatform.MODRINTH]?.let { modrinth(it, modrinthAction) }
