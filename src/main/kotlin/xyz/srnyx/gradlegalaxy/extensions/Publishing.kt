@@ -4,6 +4,7 @@ import io.papermc.hangarpublishplugin.HangarPublishExtension
 import io.papermc.hangarpublishplugin.model.HangarPublication
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonArray
@@ -35,7 +36,6 @@ import xyz.srnyx.gradlegalaxy.data.config.publishing.TextArtifact
 import xyz.srnyx.gradlegalaxy.data.pom.DeveloperData
 import xyz.srnyx.gradlegalaxy.data.pom.LicenseData
 import xyz.srnyx.gradlegalaxy.data.pom.ScmData
-import xyz.srnyx.gradlegalaxy.enums.Loader
 import xyz.srnyx.gradlegalaxy.enums.PluginPlatform
 import xyz.srnyx.gradlegalaxy.enums.ReleaseChannel
 import xyz.srnyx.gradlegalaxy.utility.SemanticVersion
@@ -48,10 +48,13 @@ import xyz.srnyx.gradlegalaxy.utility.hasModPublishPlugin
 import xyz.srnyx.gradlegalaxy.utility.hasShadowPlugin
 import xyz.srnyx.gradlegalaxy.utility.inGitHubPreRelease
 import xyz.srnyx.gradlegalaxy.utility.inGitHubPublish
+import xyz.srnyx.gradlegalaxy.utility.inGitHubRelease
 import xyz.srnyx.gradlegalaxy.utility.inGitHubWorkflow
 import xyz.srnyx.gradlegalaxy.utility.retrieveHangarPlatformVersions
 import xyz.srnyx.gradlegalaxy.utility.silenceMissingJavaDocWarnings
 import java.io.File
+import java.net.HttpURLConnection
+import java.net.URL
 import javax.inject.Inject
 
 
@@ -234,11 +237,25 @@ abstract class PublishingEnvExtension @Inject constructor(
 class PublishingPlatformExtension(
    objects: ObjectFactory
 ) {
-    val FOLIA = Loader.FOLIA
-    val PURPUR = Loader.PURPUR
-    val PAPER = Loader.PAPER
-    val SPIGOT = Loader.SPIGOT
-    val BUKKIT = Loader.BUKKIT
+    val FOLIA = "folia"
+    val PURPUR = "purpur"
+    val PAPER = "paper"
+    val SPIGOT = "spigot"
+    val BUKKIT = "bukkit"
+    val FABRIC = "fabric"
+    val QUILT = "quilt"
+    val FORGE = "forge"
+    val NEOFORGE = "neoforge"
+
+    /**
+     * Local, gradle-galaxy-side tier -> concrete-loaders expansion,
+     * used only to compute *this release's* `mod-publish-plugin` loaders list.
+     */
+    private val tierExpansions: Map<String, List<String>> = mapOf(
+        BUKKIT to listOf(SPIGOT, PAPER, PURPUR),
+        SPIGOT to listOf(PAPER, PURPUR),
+        PAPER to listOf(PURPUR),
+        FABRIC to listOf(QUILT))
 
     @get:Input
     val platforms: MapProperty<PluginPlatform, String> = objects.mapProperty(PluginPlatform::class.java, String::class.java)
@@ -246,20 +263,44 @@ class PublishingPlatformExtension(
     val minecraftVersionStart: Property<String> = objects.property(String::class.java).convention("1.8.8")
     @get:Input @get:Optional
     val minecraftVersionEnd: Property<String> = objects.property(String::class.java)
+    /**
+     * The API tier(s) this plugin is compiled against (e.g. [SPIGOT]) — auto-expands to every loader built on
+     * top of that tier (see [tierExpansions]/[computeLoaders]).
+     * [FOLIA] and [QUILT] need to be explicitly added via [extraLoaders].
+     */
     @get:Input
-    val apiCompatibility: ListProperty<Loader> = objects.listProperty(Loader::class.java).convention(listOf(SPIGOT))
+    val apiTiers: ListProperty<String> = objects.listProperty(String::class.java).convention(listOf(SPIGOT))
+    /**
+     * Loaders to strip out of the tier-expanded set, for a project that's compatible with a tier in general but
+     * not one specific descendant of it (e.g. `apiTiers(PAPER); excludeLoaders(PURPUR)`)
+     */
+    @get:Input
+    val excludeLoaders: ListProperty<String> = objects.listProperty(String::class.java).convention(emptyList())
+    /**
+     * Loaders to add on top of the tier-expanded set that aren't implied by any tier — e.g. [FOLIA]
+     */
+    @get:Input
+    val extraLoaders: ListProperty<String> = objects.listProperty(String::class.java).convention(emptyList())
     @get:Input
     val addResourceFile: Property<Boolean> = objects.property(Boolean::class.java).convention(true)
     @get:Input
     val dryRun: Property<Boolean> = objects.property(Boolean::class.java).convention(false)
 
-    var dependency: PublishingPlatformsDependencyExtension = objects.newInstance(PublishingPlatformsDependencyExtension::class.java)
+    val dependency: PublishingPlatformsDependencyExtension = objects.newInstance(PublishingPlatformsDependencyExtension::class.java)
+    val projectData: PublishingPlatformsProjectDataExtension = objects.newInstance(PublishingPlatformsProjectDataExtension::class.java, this)
+
     var modPublishPlugin: (ModPublishExtension.() -> Unit)? = null
     var modrinth: (Modrinth.() -> Unit)? = null
     var curseforge: (Curseforge.() -> Unit)? = null
     val hangar: HangarExtension = HangarExtension()
 
+
     fun dependency(action: PublishingPlatformsDependencyExtension.() -> Unit) = dependency.action()
+    @Used
+    fun projectData(id: String, action: PublishingPlatformsProjectDataExtension.() -> Unit = {}) {
+        projectData.id = id
+        projectData.action()
+    }
 
     fun modPublishPlugin(action: ModPublishExtension.() -> Unit) {
         val before = modPublishPlugin
@@ -302,23 +343,35 @@ class PublishingPlatformExtension(
 
     fun manual(manual: String) = platform(PluginPlatform.MANUAL, manual)
 
+    /**
+     * The effective, concrete loaders list for this project: every [apiTiers] entry expanded via
+     * [tierExpansions] (an unrecognized tier just passes through as its own loader), plus [extraLoaders],
+     * minus [excludeLoaders]. Used for the real `mod-publish-plugin` publish; [ProjectData] pushes the raw
+     * [apiTiers]/[excludeLoaders]/[extraLoaders] instead of this, so `projects/data` can be expanded centrally.
+     */
+    internal fun computeLoaders(): List<String> {
+        val apiTiers = apiTiers.get()
+        val excluded = excludeLoaders.get().toSet()
+        return (apiTiers + apiTiers.flatMap { tierExpansions[it].orEmpty() } + extraLoaders.get())
+            .distinct()
+            .filterNot(excluded::contains)
+    }
+
     internal fun setup(project: Project) {
         if (platforms.orNull?.isEmpty() == true) return
 
         // Add resource file task
         if (addResourceFile.get()) project.addPlatformsResourceFileTask(platforms.get())
 
-        // Setup publishing
         if (!project.hasModPublishPlugin()) return
-        check(project.hasModPublishPlugin()) { "Mod Publish plugin is not applied!" }
+
+        // Setup project data publishing
+        projectData.setup(project)
 
         // Identifiers
         val modrinthIdentifier = platforms.get()[PluginPlatform.MODRINTH]
         val curseForgeIdentifier = platforms.get()[PluginPlatform.CURSEFORGE]
         val hangarIdentifier = platforms.get()[PluginPlatform.HANGAR]
-
-        // Loaders
-        val loaders: List<Loader> = Loader.getSupportedLoaders(apiCompatibility.get())
 
         // Release channel
         val releaseChannel: ReleaseChannel = when {
@@ -359,7 +412,7 @@ class PublishingPlatformExtension(
         // Setup publishing
         project.extensions.configure<ModPublishExtension>("publishMods") {
             dryRun.set(this@PublishingPlatformExtension.dryRun)
-            modLoaders.set(loaders.map(Loader::getModPublishPluginName))
+            modLoaders.set(computeLoaders())
             type.set(releaseChannel.mpp)
             changelog.set(changelogText)
 
@@ -569,29 +622,67 @@ abstract class PublishingPlatformsProjectDataExtension @Inject constructor(
     private val publishingPlatforms: PublishingPlatformExtension,
     objects: ObjectFactory,
 ) {
+    lateinit var id: String
+
     @get:Input
     val url: Property<String> = objects.property(String::class.java).convention("https://srnyx.com/projects/data")
     @get:Input
     val token: Property<String> = objects.property(String::class.java).convention(getEnvironmentVariable("PUBLISHING_PROJECT_DATA_TOKEN"))
-    @get:Input
-    val id: Property<String> = objects.property(String::class.java)
 
     fun setup(project: Project) {
-        if (token.orNull == null || id.orNull == null) return
+        if (token.orNull == null) return
+
+        val minecraftVersions = when {
+            publishingPlatforms.minecraftVersionStart.isPresent && publishingPlatforms.minecraftVersionEnd.isPresent ->
+                "${publishingPlatforms.minecraftVersionStart.get()}-${publishingPlatforms.minecraftVersionEnd.get()}"
+            publishingPlatforms.minecraftVersionStart.isPresent -> "${publishingPlatforms.minecraftVersionStart.get()}+"
+            publishingPlatforms.minecraftVersionEnd.isPresent -> "${publishingPlatforms.minecraftVersionEnd.get()}-"
+            else -> throw IllegalArgumentException("Must specify at least one of minecraftVersionStart or minecraftVersionEnd")
+        }
 
         val data = ProjectData(
             platforms = publishingPlatforms.platforms.get(),
-            apiCompatibility = publishingPlatforms.apiCompatibility.get(),
-            minecraftVersions = publishingPlatforms.minecraftVersionEnd.orNull?.let { listOf(it) } ?: publishingPlatforms.minecraftVersionStart.get().split("-").map { it.trim() },
-        )
+            apiTiers = publishingPlatforms.apiTiers.get(),
+            excludeLoaders = publishingPlatforms.excludeLoaders.get(),
+            extraLoaders = publishingPlatforms.extraLoaders.get(),
+            minecraftVersions = listOf(minecraftVersions))
+
+        val publishProjectData = project.tasks.register("publishProjectData") {
+            group = "publishing"
+            description = "Publishes the project data to ${url.get()}"
+
+            doLast {
+                val jsonData = Json.encodeToString(ProjectData.serializer(), data)
+                val connection = URL(url.get()).openConnection() as HttpURLConnection
+                connection.requestMethod = "POST"
+                connection.setRequestProperty("Content-Type", "application/json")
+                connection.setRequestProperty("Authorization", "Bearer ${token.get()}")
+                connection.doOutput = true
+
+                connection.outputStream.use { os ->
+                    os.write(jsonData.toByteArray())
+                    os.flush()
+                }
+
+                if (connection.responseCode != 200) throw RuntimeException("Failed to publish project data: ${connection.responseMessage}")
+            }
+        }
+
+        // Only publish project data if running in a GitHub Release
+        if (inGitHubRelease) project.tasks.named("publishMods") { finalizedBy(publishProjectData) }
     }
 }
 
 @Serializable
 data class ProjectData(
+    @SerialName("platforms")
     val platforms: Map<PluginPlatform, String>,
-    @SerialName("api-compatibility")
-    val apiCompatibility: List<Loader>,
+    @SerialName("api-tiers")
+    val apiTiers: List<String>,
+    @SerialName("exclude-loaders")
+    val excludeLoaders: List<String>,
+    @SerialName("extra-loaders")
+    val extraLoaders: List<String>,
     /**
      * Supports `1.8.8+` (greater than or equal), `1.21.11-` (less than or equal), `1.13-1.21.11` (range)
      */

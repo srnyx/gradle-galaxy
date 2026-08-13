@@ -25,7 +25,8 @@ data class PublishingPlatformConfig(
 
         minecraftVersionStart.set(config.minecraftVersionStart)
         minecraftVersionEnd.set(config.minecraftVersionEnd)
-        loaders.set(config.loaders)
+        apiTiers.set(emptyList())
+        extraLoaders.set(config.loaders)
         dryRun.set(config.dryRun)
         dependency.addAnnoyingApiDependency.set(config.addAnnoyingApiDependency)
 
