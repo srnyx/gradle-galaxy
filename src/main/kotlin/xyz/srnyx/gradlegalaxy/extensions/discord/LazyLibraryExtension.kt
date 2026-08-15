@@ -1,6 +1,7 @@
 package xyz.srnyx.gradlegalaxy.extensions.discord
 
 import org.gradle.api.Project
+import org.gradle.api.model.ObjectFactory
 import xyz.srnyx.gradlegalaxy.extensions.DependencyExtension
 import xyz.srnyx.gradlegalaxy.extensions.Repositories.Companion.REPOSITORIES
 import xyz.srnyx.gradlegalaxy.extensions.JavaExtension
@@ -12,7 +13,9 @@ import javax.inject.Inject
 abstract class LazyLibraryExtension @Inject internal constructor(
     private val project: Project,
     private val java: JavaExtension,
+    objects: ObjectFactory,
 ) : DependencyExtension(
+    objects,
     repositories = listOf(REPOSITORIES.SRNYX_SNAPSHOTS, REPOSITORIES.SRNYX_RELEASES),
     group = "xyz.srnyx",
     name = "lazy-library",

@@ -1,5 +1,6 @@
 package xyz.srnyx.gradlegalaxy.extensions.minecraft
 
+import org.gradle.api.JavaVersion
 import org.gradle.api.Project
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Property
@@ -9,8 +10,6 @@ import org.gradle.kotlin.dsl.maven
 import xyz.srnyx.gradlegalaxy.extensions.DependencyExtension
 import xyz.srnyx.gradlegalaxy.extensions.Repositories.Companion.REPOSITORIES
 import xyz.srnyx.gradlegalaxy.utility.SemanticVersion
-import xyz.srnyx.gradlegalaxy.utility.getJavaVersionForMC
-import xyz.srnyx.gradlegalaxy.utility.getVersionString
 import xyz.srnyx.gradlegalaxy.utility.setJavaVersion
 import javax.inject.Inject
 
@@ -18,6 +17,7 @@ import javax.inject.Inject
 abstract class SpigotApiExtension @Inject constructor(
     objects: ObjectFactory
 ) : DependencyExtension(
+    objects,
     repositories = listOf(REPOSITORIES.MAVEN_CENTRAL, REPOSITORIES.SPIGOT, REPOSITORIES.SPIGOT_SNAPSHOTS),
     group = "org.spigotmc",
     name = "spigot-api",
@@ -32,14 +32,14 @@ abstract class SpigotApiExtension @Inject constructor(
      * decided on afterward — see [xyz.srnyx.gradlegalaxy.extensions.DeferredActions].
      */
     internal fun setup(project: Project) {
-        if (setJavaVersion.get()) project.setJavaVersion(getJavaVersionForMC(version))
+        if (setJavaVersion.get()) project.setJavaVersion(getJavaVersionForMC(version.get()))
 
-        val semanticVersion = SemanticVersion(version)
+        val semanticVersion = SemanticVersion(version.get())
         if (semanticVersion.major <= 1 && semanticVersion.minor <= 15) project.repositories.maven(REPOSITORIES.SONATYPE_SNAPSHOTS_OLD)
     }
 
     override fun add(project: Project) {
-        version = getVersionString(version)
+        version.set(getVersionString(version.get()))
         super.add(project)
     }
 }
@@ -47,6 +47,7 @@ abstract class SpigotApiExtension @Inject constructor(
 abstract class SpigotNmsExtension @Inject constructor(
     objects: ObjectFactory
 ) : DependencyExtension(
+    objects,
     repositories = listOf(REPOSITORIES.MAVEN_CENTRAL, REPOSITORIES.SPIGOT, REPOSITORIES.SPIGOT_SNAPSHOTS),
     group = "org.spigotmc",
     name = "spigot",
@@ -56,12 +57,47 @@ abstract class SpigotNmsExtension @Inject constructor(
     val setJavaVersion: Property<Boolean> = objects.property(Boolean::class.java).convention(true)
 
     internal fun setup(project: Project) {
-        if (setJavaVersion.get()) project.setJavaVersion(getJavaVersionForMC(version))
+        if (setJavaVersion.get()) project.setJavaVersion(getJavaVersionForMC(version.get()))
         project.repositories.mavenLocal()
     }
 
     override fun add(project: Project) {
-        version = getVersionString(version)
+        version.set(getVersionString(version.get()))
         super.add(project)
     }
 }
+
+/**
+ * Returns the correct Java version that is required for the Minecraft version
+ * - 26.1+: Java 25
+ * - 1.20.5+: Java 21
+ * - 1.18+: Java 17
+ * - 1.17+: Java 16
+ * - Else: Java 8
+ *
+ * @param minecraftVersion The Minecraft version to get the Java version for
+ *
+ * @return The [JavaVersion] that is required for the Minecraft version
+ */
+fun getJavaVersionForMC(minecraftVersion: String): JavaVersion {
+    val version = SemanticVersion(minecraftVersion)
+    // 26.1+
+    if (version.major > 1) return JavaVersion.VERSION_25
+    // 1.20.5+
+    if (version.minor > 20 || (version.minor == 20 && version.patch >= 5)) return JavaVersion.VERSION_21
+    // 1.18+
+    if (version.minor >= 18) return JavaVersion.VERSION_17
+    // 1.17+
+    if (version.minor >= 17) return JavaVersion.VERSION_16
+    // Else
+    return JavaVersion.VERSION_1_8
+}
+
+/**
+ * Returns the version string with `-R0.1-SNAPSHOT` appended to it
+ *
+ * @param version The version to append to
+ *
+ * @return The version string with `-R0.1-SNAPSHOT` appended to it
+ */
+fun getVersionString(version: String): String = "${version}-R0.1-SNAPSHOT"

@@ -21,7 +21,7 @@ abstract class TestingExtension @Inject internal constructor(
     val mockBukkit = objects.newInstance(MockBukkitExtension::class.java)
 
     fun jUnit(version: String, action: JUnitExtension.() -> Unit = {}) {
-        jUnit.version = version
+        jUnit.version.set(version)
         jUnit.action()
         deferred.defer(Phase.WIRE) { jUnit.setup(project) }
         deferred.defer(Phase.FINALIZE) {
@@ -37,13 +37,16 @@ abstract class TestingExtension @Inject internal constructor(
     }
 
     fun mockBukkit(version: String, action: MockBukkitExtension.() -> Unit = {}) {
-        mockBukkit.version = version
+        mockBukkit.version.set(version)
         mockBukkit.action()
         deferred.defer(Phase.FINALIZE) { mockBukkit.add(project) }
     }
 }
 
-abstract class JUnitExtension @Inject constructor() : DependencyExtension(
+abstract class JUnitExtension @Inject constructor(
+    objects: ObjectFactory,
+) : DependencyExtension(
+    objects,
     repositories = listOf(REPOSITORIES.MAVEN_CENTRAL),
     group = "org.junit",
     name = "junit-bom",

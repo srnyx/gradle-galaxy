@@ -3,6 +3,9 @@ package xyz.srnyx.gradlegalaxy.extensions
 import org.gradle.api.Project
 import org.gradle.api.artifacts.ModuleDependency
 import org.gradle.api.artifacts.dsl.DependencyHandler
+import org.gradle.api.model.ObjectFactory
+import org.gradle.api.provider.Property
+import org.gradle.api.tasks.Input
 import org.gradle.kotlin.dsl.add
 import org.gradle.kotlin.dsl.maven
 import xyz.srnyx.gradlegalaxy.utility.hasJavaPlugin
@@ -14,6 +17,7 @@ import javax.inject.Inject
  * resolving `group`/`name` from the Minecraft version) before delegating to `super.add(project)`.
  */
 open class DependencyExtension @Inject constructor(
+    objects: ObjectFactory,
     var repositories: List<String>,
     var group: String,
     var name: String,
@@ -21,7 +25,8 @@ open class DependencyExtension @Inject constructor(
     /** Whether this dependency is a BOM/platform (e.g. `junit-bom`) — added via [DependencyHandler.platform] instead of as a regular library. */
     var platform: Boolean = false,
 ) {
-    lateinit var version: String
+    @get:Input
+    val version: Property<String> = objects.property(String::class.java)
     var action: ModuleDependency.() -> Unit = {}
 
     fun action(action: ModuleDependency.() -> Unit) {
@@ -33,14 +38,14 @@ open class DependencyExtension @Inject constructor(
     }
 
     internal open fun add(project: Project) {
-        check(::version.isInitialized) { "Dependency version is not configured!" }
+        check(version.isPresent) { "Dependency version is not configured!" }
         check(project.hasJavaPlugin()) { "Java plugin is not applied!" }
 
         // Repositories
         repositories.forEach { project.repositories.maven(it) }
 
         // Add dependency
-        val notation = "${group}:${name}:${version}"
+        val notation = "${group}:${name}:${version.get()}"
         configurations.forEach { configuration ->
             if (platform) {
                 val dependency = project.dependencies.platform(notation)

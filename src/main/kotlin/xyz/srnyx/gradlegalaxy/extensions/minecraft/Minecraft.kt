@@ -72,6 +72,13 @@ abstract class MinecraftExtension @Inject internal constructor(
         deferred.defer(Phase.FINALIZE) { annoyingAPI.add(project) }
     }
 
+    fun getMinecraftVersion(): String? = when {
+        paper.version.orNull != null -> paper.version.get()
+        spigotAPI.version.orNull != null -> spigotAPI.version.get()
+        spigotNMS.version.orNull != null -> spigotNMS.version.get()
+        else -> null
+    }
+
     /**
      * Idempotent: multiple `galaxy { }` entries (top-level `minecraft { }`, and any entry that bundles
      * minecraft setup in automatically, like `annoyingAPI { }`) may all call this. Only the first actually applies.

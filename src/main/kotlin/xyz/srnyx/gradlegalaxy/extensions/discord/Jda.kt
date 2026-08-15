@@ -20,6 +20,7 @@ abstract class JdaExtension @Inject constructor(
     objects: ObjectFactory,
     private val java: JavaExtension,
 ) : DependencyExtension(
+    objects,
     repositories = listOf(REPOSITORIES.MAVEN_CENTRAL),
     group = "net.dv8tion",
     name = "JDA",

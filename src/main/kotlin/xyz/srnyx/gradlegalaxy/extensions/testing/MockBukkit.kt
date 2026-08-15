@@ -13,6 +13,7 @@ import javax.inject.Inject
 abstract class MockBukkitExtension @Inject constructor(
     objects: ObjectFactory
 ) : DependencyExtension(
+    objects,
     repositories = listOf(REPOSITORIES.MAVEN_CENTRAL, REPOSITORIES.PAPER),
     group = "com.github.seeseemelk",
     name = "MockBukkit-v",

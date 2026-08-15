@@ -8,8 +8,6 @@ import org.gradle.api.tasks.Optional
 import xyz.srnyx.gradlegalaxy.enums.PaperVersion
 import xyz.srnyx.gradlegalaxy.extensions.DependencyExtension
 import xyz.srnyx.gradlegalaxy.extensions.Repositories.Companion.REPOSITORIES
-import xyz.srnyx.gradlegalaxy.utility.getJavaVersionForMC
-import xyz.srnyx.gradlegalaxy.utility.getVersionString
 import xyz.srnyx.gradlegalaxy.utility.setJavaVersion
 import javax.inject.Inject
 
@@ -17,6 +15,7 @@ import javax.inject.Inject
 abstract class PaperExtension @Inject constructor(
     objects: ObjectFactory
 ) : DependencyExtension(
+    objects,
     repositories = listOf(REPOSITORIES.MAVEN_CENTRAL, REPOSITORIES.SONATYPE_SNAPSHOTS_OLD, REPOSITORIES.PAPER),
     group = "io.papermc.paper",
     name = "paper-api",
@@ -29,14 +28,14 @@ abstract class PaperExtension @Inject constructor(
      * Runs in [xyz.srnyx.gradlegalaxy.extensions.Phase.WIRE] — see [SpigotApiExtension.setup]'s KDoc for why.
      */
     internal fun setup(project: Project) {
-        if (setJavaVersion.get()) project.setJavaVersion(getJavaVersionForMC(version))
+        if (setJavaVersion.get()) project.setJavaVersion(getJavaVersionForMC(version.get()))
     }
 
     override fun add(project: Project) {
-        val paperVersion = PaperVersion.parse(version)
+        val paperVersion = PaperVersion.parse(version.get())
         group = paperVersion.groupId
         name = paperVersion.artifactId
-        version = getVersionString(version)
+        version.set(getVersionString(version.get()))
 
         super.add(project)
     }

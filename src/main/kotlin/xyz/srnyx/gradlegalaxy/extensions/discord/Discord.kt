@@ -20,13 +20,13 @@ abstract class DiscordExtension @Inject internal constructor(
 
 
     fun jda(version: String, action: JdaExtension.() -> Unit = {}) {
-        jda.version = version
+        jda.version.set(version)
         jda.action()
         deferred.defer(Phase.WIRE) { jda.setup(project) }
         deferred.defer(Phase.FINALIZE) { jda.add(project) }
     }
     fun lazyLibrary(version: String, action: LazyLibraryExtension.() -> Unit = {}) {
-        lazyLibrary.version = version
+        lazyLibrary.version.set(version)
         lazyLibrary.action()
         deferred.defer(Phase.WIRE) { lazyLibrary.setup() }
         deferred.defer(Phase.FINALIZE) { lazyLibrary.add(project) }

@@ -428,7 +428,7 @@ fun Project.getAnnoyingApiMetadata(version: String): AnnoyingMetadata? {
 fun Project.generateAnnoyingApiRuntimeLibraryEnum(
     libraries: Collection<RuntimeLibrary>,
     generateRuntimeLibraryEnumConfig: GenerateRuntimeLibraryEnumConfig = GenerateRuntimeLibraryEnumConfig(),
-    annoyingMetadata: AnnoyingMetadata? = null, // Keep for backwards compatibility
+    @Used annoyingMetadata: AnnoyingMetadata? = null, // Keep for backwards compatibility
 ) {
     extensions.configure<GradleGalaxyExtension>("galaxy") {
         minecraft {

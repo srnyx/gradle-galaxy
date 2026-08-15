@@ -1,6 +1,5 @@
 package xyz.srnyx.gradlegalaxy.utility
 
-import org.gradle.api.JavaVersion
 import org.gradle.api.Project
 import org.gradle.api.artifacts.ExternalModuleDependency
 import org.gradle.api.artifacts.ModuleDependency
@@ -13,15 +12,11 @@ import xyz.srnyx.gradlegalaxy.data.config.dependency.SpigotConfig
 import xyz.srnyx.gradlegalaxy.extensions.GradleGalaxyExtension
 import xyz.srnyx.gradlegalaxy.extensions.Phase
 import xyz.srnyx.gradlegalaxy.extensions.Repositories
+import xyz.srnyx.gradlegalaxy.extensions.minecraft.MinecraftExtension
 
 
 /**
- * 1. Sets the Java version for the project depending on the version
- * 2. Adds the [Repositories.SONATYPE_SNAPSHOTS_OLD] repository if the version is 1.15 or below
- * 3. Adds the [Repositories.MAVEN_CENTRAL] and [Repositories.SPIGOT] repositories
- * 4. Adds the Spigot-API dependency (org.spigotmc:spigot-api:[getVersionString])
- *
- * @param config The configuration for the Spigot-API dependency
+ * @see MinecraftExtension.spigotAPI
  */
 @Deprecated("Use galaxy { minecraft { spigotAPI(version) { ... } } } instead")
 fun Project.spigotAPI(
@@ -41,10 +36,7 @@ fun Project.spigotAPI(
 }
 
 /**
- * 1. Adds the [Repositories.MAVEN_CENTRAL], maven local, and [Repositories.SPIGOT] repositories
- * 2. Adds the Spigot dependency (org.spigotmc:spigot:[getVersionString])
- *
- * @param config The configuration for the Spigot dependency
+ * @see MinecraftExtension.spigotNMS
  */
 @Deprecated("Use galaxy { minecraft { spigotNMS(version) { ... } } } instead")
 fun Project.spigotNMS(
@@ -101,7 +93,7 @@ fun Project.adventure(vararg dependencies: AdventureDependency, configurationAll
     }
 
     extensions.configure<GradleGalaxyExtension>("galaxy") {
-        deferred.defer(Phase.FINALIZE) { dependencies.forEach { it.toExtension().add(project) } }
+        deferred.defer(Phase.FINALIZE) { dependencies.forEach { it.toExtension(objects).add(project) } }
     }
 }
 
@@ -260,38 +252,3 @@ fun Project.dependencyRelocate(
     project.relocate(relocateFrom, relocateTo)
     return addDependencyTo(dependencies, configuration, dependency, configurationAction)
 }
-
-/**
- * Returns the correct Java version that is required for the Minecraft version
- * - 26.1+: Java 25
- * - 1.20.5+: Java 21
- * - 1.18+: Java 17
- * - 1.17+: Java 16
- * - Else: Java 8
- *
- * @param minecraftVersion The Minecraft version to get the Java version for
- *
- * @return The [JavaVersion] that is required for the Minecraft version
- */
-fun getJavaVersionForMC(minecraftVersion: String): JavaVersion {
-    val version = SemanticVersion(minecraftVersion)
-    // 26.1+
-    if (version.major > 1) return JavaVersion.VERSION_25
-    // 1.20.5+
-    if (version.minor > 20 || (version.minor == 20 && version.patch >= 5)) return JavaVersion.VERSION_21
-    // 1.18+
-    if (version.minor >= 18) return JavaVersion.VERSION_17
-    // 1.17+
-    if (version.minor >= 17) return JavaVersion.VERSION_16
-    // Else
-    return JavaVersion.VERSION_1_8
-}
-
-/**
- * Returns the version string with `-R0.1-SNAPSHOT` appended to it
- *
- * @param version The version to append to
- *
- * @return The version string with `-R0.1-SNAPSHOT` appended to it
- */
-fun getVersionString(version: String): String = "${version}-R0.1-SNAPSHOT"

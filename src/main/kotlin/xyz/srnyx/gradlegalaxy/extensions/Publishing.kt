@@ -38,6 +38,7 @@ import xyz.srnyx.gradlegalaxy.data.pom.LicenseData
 import xyz.srnyx.gradlegalaxy.data.pom.ScmData
 import xyz.srnyx.gradlegalaxy.enums.PluginPlatform
 import xyz.srnyx.gradlegalaxy.enums.ReleaseChannel
+import xyz.srnyx.gradlegalaxy.extensions.minecraft.MinecraftExtension
 import xyz.srnyx.gradlegalaxy.utility.SemanticVersion
 import xyz.srnyx.gradlegalaxy.utility.addJavadocSourcesJars
 import xyz.srnyx.gradlegalaxy.utility.addPlatformsResourceFileTask
@@ -61,6 +62,7 @@ import javax.inject.Inject
 abstract class PublishingExtension @Inject internal constructor(
     private val project: Project,
     private val deferred: DeferredActions,
+    private val minecraft: MinecraftExtension,
     objects: ObjectFactory
 ) {
     val simple = objects.newInstance(PublishingSimpleExtension::class.java)
@@ -77,7 +79,7 @@ abstract class PublishingExtension @Inject internal constructor(
     }
     fun platforms(action: PublishingPlatformExtension.() -> Unit = {}) {
         platforms.action()
-        deferred.defer(Phase.WIRE) { platforms.setup(project) }
+        deferred.defer(Phase.WIRE) { platforms.setup(project, minecraft) }
     }
 }
 
@@ -238,12 +240,18 @@ class PublishingPlatformExtension(
     project: Project,
     objects: ObjectFactory
 ) {
+    /**
+     * Needs explicit addition
+     */
     val FOLIA = "folia"
     val PURPUR = "purpur"
     val PAPER = "paper"
     val SPIGOT = "spigot"
     val BUKKIT = "bukkit"
     val FABRIC = "fabric"
+    /**
+     * Needs explicit addition
+     */
     val QUILT = "quilt"
     val FORGE = "forge"
     val NEOFORGE = "neoforge"
@@ -255,13 +263,15 @@ class PublishingPlatformExtension(
     private val tierExpansions: Map<String, List<String>> = mapOf(
         BUKKIT to listOf(SPIGOT, PAPER, PURPUR),
         SPIGOT to listOf(PAPER, PURPUR),
-        PAPER to listOf(PURPUR),
-        FABRIC to listOf(QUILT))
+        PAPER to listOf(PURPUR))
 
     @get:Input
     val platforms: MapProperty<PluginPlatform, String> = objects.mapProperty(PluginPlatform::class.java, String::class.java)
-    @get:Input //TODO convention: spigot/paper dependency minecraft version
-    val minecraftVersionStart: Property<String> = objects.property(String::class.java).convention("1.8.8")
+    /**
+     * Defaults to Paper/Spigot Minecraft version
+     */
+    @get:Input @get:Optional
+    val minecraftVersionStart: Property<String> = objects.property(String::class.java)
     @get:Input @get:Optional
     val minecraftVersionEnd: Property<String> = objects.property(String::class.java)
     /**
@@ -358,13 +368,19 @@ class PublishingPlatformExtension(
             .filterNot(excluded::contains)
     }
 
-    internal fun setup(project: Project) {
+    internal fun setup(
+        project: Project,
+        minecraft: MinecraftExtension,
+    ) {
         if (platforms.orNull?.isEmpty() == true) return
 
         // Add resource file task
         if (addResourceFile.get()) project.addPlatformsResourceFileTask(platforms.get())
 
         if (!project.hasModPublishPlugin()) return
+
+        // Default minecraftVersionStart to Paper/Spigot Minecraft version
+        if (minecraftVersionStart.orNull == null) minecraftVersionStart.set(minecraft.getMinecraftVersion())
 
         // Setup project data publishing
         projectData.setup(project)

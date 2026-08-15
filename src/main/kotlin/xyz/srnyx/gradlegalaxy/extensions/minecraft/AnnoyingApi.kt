@@ -41,6 +41,7 @@ abstract class AnnoyingApiExtension @Inject constructor(
     private val java: JavaExtension,
     private val minecraft: MinecraftExtension,
 ) : DependencyExtension(
+    objects,
     repositories = listOf(REPOSITORIES.SRNYX_SNAPSHOTS, REPOSITORIES.SRNYX_RELEASES),
     group = "xyz.srnyx",
     name = "annoying-api",
@@ -91,7 +92,7 @@ abstract class MetadataExtension @Inject constructor(
         annoyingApiDependency: DependencyExtension,
     ): AnnoyingMetadata? {
         // Get and process Annoying API metadata
-        val metadata = useMetadata.takeIf { it.get() }?.let { project.getAnnoyingApiMetadata(annoyingApiDependency.version) }
+        val metadata = useMetadata.takeIf { it.get() }?.let { project.getAnnoyingApiMetadata(annoyingApiDependency.version.get()) }
         if (metadata != null) {
             // Relocate Annoying API
             if (relocateAnnoyingAPI.get()) project.relocate(metadata.packageName)
