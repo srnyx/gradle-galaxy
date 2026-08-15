@@ -39,6 +39,7 @@ import xyz.srnyx.gradlegalaxy.data.pom.ScmData
 import xyz.srnyx.gradlegalaxy.enums.PluginPlatform
 import xyz.srnyx.gradlegalaxy.enums.ReleaseChannel
 import xyz.srnyx.gradlegalaxy.extensions.minecraft.MinecraftExtension
+import xyz.srnyx.gradlegalaxy.extensions.minecraft.PluginYmlExtension
 import xyz.srnyx.gradlegalaxy.utility.SemanticVersion
 import xyz.srnyx.gradlegalaxy.utility.addJavadocSourcesJars
 import xyz.srnyx.gradlegalaxy.utility.addPlatformsResourceFileTask
@@ -372,6 +373,10 @@ class PublishingPlatformExtension(
         project: Project,
         minecraft: MinecraftExtension,
     ) {
+        // Universal dependencies pluginYml
+        dependency.universalDependencies.orNull?.forEach { dependency -> dependency.addPluginYml(minecraft.pluginYml) }
+
+        // Don't do anything else if there aren't any platforms defined
         if (platforms.orNull?.isEmpty() == true) return
 
         // Add resource file task
@@ -472,11 +477,7 @@ class PublishingPlatformExtension(
                     if (dependency.addAnnoyingApiDependency.get()) embeds("annoying-api")
 
                     // Universal dependencies
-                    dependency.universalDependencies.orNull?.forEach { dependency ->
-                        dependency.modrinth.orNull?.let {
-                            if (dependency.required.get()) requires(it) else optional(it)
-                        }
-                    }
+                    dependency.universalDependencies.orNull?.forEach { dependency -> dependency.addModrinth(this) }
 
                     // Additional file types
                     javadocJarTask?.let { additionalFile(it.archiveFile) { type.set(JAVADOC_JAR) } }
@@ -501,11 +502,7 @@ class PublishingPlatformExtension(
                     if (dependency.addAnnoyingApiDependency.get()) embeds("annoying-api")
 
                     // Universal dependencies
-                    dependency.universalDependencies.orNull?.forEach { dependency ->
-                        dependency.curseforge.orNull?.let {
-                            if (dependency.required.get()) requires(it) else optional(it)
-                        }
-                    }
+                    dependency.universalDependencies.orNull?.forEach { dependency -> dependency.addCurseforge(this) }
 
                     projectId.set(curseForgeIdentifier)
                     this@PublishingPlatformExtension.curseforge?.invoke(this)
@@ -558,11 +555,7 @@ class PublishingPlatformExtension(
                     } }
 
                     // Universal dependencies (add to custom action)
-                    dependency.universalDependencies.orNull?.forEach { dependency ->
-                        dependency.hangar.orNull?.let {
-                            hangar.dependencies += HangarDependency(it, dependency.required.get())
-                        }
-                    }
+                    dependency.universalDependencies.orNull?.forEach { dependency -> dependency.addHangar(hangar) }
 
                     // Custom action
                     hangar.apply(this)
@@ -628,11 +621,34 @@ abstract class UniversalDependency @Inject constructor(
     @get:Input
     val required: Property<Boolean> = objects.property(Boolean::class.java)
     @get:Input @get:Optional
+    val pluginYml: Property<String> = objects.property(String::class.java)
+    @get:Input @get:Optional
     val modrinth: Property<String> = objects.property(String::class.java)
     @get:Input @get:Optional
     val curseforge: Property<String> = objects.property(String::class.java)
     @get:Input @get:Optional
     val hangar: Property<String> = objects.property(String::class.java)
+
+
+    internal fun addPluginYml(pluginYmlExtension: PluginYmlExtension) {
+        if (pluginYml.orNull == null) return
+        pluginYmlExtension.apply { (if (required.get()) depend else softDepend).add(pluginYml.get()) }
+    }
+
+    internal fun addModrinth(modrinthTask: Modrinth) {
+        if (modrinth.orNull == null) return
+        modrinthTask.apply { if (required.get()) requires(modrinth.get()) else optional(modrinth.get()) }
+    }
+
+    internal fun addCurseforge(curseforgeTask: Curseforge) {
+        if (curseforge.orNull == null) return
+        curseforgeTask.apply { if (required.get()) requires(curseforge.get()) else optional(curseforge.get()) }
+    }
+
+    internal fun addHangar(hangarExtension: HangarExtension) {
+        if (hangar.orNull == null) return
+        hangarExtension.dependencies += HangarDependency(hangar.get(), required.get())
+    }
 }
 
 abstract class PublishingPlatformsProjectDataExtension @Inject constructor(

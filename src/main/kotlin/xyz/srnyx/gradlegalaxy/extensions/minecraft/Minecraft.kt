@@ -27,6 +27,7 @@ abstract class MinecraftExtension @Inject internal constructor(
     var replacements: MapProperty<String, String> = objects.mapProperty(String::class.java, String::class.java).convention(mapOf("defaultReplacements" to "true"))
 
     // Project-wide setup
+    val pluginYml = objects.newInstance(PluginYmlExtension::class.java)
     val runPaper = RunPaperExtension(objects)
     val adventure = objects.newInstance(AdventureExtension::class.java, deferred)
     // Pure dependencies
@@ -40,33 +41,39 @@ abstract class MinecraftExtension @Inject internal constructor(
 
 
     @Used
+    fun pluginYml(action: PluginYmlExtension.() -> Unit) {
+        pluginYml.action()
+        deferred.defer(Phase.WIRE) { pluginYml.setup(project, this) }
+    }
+    @Used
     fun runPaper(action: RunPaperExtension.() -> Unit = {}) {
         runPaper.action()
         deferred.defer(Phase.WIRE) { runPaper.setup(project) }
     }
+    @Used
     fun adventure(action: AdventureExtension.() -> Unit) = adventure.action()
 
     fun spigotAPI(version: String, action: SpigotApiExtension.() -> Unit = {}) {
-        spigotAPI.version = version
+        spigotAPI.version.set(version)
         spigotAPI.action()
         deferred.defer(Phase.WIRE) { spigotAPI.setup(project) }
         deferred.defer(Phase.FINALIZE) { spigotAPI.add(project) }
     }
     fun spigotNMS(version: String, action: SpigotNmsExtension.() -> Unit = {}) {
-        spigotNMS.version = version
+        spigotNMS.version.set(version)
         spigotNMS.action()
         deferred.defer(Phase.WIRE) { spigotNMS.setup(project) }
         deferred.defer(Phase.FINALIZE) { spigotNMS.add(project) }
     }
     fun paper(version: String, action: PaperExtension.() -> Unit = {}) {
-        paper.version = version
+        paper.version.set(version)
         paper.action()
         deferred.defer(Phase.WIRE) { paper.setup(project) }
         deferred.defer(Phase.FINALIZE) { paper.add(project) }
     }
 
     fun annoyingAPI(version: String, action: AnnoyingApiExtension.() -> Unit = {}) {
-        annoyingAPI.version = version
+        annoyingAPI.version.set(version)
         annoyingAPI.action()
         deferred.defer(Phase.WIRE) { annoyingAPI.setup(project) }
         deferred.defer(Phase.FINALIZE) { annoyingAPI.add(project) }
