@@ -21,7 +21,6 @@ group = "xyz.srnyx"
 description = "A Gradle plugin to simplify the process of creating projects"
 val projectId: String = "gradle-galaxy"
 val vcs: String = "github.com/srnyx/$projectId"
-val includeJavadocsSources: Boolean = true
 val javaVersion = 17
 
 repositories {
@@ -53,21 +52,19 @@ tasks.withType<JavaCompile> {
 }
 
 // Add docs and sources jars
-if (includeJavadocsSources) {
-    tasks.register("javadocJar", Jar::class) {
-        group = "build"
-        description = "Assembles a jar archive containing the javadoc files"
-        val dokkaTask = tasks.getByName("dokkaHtml")
-        dependsOn(dokkaTask)
-        from(dokkaTask)
-        archiveClassifier.set("javadoc")
-    }
-    tasks.register("sourcesJar", Jar::class) {
-        group = "build"
-        description = "Assembles a jar archive containing the sources"
-        from(sourceSets["main"].allSource.srcDirs)
-        archiveClassifier.set("sources")
-    }
+tasks.register("javadocJar", Jar::class) {
+    group = "build"
+    description = "Assembles a jar archive containing the javadoc files"
+    val dokkaTask = tasks.getByName("dokkaHtml")
+    dependsOn(dokkaTask)
+    from(dokkaTask)
+    archiveClassifier.set("javadoc")
+}
+tasks.register("sourcesJar", Jar::class) {
+    group = "build"
+    description = "Assembles a jar archive containing the sources"
+    from(sourceSets["main"].allSource.srcDirs)
+    archiveClassifier.set("sources")
 }
 
 gradlePlugin {
