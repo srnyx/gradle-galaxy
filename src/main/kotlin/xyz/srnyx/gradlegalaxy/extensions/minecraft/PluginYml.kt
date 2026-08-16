@@ -1,7 +1,6 @@
 package xyz.srnyx.gradlegalaxy.extensions.minecraft
 
 import org.gradle.api.Project
-import org.gradle.api.file.RegularFile
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.MapProperty
@@ -120,22 +119,44 @@ abstract class PluginYmlExtension @Inject constructor(
         if (apiVersion.orNull == null) apiVersion.set(minecraft.getMinecraftVersion())
         if (foliaSupported.orNull == null) foliaSupported.set(minecraft.folia)
 
-        // main
-        val mainExtra = project.layout.projectDirectory.file("src/main/resources/plugin.yml")
-        val mainText = project.provider { buildPluginYmlText(name.get(), main.get()) }
-        project.tasks.named<ProcessResources>("processResources") {
-            inputs.property("pluginYmlText", mainText)
-            doLast { writePluginYml(destinationDir, mainText.get(), mainExtra) }
-        }
+        setupTask(project, "main", "processResources")
+        setupTask(project, "test", "processTestResources", "Mock")
+    }
 
-        // test
-        val testExtra = project.layout.projectDirectory.file("src/test/resources/plugin.yml")
-        val mockName = project.provider { "Mock${name.get()}" }
-        val mockMain = project.provider { main.get().let { "${it.substringBeforeLast('.')}.Mock${it.substringAfterLast('.')}" } }
-        val testText = project.provider { buildPluginYmlText(mockName.get(), mockMain.get()) }
-        project.tasks.named<ProcessResources>("processTestResources") {
-            inputs.property("pluginYmlText", testText)
-            doLast { writePluginYml(destinationDir, testText.get(), testExtra) }
+    internal fun setupTask(
+        project: Project,
+        module: String,
+        processTask: String,
+        prefixName: String = "",
+    ) {
+        val moduleCapital = module.replaceFirstChar { it.uppercase() }
+
+        // Add prefix to name and main class name
+        val nameValue: String = prefixName + name.get()
+        var mainValue: String = main.get()
+        if (prefixName.isNotBlank()) mainValue = "${mainValue.substringBeforeLast(".")}.${prefixName}${mainValue.substringAfterLast(".")}"
+
+        // Setup
+        val extra = project.layout.projectDirectory.file("src/$module/resources/plugin.yml")
+        val text = project.provider { buildPluginYmlText(nameValue, mainValue) }
+        val generated = project.layout.buildDirectory.dir("generated/pluginYml/$module")
+        val generatePluginYml = project.tasks.register("generate${moduleCapital}PluginYml") {
+            val output = generated.map { it.file("plugin.yml") }
+            outputs.file(output)
+            inputs.property("pluginYmlText", text)
+            inputs.files(extra).optional(true)
+            doLast {
+                val output = File(output.get().asFile.parentFile, "plugin.yml")
+                output.parentFile.mkdirs()
+
+                val existing = extra.asFile.takeIf(File::exists)?.readText()
+                output.writeText(text.get() + if (existing != null) "\n$existing" else "")
+            }
+        }
+        project.tasks.named<ProcessResources>(processTask) {
+            dependsOn(generatePluginYml)
+            exclude { it.file == extra.asFile }
+            from(generated)
         }
     }
 
@@ -206,17 +227,6 @@ abstract class PluginYmlExtension @Inject constructor(
                 }
             }
         }
-    }
-
-    /**
-     * Writes the generated [text] to `plugin.yml` in [destinationDir], appending [extra]'s contents (if it exists) as extra fields
-     */
-    private fun writePluginYml(destinationDir: File, text: String, extra: RegularFile) {
-        val output = File(destinationDir, "plugin.yml")
-        output.parentFile.mkdirs()
-
-        val existing = extra.asFile.takeIf(File::exists)?.readText()
-        output.writeText(text + if (existing != null) "\n$existing" else "")
     }
 
     /**
