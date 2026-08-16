@@ -33,7 +33,7 @@ open class DependencyExtension @Inject constructor(
     val configurations: ListProperty<String> = objects.listProperty(String::class.java).convention(listOf("compileOnly", "testImplementation"))
     /**
      * Whether this dependency is a BOM/platform (e.g. `junit-bom`) — added via [DependencyHandler.platform] instead of as a regular library
-     * */
+     */
     @get:Input
     val platform: Property<Boolean> = objects.property(Boolean::class.java).convention(false)
     var action: ModuleDependency.() -> Unit = {}

@@ -370,7 +370,7 @@ interface GenerateRuntimeLibraryEnumExtension {
         }
 
         // Register task to generate Enum file
-        val outputDir = project.layout.buildDirectory.dir("generated/sources/gradle-galaxy/main/java")
+        val outputDir = project.layout.buildDirectory.dir("generated/sources/galaxy/main/java")
         val outputFile = outputDir.map { it.file("$packageFolder/library/$enumName.java") }
         val generateEnumTask = project.tasks.register("generateRuntimeLibrary") {
             group = "galaxy"

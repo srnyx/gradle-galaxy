@@ -1,11 +1,13 @@
 package xyz.srnyx.gradlegalaxy.extensions.minecraft
 
 import org.gradle.api.Project
+import org.gradle.api.file.RegularFile
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Optional
+import org.gradle.kotlin.dsl.named
 import org.gradle.language.jvm.tasks.ProcessResources
 import org.gradle.util.internal.VersionNumber
 import xyz.srnyx.gradlegalaxy.annotations.Used
@@ -76,53 +78,72 @@ abstract class PluginYmlExtension @Inject constructor(
         if (apiVersion.orNull == null) apiVersion.set(minecraft.getMinecraftVersion())
         if (foliaSupported.orNull == null) foliaSupported.set(minecraft.folia)
 
-        val pluginYml = project.layout.projectDirectory.file("src/main/resources/plugin.yml")
-        val textProvider = project.provider { buildString {
-            appendLine("name: ${name.get()}")
-            appendLine("version: ${version.get()}")
-            appendLine("description: ${description.get()}")
-            appendLine("main: ${main.get()}")
-            apiVersion.orNull?.let { appendLine("api-version: ${normalizeApiVersion(it)}") }
-            authors.orNull?.takeIf(List<String>::isNotEmpty)?.let { authors ->
-                appendLine("authors:")
-                authors.forEach { author -> appendLine("  - $author") }
-            }
-            contributors.orNull?.takeIf(List<String>::isNotEmpty)?.let { contributors ->
-                appendLine("contributors:")
-                contributors.forEach { contributor -> appendLine("  - $contributor") }
-            }
-            website.orNull?.takeIf(String::isNotBlank)?.let { website -> appendLine("website: $website") }
-            foliaSupported.orNull?.takeIf { it }?.let { appendLine("folia-supported: true") }
-            load.orNull?.takeIf(String::isNotBlank)?.let { appendLine("load: $it") }
-            depend.orNull?.takeIf(List<String>::isNotEmpty)?.let { depend ->
-                appendLine("depend:")
-                depend.forEach { dependency -> appendLine("  - $dependency") }
-            }
-            softDepend.orNull?.takeIf(List<String>::isNotEmpty)?.let { softDepend ->
-                appendLine("softdepend:")
-                softDepend.forEach { softDependency -> appendLine("  - $softDependency") }
-            }
-            loadBefore.orNull?.takeIf(List<String>::isNotEmpty)?.let { loadBefore ->
-                appendLine("loadbefore:")
-                loadBefore.forEach { loadBefore -> appendLine("  - $loadBefore") }
-            }
-            provides.orNull?.takeIf(List<String>::isNotEmpty)?.let { provides ->
-                appendLine("provides:")
-                provides.forEach { provide -> appendLine("  - $provide") }
-            }
-        } }
-
-        project.tasks.withType(ProcessResources::class.java).configureEach {
-            inputs.property("pluginYmlText", textProvider)
-
-            doLast {
-                val output = File(destinationDir, "plugin.yml")
-                output.parentFile.mkdirs()
-
-                val existing = pluginYml.asFile.takeIf(File::exists)?.readText()
-                output.writeText(textProvider.get() + if (existing != null) "\n$existing" else "")
-            }
+        // main
+        val mainExtra = project.layout.projectDirectory.file("src/main/resources/plugin.yml")
+        val mainText = project.provider { buildPluginYmlText(name.get(), main.get()) }
+        project.tasks.named<ProcessResources>("processResources") {
+            inputs.property("pluginYmlText", mainText)
+            doLast { writePluginYml(destinationDir, mainText.get(), mainExtra) }
         }
+
+        // test
+        val testExtra = project.layout.projectDirectory.file("src/test/resources/plugin.yml")
+        val mockName = project.provider { "Mock${name.get()}" }
+        val mockMain = project.provider { main.get().let { "${it.substringBeforeLast('.')}.Mock${it.substringAfterLast('.')}" } }
+        val testText = project.provider { buildPluginYmlText(mockName.get(), mockMain.get()) }
+        project.tasks.named<ProcessResources>("processTestResources") {
+            inputs.property("pluginYmlText", testText)
+            doLast { writePluginYml(destinationDir, testText.get(), testExtra) }
+        }
+    }
+
+    /**
+     * Builds the `plugin.yml` text, using [nameValue]/[mainValue] instead of [name]/[main] so the `Mock`-prefixed test variant can reuse it
+     */
+    private fun buildPluginYmlText(nameValue: String, mainValue: String): String = buildString {
+        appendLine("name: $nameValue")
+        appendLine("version: ${version.get()}")
+        appendLine("description: ${description.get()}")
+        appendLine("main: $mainValue")
+        apiVersion.orNull?.let { appendLine("api-version: ${normalizeApiVersion(it)}") }
+        authors.orNull?.takeIf(List<String>::isNotEmpty)?.let { authors ->
+            appendLine("authors:")
+            authors.forEach { author -> appendLine("  - $author") }
+        }
+        contributors.orNull?.takeIf(List<String>::isNotEmpty)?.let { contributors ->
+            appendLine("contributors:")
+            contributors.forEach { contributor -> appendLine("  - $contributor") }
+        }
+        website.orNull?.takeIf(String::isNotBlank)?.let { website -> appendLine("website: $website") }
+        foliaSupported.orNull?.takeIf { it }?.let { appendLine("folia-supported: true") }
+        load.orNull?.takeIf(String::isNotBlank)?.let { appendLine("load: $it") }
+        depend.orNull?.takeIf(List<String>::isNotEmpty)?.let { depend ->
+            appendLine("depend:")
+            depend.forEach { dependency -> appendLine("  - $dependency") }
+        }
+        softDepend.orNull?.takeIf(List<String>::isNotEmpty)?.let { softDepend ->
+            appendLine("softdepend:")
+            softDepend.forEach { softDependency -> appendLine("  - $softDependency") }
+        }
+        loadBefore.orNull?.takeIf(List<String>::isNotEmpty)?.let { loadBefore ->
+            appendLine("loadbefore:")
+            loadBefore.forEach { loadBefore -> appendLine("  - $loadBefore") }
+        }
+        provides.orNull?.takeIf(List<String>::isNotEmpty)?.let { provides ->
+            appendLine("provides:")
+            provides.forEach { provide -> appendLine("  - $provide") }
+        }
+    }
+
+    /**
+     * Writes the generated [text] to `plugin.yml` in [destinationDir], appending [extra]'s contents (if it exists) as extra fields
+     */
+    private fun writePluginYml(destinationDir: File, text: String, extra: RegularFile) {
+        val output = File(destinationDir, "plugin.yml")
+        output.parentFile.mkdirs()
+
+        val existing = extra.asFile.takeIf(File::exists)?.readText()
+        output.writeText(text + if (existing != null) "\n$existing" else "")
     }
 
     /**
