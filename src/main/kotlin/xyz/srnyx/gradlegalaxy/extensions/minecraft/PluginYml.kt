@@ -18,7 +18,7 @@ import javax.inject.Inject
 
 
 abstract class PluginYmlExtension @Inject constructor(
-    project: Project,
+    private val project: Project,
     private val objects: ObjectFactory
 ) {
     @Used val STARTUP = "STARTUP"
@@ -91,12 +91,12 @@ abstract class PluginYmlExtension @Inject constructor(
     @get:Input @get:Optional
     val commands: MapProperty<String, Command> = objects.mapProperty(String::class.java, Command::class.java)
     @get:Input @get:Optional
-    val permissions: MapProperty<String, Permission> = objects.mapProperty(String::class.java, Permission::class.java)
+    val permissions: ListProperty<Permission> = objects.listProperty(Permission::class.java)
 
 
     @Used
     fun command(name: String, action: Command.() -> Unit = {}) {
-        val command: Command = objects.newInstance(Command::class.java)
+        val command: Command = objects.newInstance(Command::class.java, this)
         command.action()
         commands.put(name, command)
     }
@@ -104,8 +104,9 @@ abstract class PluginYmlExtension @Inject constructor(
     @Used
     fun permission(name: String, action: Permission.() -> Unit = {}) {
         val permission: Permission = objects.newInstance(Permission::class.java)
+        permission.permission.set(name)
         permission.action()
-        permissions.put(name, permission)
+        permissions.add(permission)
     }
 
     internal fun setup(
@@ -123,7 +124,7 @@ abstract class PluginYmlExtension @Inject constructor(
         setupTask(project, "test", "processTestResources", "Mock")
     }
 
-    internal fun setupTask(
+    private fun setupTask(
         project: Project,
         module: String,
         processTask: String,
@@ -134,17 +135,19 @@ abstract class PluginYmlExtension @Inject constructor(
         // Add prefix to name and main class name
         val nameValue: String = prefixName + name.get()
         var mainValue: String = main.get()
-        if (prefixName.isNotBlank()) mainValue = "${mainValue.substringBeforeLast(".")}.${prefixName}${mainValue.substringAfterLast(".")}"
+        if (prefixName.isNotBlank()) mainValue = "${mainValue.substringBeforeLast(".")}.$prefixName${mainValue.substringAfterLast(".")}"
 
         // Setup
         val extra = project.layout.projectDirectory.file("src/$module/resources/plugin.yml")
-        val text = project.provider { buildPluginYmlText(nameValue, mainValue) }
+        val textValue: String by lazy { buildText(nameValue, mainValue) }
+        val text = project.provider { textValue }
         val generated = project.layout.buildDirectory.dir("generated/pluginYml/$module")
         val generatePluginYml = project.tasks.register("generate${moduleCapital}PluginYml") {
             val output = generated.map { it.file("plugin.yml") }
             outputs.file(output)
             inputs.property("pluginYmlText", text)
             inputs.files(extra).optional(true)
+
             doLast {
                 val output = File(output.get().asFile.parentFile, "plugin.yml")
                 output.parentFile.mkdirs()
@@ -163,7 +166,7 @@ abstract class PluginYmlExtension @Inject constructor(
     /**
      * Builds the `plugin.yml` text, using [nameValue]/[mainValue] instead of [name]/[main] so the `Mock`-prefixed test variant can reuse it
      */
-    private fun buildPluginYmlText(nameValue: String, mainValue: String): String = buildString {
+    private fun buildText(nameValue: String, mainValue: String): String = buildString {
         appendLine("name: $nameValue")
         appendLine("version: ${version.get()}")
         appendLine("description: ${description.get()}")
@@ -211,14 +214,22 @@ abstract class PluginYmlExtension @Inject constructor(
                 }
                 command.description.orNull?.let { appendLine("    description: $it") }
                 command.usage.orNull?.let { appendLine("    usage: $it") }
-                command.permission.orNull?.let { appendLine("    permission: ${it.getPermission(this@PluginYmlExtension)}") }
+                command.permission.orNull?.let { appendLine("    permission: ${prefixPermission(it.permission.get())}") }
                 command.permissionMessage.orNull?.let { appendLine("    permission-message: $it") }
             }
         }
-        permissions.orNull?.takeIf(Map<String, Permission>::isNotEmpty)?.let { permissions ->
+        permissions.orNull?.takeIf(List<Permission>::isNotEmpty)?.let { permissions ->
             appendLine("permissions:")
-            permissions.forEach { (name, permission) ->
-                appendLine("  ${prefixPermission(name)}:")
+            val seen = mutableSetOf<String>()
+            permissions.forEach { permission ->
+                // Prevent duplicates
+                val name = prefixPermission(permission.permission.get())
+                if (!seen.add(name)) {
+                    project.logger.warn("[$nameValue] Duplicate permission '$name' found in plugin.yml, only keeping first")
+                    return@forEach
+                }
+
+                appendLine("  $name:")
                 permission.description.orNull?.let { appendLine("    description: $it") }
                 permission.default.orNull?.let { appendLine("    default: $it") }
                 permission.children.orNull?.takeIf(Map<String, Boolean>::isNotEmpty)?.let { children ->
@@ -234,16 +245,17 @@ abstract class PluginYmlExtension @Inject constructor(
      * - 1.13-1.20.4: MAJOR.MINOR
      * - 1.20.5+: MAJOR.MINOR.PATCH
      */
-    internal fun normalizeApiVersion(apiVersion: String) = when (val version = VersionNumber.parse(apiVersion)) {
+    private fun normalizeApiVersion(apiVersion: String) = when (val version = VersionNumber.parse(apiVersion)) {
         in VersionNumber.version(0, 0)..VersionNumber.parse("1.12.2") -> "1.13"
         in VersionNumber.version(1, 13)..VersionNumber.parse("1.20.4") -> "${version.major}.${version.minor}"
         else -> "${version.major}.${version.minor}.${version.patch}"
     }
 
-    internal fun prefixPermission(permission: String) = (if (permissionPrefix.orNull != null) "${permissionPrefix.get()}." else "") + permission
+    private fun prefixPermission(permission: String) = (if (permissionPrefix.orNull != null) "${permissionPrefix.get()}." else "") + permission
 }
 
 abstract class Command @Inject constructor(
+    private val pluginYml: PluginYmlExtension,
     private val objects: ObjectFactory,
 ) {
     @get:Input @get:Optional
@@ -253,30 +265,19 @@ abstract class Command @Inject constructor(
     @get:Input @get:Optional
     val usage: Property<String> = objects.property(String::class.java)
     @get:Input @get:Optional
-    val permission: Property<CommandPermission> = objects.property(CommandPermission::class.java)
+    val permission: Property<Permission> = objects.property(Permission::class.java)
     @get:Input @get:Optional
     val permissionMessage: Property<String> = objects.property(String::class.java)
 
 
     @Used
-    fun permission(permission: String, action: CommandPermission.() -> Unit = {}) {
-        val commandPermission: CommandPermission = objects.newInstance(CommandPermission::class.java)
-        commandPermission.permission.set(permission)
-        commandPermission.action()
-        this.permission.set(commandPermission)
+    fun permission(permission: String, action: Permission.() -> Unit = {}) {
+        val permissionBuilder: Permission = objects.newInstance(Permission::class.java)
+        permissionBuilder.permission.set(permission)
+        permissionBuilder.action()
+        this.permission.set(permissionBuilder)
+        pluginYml.permissions.add(permissionBuilder)
     }
-}
-
-abstract class CommandPermission @Inject constructor(
-    objects: ObjectFactory,
-) {
-    @get:Input
-    val prefix: Property<Boolean> = objects.property(Boolean::class.java).convention(true)
-    @get:Input
-    val permission: Property<String> = objects.property(String::class.java)
-
-
-    internal fun getPermission(pluginYmlExtension: PluginYmlExtension): String = pluginYmlExtension.prefixPermission(permission.get())
 }
 
 abstract class Permission @Inject constructor(
@@ -289,6 +290,8 @@ abstract class Permission @Inject constructor(
 
     @get:Input
     val prefix: Property<Boolean> = objects.property(Boolean::class.java).convention(true)
+    @get:Input
+    val permission: Property<String> = objects.property(String::class.java)
     @get:Input
     val description: Property<String> = objects.property(String::class.java)
     @get:Input
