@@ -6,7 +6,6 @@ import org.gradle.api.model.ObjectFactory
 import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
-import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Optional
 import org.gradle.kotlin.dsl.add
@@ -134,9 +133,10 @@ abstract class CustomRuntimeLibrariesExtension @Inject constructor(
 
     @Used
     fun library(name: String, action: RuntimeLibraryBuilder.() -> Unit) {
-        val builder = RuntimeLibraryBuilder(objects, name, libraries)
+        val builder = RuntimeLibraryBuilder(objects, name)
         builder.action()
         libraries.add(builder.build())
+        libraries.addAll(builder.children)
     }
     fun generateRuntimeLibraryEnum(action: GenerateRuntimeLibraryEnumExtension.() -> Unit) = generateRuntimeLibraryEnum.action()
 
@@ -162,8 +162,10 @@ abstract class CustomRuntimeLibrariesExtension @Inject constructor(
 class RuntimeLibraryBuilder internal constructor(
     private val objects: ObjectFactory,
     private val name: String,
-    private val existingLibraries: Provider<List<RuntimeLibrary>>,
 ) {
+    /** Nested [library] declarations, flattened in parent-before-descendant (pre-order) declaration order */
+    internal val children: MutableList<RuntimeLibrary> = mutableListOf()
+
     @get:Input
     val group: Property<String> = objects.property(String::class.java)
     @get:Input
@@ -182,6 +184,7 @@ class RuntimeLibraryBuilder internal constructor(
     @get:Input
     val relocations: ListProperty<Relocation> = objects.listProperty(Relocation::class.java).convention(emptyList())
 
+
     @Used
     fun exclude(group: String, module: String) {
         excludes.add(Exclude(group, module))
@@ -194,24 +197,24 @@ class RuntimeLibraryBuilder internal constructor(
     }
 
     /**
-     * Inherits [repositories], [group], [artifact], [version], and [excludes] from the already-declared
-     * library named [name] as conventions (anything set explicitly on this builder still wins), and adds
-     * [name] as a [dependencies] entry (toggle with `inherit(name) { dependency.set(false) }`).
+     * Declares a runtime library named [name] nested under this one — inherits [repositories], [group],
+     * [artifact], [version], [excludes], and [relocations] from this (enclosing) library as conventions
+     * (anything set explicitly on the nested builder still wins), and adds this library as a [dependencies]
+     * entry unless [dependency] is `false`.
      */
     @Used
-    fun inherit(name: String, action: InheritedLibrary.() -> Unit = {}) {
-        val parent = existingLibraries.get().firstOrNull { it.name == name }
-            ?: throw IllegalArgumentException("No runtime library named \"$name\" has been declared yet (it must be declared with library(\"$name\") { } before this one)")
-
-        repositories.convention(parent.repositories)
-        group.convention(parent.group)
-        artifact.convention(parent.artifact)
-        version.convention(parent.version)
-        excludes.convention(parent.excludes)
-
-        val inherited = objects.newInstance(InheritedLibrary::class.java)
-        inherited.action()
-        if (inherited.dependency.get()) dependencies.add(name)
+    fun library(name: String, dependency: Boolean = true, action: RuntimeLibraryBuilder.() -> Unit = {}) {
+        val builder = RuntimeLibraryBuilder(objects, name)
+        builder.repositories.convention(repositories)
+        builder.group.convention(group)
+        builder.artifact.convention(artifact)
+        builder.version.convention(version)
+        builder.excludes.convention(excludes)
+        builder.relocations.convention(relocations)
+        if (dependency) builder.dependencies.add(this.name)
+        builder.action()
+        children.add(builder.build())
+        children.addAll(builder.children)
     }
 
     internal fun build(): RuntimeLibrary = RuntimeLibrary(
@@ -224,12 +227,6 @@ class RuntimeLibraryBuilder internal constructor(
         relocations = relocations.get(),
         dependencies = dependencies.get()
     )
-}
-
-abstract class InheritedLibrary @Inject constructor(objects: ObjectFactory) {
-    /** Whether to add the inherited library as a [RuntimeLibraryBuilder.dependencies] entry. Default `true`. */
-    @get:Input
-    val dependency: Property<Boolean> = objects.property(Boolean::class.java).convention(true)
 }
 
 /** Processes a set of [RuntimeLibrary] dependencies: adds their repositories, dependencies, and relocations. */
