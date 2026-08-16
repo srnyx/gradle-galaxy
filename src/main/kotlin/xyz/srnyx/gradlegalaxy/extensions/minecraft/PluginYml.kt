@@ -4,6 +4,7 @@ import org.gradle.api.Project
 import org.gradle.api.file.RegularFile
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.ListProperty
+import org.gradle.api.provider.MapProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Optional
@@ -12,12 +13,14 @@ import org.gradle.language.jvm.tasks.ProcessResources
 import org.gradle.util.internal.VersionNumber
 import xyz.srnyx.gradlegalaxy.annotations.Used
 import xyz.srnyx.gradlegalaxy.utility.getPackage
+import xyz.srnyx.gradlegalaxy.utility.makePackageSafe
 import java.io.File
 import javax.inject.Inject
 
 
 abstract class PluginYmlExtension @Inject constructor(
-    objects: ObjectFactory
+    project: Project,
+    private val objects: ObjectFactory
 ) {
     @Used val STARTUP = "STARTUP"
     @Used val POSTWORLD = "POSTWORLD"
@@ -49,10 +52,16 @@ abstract class PluginYmlExtension @Inject constructor(
     val apiVersion: Property<String> = objects.property(String::class.java)
     @get:Input @get:Optional
     val authors: ListProperty<String> = objects.listProperty(String::class.java)
+    /**
+     * Paper-only
+     */
     @get:Input @get:Optional
     val contributors: ListProperty<String> = objects.listProperty(String::class.java)
     @get:Input @get:Optional
     val website: Property<String> = objects.property(String::class.java)
+    /**
+     * Folia-only
+     */
     @get:Input @get:Optional
     val foliaSupported: Property<Boolean> = objects.property(Boolean::class.java)
     @get:Input @get:Optional
@@ -63,9 +72,42 @@ abstract class PluginYmlExtension @Inject constructor(
     val softDepend: ListProperty<String> = objects.listProperty(String::class.java)
     @get:Input @get:Optional
     val loadBefore: ListProperty<String> = objects.listProperty(String::class.java)
+    /**
+     * Paper-only
+     */
     @get:Input @get:Optional
     val provides: ListProperty<String> = objects.listProperty(String::class.java)
+    @get:Input @get:Optional
+    val libraries: ListProperty<String> = objects.listProperty(String::class.java)
+    /**
+     * Paper-only
+     */
+    @get:Input @get:Optional
+    val defaultPermission: Property<String> = objects.property(String::class.java)
+    /**
+     * The prefix for permissions that have prefix enabled
+     */
+    @get:Input
+    val permissionPrefix: Property<String> = objects.property(String::class.java).convention(makePackageSafe(project.name) + ".")
+    @get:Input @get:Optional
+    val commands: MapProperty<String, Command> = objects.mapProperty(String::class.java, Command::class.java)
+    @get:Input @get:Optional
+    val permissions: MapProperty<String, Permission> = objects.mapProperty(String::class.java, Permission::class.java)
 
+
+    @Used
+    fun command(name: String, action: Command.() -> Unit = {}) {
+        val command: Command = objects.newInstance(Command::class.java)
+        command.action()
+        commands.put(name, command)
+    }
+
+    @Used
+    fun permission(name: String, action: Permission.() -> Unit = {}) {
+        val permission: Permission = objects.newInstance(Permission::class.java)
+        permission.action()
+        permissions.put(name, permission)
+    }
 
     internal fun setup(
         project: Project,
@@ -133,6 +175,37 @@ abstract class PluginYmlExtension @Inject constructor(
             appendLine("provides:")
             provides.forEach { provide -> appendLine("  - $provide") }
         }
+        libraries.orNull?.takeIf(List<String>::isNotEmpty)?.let { libraries ->
+            appendLine("libraries:")
+            libraries.forEach { library -> appendLine("  - $library") }
+        }
+        defaultPermission.orNull?.let { appendLine("default-permission: $it") }
+        commands.orNull?.takeIf(Map<String, Command>::isNotEmpty)?.let { commands ->
+            appendLine("commands:")
+            commands.forEach { (name, command) ->
+                appendLine("  $name:")
+                command.aliases.orNull?.takeIf(List<String>::isNotEmpty)?.let { aliases ->
+                    appendLine("    aliases:")
+                    aliases.forEach { alias -> appendLine("      - $alias") }
+                }
+                command.description.orNull?.let { appendLine("    description: $it") }
+                command.usage.orNull?.let { appendLine("    usage: $it") }
+                command.permission.orNull?.let { appendLine("    permission: ${it.getPermission(this@PluginYmlExtension)}") }
+                command.permissionMessage.orNull?.let { appendLine("    permission-message: $it") }
+            }
+        }
+        permissions.orNull?.takeIf(Map<String, Permission>::isNotEmpty)?.let { permissions ->
+            appendLine("permissions:")
+            permissions.forEach { (name, permission) ->
+                appendLine("  ${prefixPermission(name)}:")
+                permission.description.orNull?.let { appendLine("    description: $it") }
+                permission.default.orNull?.let { appendLine("    default: $it") }
+                permission.children.orNull?.takeIf(Map<String, Boolean>::isNotEmpty)?.let { children ->
+                    appendLine("    children:")
+                    children.forEach { (child, value) -> appendLine("      $child: $value") }
+                }
+            }
+        }
     }
 
     /**
@@ -156,4 +229,60 @@ abstract class PluginYmlExtension @Inject constructor(
         in VersionNumber.version(1, 13)..VersionNumber.parse("1.20.4") -> "${version.major}.${version.minor}"
         else -> "${version.major}.${version.minor}.${version.patch}"
     }
+
+    internal fun prefixPermission(permission: String) = (if (permissionPrefix.orNull != null) "${permissionPrefix.get()}." else "") + permission
+}
+
+abstract class Command @Inject constructor(
+    private val objects: ObjectFactory,
+) {
+    @get:Input @get:Optional
+    val aliases: ListProperty<String> = objects.listProperty(String::class.java)
+    @get:Input
+    val description: Property<String> = objects.property(String::class.java)
+    @get:Input @get:Optional
+    val usage: Property<String> = objects.property(String::class.java)
+    @get:Input @get:Optional
+    val permission: Property<CommandPermission> = objects.property(CommandPermission::class.java)
+    @get:Input @get:Optional
+    val permissionMessage: Property<String> = objects.property(String::class.java)
+
+
+    @Used
+    fun permission(permission: String, action: CommandPermission.() -> Unit = {}) {
+        val commandPermission: CommandPermission = objects.newInstance(CommandPermission::class.java)
+        commandPermission.permission.set(permission)
+        commandPermission.action()
+        this.permission.set(commandPermission)
+    }
+}
+
+abstract class CommandPermission @Inject constructor(
+    objects: ObjectFactory,
+) {
+    @get:Input
+    val prefix: Property<Boolean> = objects.property(Boolean::class.java).convention(true)
+    @get:Input
+    val permission: Property<String> = objects.property(String::class.java)
+
+
+    internal fun getPermission(pluginYmlExtension: PluginYmlExtension): String = pluginYmlExtension.prefixPermission(permission.get())
+}
+
+abstract class Permission @Inject constructor(
+    objects: ObjectFactory,
+) {
+    @Used val TRUE = "true"
+    @Used val FALSE = "false"
+    @Used val OP = "op"
+    @Used val NOT_OP = "not op"
+
+    @get:Input
+    val prefix: Property<Boolean> = objects.property(Boolean::class.java).convention(true)
+    @get:Input
+    val description: Property<String> = objects.property(String::class.java)
+    @get:Input
+    val default: Property<String> = objects.property(String::class.java)
+    @get:Input
+    val children: MapProperty<String, Boolean> = objects.mapProperty(String::class.java, Boolean::class.java)
 }
