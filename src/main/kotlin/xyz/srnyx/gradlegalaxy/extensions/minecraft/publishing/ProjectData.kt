@@ -49,24 +49,32 @@ abstract class PublishingPlatformsProjectDataExtension @Inject constructor(
             extraLoaders = platformPublishing.extraLoaders.get(),
             minecraftVersions = listOf(minecraftVersions))
 
+        val urlString = url.get()
+        val tokenString = token.get()
+        val jsonData = Json.encodeToString(ProjectData.serializer(), data)
+
         val publishProjectData = project.tasks.register("publishProjectData") {
             group = "galaxy"
-            description = "Publishes the project data to ${url.get()}"
+            description = "Publishes the project data to $urlString"
 
             doLast {
-                val jsonData = Json.encodeToString(ProjectData.serializer(), data)
-                val connection = URL(url.get()).openConnection() as HttpURLConnection
-                connection.requestMethod = "POST"
-                connection.setRequestProperty("Content-Type", "application/json")
-                connection.setRequestProperty("Authorization", "Bearer ${token.get()}")
-                connection.doOutput = true
+                try {
+                    val connection = URL(urlString).openConnection() as HttpURLConnection
+                    connection.requestMethod = "POST"
+                    connection.setRequestProperty("Content-Type", "application/json")
+                    connection.setRequestProperty("Authorization", "Bearer $tokenString")
+                    connection.doOutput = true
 
-                connection.outputStream.use { os ->
-                    os.write(jsonData.toByteArray())
-                    os.flush()
+                    connection.outputStream.use { os ->
+                        os.write(jsonData.toByteArray())
+                        os.flush()
+                    }
+
+                    val code = connection.responseCode
+                    if (code !in 200..299) logger.warn("Failed to publish project data: $code ${connection.responseMessage}")
+                } catch (e: Exception) {
+                    logger.warn("Failed to publish project data: ${e.message}")
                 }
-
-                if (connection.responseCode != 200) throw RuntimeException("Failed to publish project data: ${connection.responseMessage}")
             }
         }
 
