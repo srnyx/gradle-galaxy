@@ -28,7 +28,7 @@ abstract class PublishingPlatformsProjectDataExtension @Inject constructor(
     val token: Property<String> = objects.property(String::class.java).convention(project.getEnvironmentVariable("PUBLISHING_PROJECT_DATA_TOKEN"))
 
     fun setup(project: Project) {
-        if (token.orNull == null) return
+        if (!::id.isInitialized) return
 
         // Add ID to URL
         if (!url.get().endsWith("/")) url.set("${url.get()}/")
@@ -50,7 +50,7 @@ abstract class PublishingPlatformsProjectDataExtension @Inject constructor(
             minecraftVersions = listOf(minecraftVersions))
 
         val urlString = url.get()
-        val tokenString = token.get()
+        val tokenString = token.orNull
         val jsonData = Json.encodeToString(ProjectData.serializer(), data)
 
         val publishProjectData = project.tasks.register("publishProjectData") {
@@ -58,6 +58,12 @@ abstract class PublishingPlatformsProjectDataExtension @Inject constructor(
             description = "Publishes the project data to $urlString"
 
             doLast {
+                // Dry run (print to console)
+                if (tokenString == null) {
+                    logger.lifecycle("Dry run: $jsonData")
+                    return@doLast
+                }
+
                 try {
                     val connection = URL(urlString).openConnection() as HttpURLConnection
                     connection.requestMethod = "POST"
