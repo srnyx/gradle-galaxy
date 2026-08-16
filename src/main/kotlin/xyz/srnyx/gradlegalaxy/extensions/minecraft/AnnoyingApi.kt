@@ -40,12 +40,13 @@ abstract class AnnoyingApiExtension @Inject constructor(
     private val java: JavaExtension,
     private val minecraft: MinecraftExtension,
 ) : DependencyExtension(objects) {
-    init { apply {
+    init {
         repositories.set(listOf(REPOSITORIES.SRNYX_SNAPSHOTS, REPOSITORIES.SRNYX_RELEASES))
         group.set("xyz.srnyx")
         name.set("annoying-api")
         configurations.set(listOf("implementation", "testImplementation"))
-    } }
+    }
+
     val metadata = objects.newInstance(MetadataExtension::class.java)
     val customRuntimeLibraries = objects.newInstance(CustomRuntimeLibrariesExtension::class.java)
 
@@ -133,7 +134,7 @@ abstract class CustomRuntimeLibrariesExtension @Inject constructor(
 
     @Used
     fun library(name: String, action: RuntimeLibraryBuilder.() -> Unit) {
-        val builder = RuntimeLibraryBuilder(objects, name)
+        val builder = RuntimeLibraryBuilder(objects, this, name)
         builder.action()
         libraries.add(builder.build())
         libraries.addAll(builder.children)
@@ -161,6 +162,7 @@ abstract class CustomRuntimeLibrariesExtension @Inject constructor(
 
 class RuntimeLibraryBuilder internal constructor(
     private val objects: ObjectFactory,
+    private val customRuntimeLibraries: CustomRuntimeLibrariesExtension,
     private val name: String,
 ) {
     /** Nested [library] declarations, flattened in parent-before-descendant (pre-order) declaration order */
@@ -186,6 +188,14 @@ class RuntimeLibraryBuilder internal constructor(
 
 
     @Used
+    fun dependency(name: String, action: RuntimeLibraryBuilder.() -> Unit) {
+        val builder = RuntimeLibraryBuilder(objects, customRuntimeLibraries, name)
+        builder.action()
+        customRuntimeLibraries.libraries.add(builder.build())
+        dependencies.add(name)
+    }
+
+    @Used
     fun exclude(group: String, module: String) {
         excludes.add(Exclude(group, module))
     }
@@ -203,8 +213,8 @@ class RuntimeLibraryBuilder internal constructor(
      * entry unless [dependency] is `false`.
      */
     @Used
-    fun library(name: String, dependency: Boolean = true, action: RuntimeLibraryBuilder.() -> Unit = {}) {
-        val builder = RuntimeLibraryBuilder(objects, name)
+    fun library(name: String, dependency: Boolean = true, action: RuntimeLibraryBuilder.() -> Unit) {
+        val builder = RuntimeLibraryBuilder(objects, customRuntimeLibraries, name)
         builder.repositories.convention(repositories)
         builder.group.convention(group)
         builder.artifact.convention(artifact)
