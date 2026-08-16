@@ -1,11 +1,17 @@
 package xyz.srnyx.gradlegalaxy.extensions
 
+import com.github.jengelman.gradle.plugins.shadow.relocation.SimpleRelocator
+import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import org.gradle.api.Project
 import org.gradle.api.model.ObjectFactory
 import org.gradle.kotlin.dsl.maven
+import org.gradle.kotlin.dsl.named
 import xyz.srnyx.gradlegalaxy.extensions.discord.DiscordExtension
 import xyz.srnyx.gradlegalaxy.extensions.minecraft.MinecraftExtension
 import xyz.srnyx.gradlegalaxy.extensions.testing.TestingExtension
+import xyz.srnyx.gradlegalaxy.utility.getPackage
+import xyz.srnyx.gradlegalaxy.utility.hasShadowPlugin
+import xyz.srnyx.gradlegalaxy.utility.makePackageSafe
 import javax.inject.Inject
 
 
@@ -34,6 +40,16 @@ abstract class GradleGalaxyExtension @Inject constructor(
         configurations.set(listOf("implementation", "testImplementation"))
     }
 
+
+    fun getPackage() = project.getPackage()
+    fun relocate(
+        from: String,
+        to: String = "${getPackage()}.libs.${makePackageSafe(from.split(".").last())}",
+        action: SimpleRelocator.() -> Unit = {}
+    ) {
+        check(project.hasShadowPlugin()) { "Shadow plugin is not applied!" }
+        project.tasks.named<ShadowJar>("shadowJar") { relocate(from, to, action) }
+    }
 
     fun repository(action: RepositoryHolder.() -> Unit) = repository.action()
     fun java(action: JavaExtension.() -> Unit) {

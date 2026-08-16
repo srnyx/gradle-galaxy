@@ -365,8 +365,9 @@ fun Project.relocate(
     to: String = "${getPackage()}.libs.${makePackageSafe(from.split(".").last())}",
     action: SimpleRelocator.() -> Unit = {},
 ) {
-    check(hasShadowPlugin()) { "Shadow plugin is not applied!" }
-    tasks.named<ShadowJar>("shadowJar") { relocate(from, to, action) }
+    extensions.configure<GradleGalaxyExtension>("galaxy") {
+        relocate(from, to, action)
+    }
 }
 
 /**
