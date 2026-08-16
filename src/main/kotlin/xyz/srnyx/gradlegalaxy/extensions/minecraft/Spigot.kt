@@ -7,22 +7,22 @@ import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Optional
 import org.gradle.kotlin.dsl.maven
+import org.gradle.util.internal.VersionNumber
 import xyz.srnyx.gradlegalaxy.extensions.DependencyExtension
 import xyz.srnyx.gradlegalaxy.extensions.Repositories.Companion.REPOSITORIES
-import xyz.srnyx.gradlegalaxy.utility.SemanticVersion
 import xyz.srnyx.gradlegalaxy.utility.setJavaVersion
 import javax.inject.Inject
 
 
 abstract class SpigotApiExtension @Inject constructor(
     objects: ObjectFactory
-) : DependencyExtension(
-    objects,
-    repositories = listOf(REPOSITORIES.MAVEN_CENTRAL, REPOSITORIES.SPIGOT, REPOSITORIES.SPIGOT_SNAPSHOTS),
-    group = "org.spigotmc",
-    name = "spigot-api",
-    configurations = listOf("compileOnly", "testImplementation"),
-) {
+) : DependencyExtension(objects) {
+    init { apply {
+        repositories.set(listOf(REPOSITORIES.MAVEN_CENTRAL, REPOSITORIES.SPIGOT, REPOSITORIES.SPIGOT_SNAPSHOTS))
+        group.set("org.spigotmc")
+        name.set("spigot-api")
+        configurations.set(listOf("compileOnly", "testImplementation"))
+    } }
     @get:Input @get:Optional
     val setJavaVersion: Property<Boolean> = objects.property(Boolean::class.java).convention(true)
 
@@ -34,7 +34,7 @@ abstract class SpigotApiExtension @Inject constructor(
     internal fun setup(project: Project) {
         if (setJavaVersion.get()) project.setJavaVersion(getJavaVersionForMC(version.get()))
 
-        val semanticVersion = SemanticVersion(version.get())
+        val semanticVersion = VersionNumber.parse(version.get())
         if (semanticVersion.major <= 1 && semanticVersion.minor <= 15) project.repositories.maven(REPOSITORIES.SONATYPE_SNAPSHOTS_OLD)
     }
 
@@ -46,13 +46,13 @@ abstract class SpigotApiExtension @Inject constructor(
 
 abstract class SpigotNmsExtension @Inject constructor(
     objects: ObjectFactory
-) : DependencyExtension(
-    objects,
-    repositories = listOf(REPOSITORIES.MAVEN_CENTRAL, REPOSITORIES.SPIGOT, REPOSITORIES.SPIGOT_SNAPSHOTS),
-    group = "org.spigotmc",
-    name = "spigot",
-    configurations = listOf("compileOnly", "testImplementation"),
-) {
+) : DependencyExtension(objects) {
+    init { apply {
+        repositories.set(listOf(REPOSITORIES.MAVEN_CENTRAL, REPOSITORIES.SPIGOT, REPOSITORIES.SPIGOT_SNAPSHOTS))
+        group.set("org.spigotmc")
+        name.set("spigot")
+        configurations.set(listOf("compileOnly", "testImplementation"))
+    } }
     @get:Input @get:Optional
     val setJavaVersion: Property<Boolean> = objects.property(Boolean::class.java).convention(true)
 
@@ -80,7 +80,7 @@ abstract class SpigotNmsExtension @Inject constructor(
  * @return The [JavaVersion] that is required for the Minecraft version
  */
 fun getJavaVersionForMC(minecraftVersion: String): JavaVersion {
-    val version = SemanticVersion(minecraftVersion)
+    val version = VersionNumber.parse(minecraftVersion)
     // 26.1+
     if (version.major > 1) return JavaVersion.VERSION_25
     // 1.20.5+

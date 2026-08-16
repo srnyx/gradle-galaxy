@@ -14,13 +14,13 @@ import javax.inject.Inject
 
 abstract class PaperExtension @Inject constructor(
     objects: ObjectFactory
-) : DependencyExtension(
-    objects,
-    repositories = listOf(REPOSITORIES.MAVEN_CENTRAL, REPOSITORIES.SONATYPE_SNAPSHOTS_OLD, REPOSITORIES.PAPER),
-    group = "io.papermc.paper",
-    name = "paper-api",
-    configurations = listOf("compileOnly", "testImplementation"),
-) {
+) : DependencyExtension(objects) {
+    init { apply {
+        repositories.set(listOf(REPOSITORIES.MAVEN_CENTRAL, REPOSITORIES.SONATYPE_SNAPSHOTS_OLD, REPOSITORIES.PAPER))
+        group.set("io.papermc.paper")
+        name.set("paper-api")
+        configurations.set(listOf("compileOnly", "testImplementation"))
+    } }
     @get:Input @get:Optional
     val setJavaVersion: Property<Boolean> = objects.property(Boolean::class.java).convention(true)
 
@@ -33,8 +33,8 @@ abstract class PaperExtension @Inject constructor(
 
     override fun add(project: Project) {
         val paperVersion = PaperVersion.parse(version.get())
-        group = paperVersion.groupId
-        name = paperVersion.artifactId
+        group.set(paperVersion.groupId)
+        name.set(paperVersion.artifactId)
         version.set(getVersionString(version.get()))
 
         super.add(project)

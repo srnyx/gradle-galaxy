@@ -12,18 +12,18 @@ import javax.inject.Inject
 
 abstract class MockBukkitExtension @Inject constructor(
     objects: ObjectFactory
-) : DependencyExtension(
-    objects,
-    repositories = listOf(REPOSITORIES.MAVEN_CENTRAL, REPOSITORIES.PAPER),
-    group = "com.github.seeseemelk",
-    name = "MockBukkit-v",
-    configurations = listOf("testImplementation"),
-) {
+) : DependencyExtension(objects) {
+    init { apply {
+        repositories.set(listOf(REPOSITORIES.MAVEN_CENTRAL, REPOSITORIES.PAPER))
+        group.set("com.github.seeseemelk")
+        name.set("MockBukkit-v")
+        configurations.set(listOf("testImplementation"))
+    } }
     @get:Input
     val minecraftVersion: Property<String> = objects.property(String::class.java).convention("1.20")
 
     override fun add(project: Project) {
-        name = "$name${minecraftVersion.get()}"
+        name.set("$name${minecraftVersion.get()}")
 
         // Exclude spigot-api from test classpath so MockBukkit's Paper takes precedence
         project.configurations.named("testImplementation") { exclude("org.spigotmc", "spigot-api") }

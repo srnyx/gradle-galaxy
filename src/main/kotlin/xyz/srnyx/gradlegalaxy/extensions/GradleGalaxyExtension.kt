@@ -24,15 +24,15 @@ abstract class GradleGalaxyExtension @Inject constructor(
     val minecraft = objects.newInstance(MinecraftExtension::class.java, deferred, java)
     val discord = objects.newInstance(DiscordExtension::class.java, deferred, java)
     val testing = objects.newInstance(TestingExtension::class.java, deferred)
-    val publishing = objects.newInstance(PublishingExtension::class.java, deferred, minecraft)
+    val mavenPublishing = objects.newInstance(MavenPublishingExtension::class.java)
 
     // Pure dependencies
-    val magicMongo: DependencyExtension = DependencyExtension(
-        objects,
-        repositories = listOf("https://repo.srnyx.com/snapshots/", "https://repo.srnyx.com/releases/"),
-        group = "xyz.srnyx",
-        name = "magic-mongo",
-        configurations = listOf("implementation", "testImplementation"))
+    val magicMongo: DependencyExtension = DependencyExtension(objects).apply {
+        repositories.set(listOf("https://repo.srnyx.com/snapshots/", "https://repo.srnyx.com/releases/"))
+        group.set("xyz.srnyx")
+        name.set("magic-mongo")
+        configurations.set(listOf("implementation", "testImplementation"))
+    }
 
 
     fun repository(action: RepositoryHolder.() -> Unit) = repository.action()
@@ -46,7 +46,10 @@ abstract class GradleGalaxyExtension @Inject constructor(
     }
     fun discord(action: DiscordExtension.() -> Unit) = discord.action()
     fun testing(action: TestingExtension.() -> Unit) = testing.action()
-    fun publishing(action: PublishingExtension.() -> Unit) = publishing.action()
+    fun mavenPublishing(action: MavenPublishingExtension.() -> Unit) {
+        mavenPublishing.action()
+        deferred.defer(Phase.WIRE) { mavenPublishing.setup(project) }
+    }
 
     fun magicMongo(version: String, action: DependencyExtension.() -> Unit = {}) {
         magicMongo.version.set(version)

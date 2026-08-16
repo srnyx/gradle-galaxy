@@ -4,8 +4,8 @@ import me.modmuss50.mpp.ModPublishExtension
 import me.modmuss50.mpp.platforms.curseforge.Curseforge
 import me.modmuss50.mpp.platforms.modrinth.Modrinth
 import xyz.srnyx.gradlegalaxy.enums.PluginPlatform
-import xyz.srnyx.gradlegalaxy.extensions.HangarExtension
-import xyz.srnyx.gradlegalaxy.extensions.PublishingPlatformExtension
+import xyz.srnyx.gradlegalaxy.extensions.minecraft.publishing.HangarExtension
+import xyz.srnyx.gradlegalaxy.extensions.minecraft.publishing.PlatformPublishingExtension
 
 
 data class PublishingPlatformConfig(
@@ -20,7 +20,7 @@ data class PublishingPlatformConfig(
     val hangarAction: HangarExtension.() -> Unit = {},
     val action: ModPublishExtension.() -> Unit = {},
 ) {
-    internal fun toExtension(): PublishingPlatformExtension.() -> Unit = {
+    internal fun toExtension(): PlatformPublishingExtension.() -> Unit = {
         val config: PublishingPlatformConfig = this@PublishingPlatformConfig
 
         minecraftVersionStart.set(config.minecraftVersionStart)
@@ -28,7 +28,7 @@ data class PublishingPlatformConfig(
         apiTiers.set(emptyList())
         extraLoaders.set(config.loaders)
         dryRun.set(config.dryRun)
-        dependency.addAnnoyingApiDependency.set(config.addAnnoyingApiDependency)
+        addAnnoyingApiDependency.set(config.addAnnoyingApiDependency)
 
         modPublishPlugin(action)
         config.platforms[PluginPlatform.MODRINTH]?.let { modrinth(it, modrinthAction) }

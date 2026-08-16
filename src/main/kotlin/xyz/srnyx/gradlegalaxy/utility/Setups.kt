@@ -36,7 +36,7 @@ fun Project.setupJava(
     config: JavaSetupConfig = JavaSetupConfig(),
 ) {
     extensions.configure<GradleGalaxyExtension>("galaxy") {
-        java(config.toExtension())
+        java(config.toExtension(project))
     }
 }
 
@@ -55,7 +55,7 @@ fun Project.setupMC(
     mcSetupConfig: MCSetupConfig = MCSetupConfig(),
 ) {
     extensions.configure<GradleGalaxyExtension>("galaxy") {
-        java(javaSetupConfig.toExtension())
+        java(javaSetupConfig.toExtension(project))
         minecraft(mcSetupConfig.toExtension())
     }
 }
@@ -80,7 +80,7 @@ fun Project.setupMC(
  *
  * @return The metadata for Annoying API if [MetadataConfig.useMetadata] is true, otherwise null
  */
-@Deprecated("Use galaxy { minecraft { annoyingAPI(version) { ... } }; publishing { platforms { ... } } } instead")
+@Deprecated("Use galaxy { minecraft { annoyingAPI(version) { ... }; platformPublishing { ... } } } instead")
 fun Project.setupAnnoyingAPI(
     javaSetupConfig: JavaSetupConfig = JavaSetupConfig(),
     mcSetupConfig: MCSetupConfig = MCSetupConfig(),
@@ -91,7 +91,7 @@ fun Project.setupAnnoyingAPI(
     publishingPlatformConfig: PublishingPlatformConfig = PublishingPlatformConfig(mapOf()),
 ) {
     extensions.configure<GradleGalaxyExtension>("galaxy") {
-        java(javaSetupConfig.toExtension())
+        java(javaSetupConfig.toExtension(project))
 
         minecraft {
             mcSetupConfig.toExtension()(this)
@@ -101,10 +101,8 @@ fun Project.setupAnnoyingAPI(
                 metadata(metadataConfig.toExtension())
                 customRuntimeLibraries(customRuntimeLibrariesConfig.toExtension())
             }
-        }
 
-        publishing {
-            platforms {
+            platformPublishing {
                 publishingPlatformConfig.platforms.forEach { (pluginPlatform, identifier) -> platform(pluginPlatform, identifier) }
                 publishingPlatformConfig.toExtension()(this)
                 addResourceFile.set(annoyingSetupConfig.addPlatformsResourceFile)
@@ -134,7 +132,7 @@ fun Project.setupJda(
     jdaConfig: DependencyConfig,
 ) {
     extensions.configure<GradleGalaxyExtension>("galaxy") {
-        java(javaSetupConfig.toExtension())
+        java(javaSetupConfig.toExtension(project))
         discord {
             jda(jdaConfig.version) {
                 jdaConfig.toExtension()(this)
@@ -164,7 +162,7 @@ fun Project.setupLazyLibrary(
     lazyLibraryConfig: DependencyConfig,
 ) {
     extensions.configure<GradleGalaxyExtension>("galaxy") {
-        java(javaSetupConfig.toExtension())
+        java(javaSetupConfig.toExtension(project))
         discord {
             jda(jdaConfig.version) {
                 jdaConfig.toExtension()(this)
@@ -246,17 +244,15 @@ fun Project.setupMockBukkit(
  *
  * @return The [MavenPublication] that was created
  */
-@Deprecated("Use galaxy { publishing { simple { ... } } } instead")
+@Deprecated("Use galaxy { mavenPublishing { ... } } instead")
 fun Project.setupPublishingSimple(
     config: PublishingSimpleConfig = PublishingSimpleConfig(this),
     configuration: MavenPublication.() -> Unit = {},
 ) {
     extensions.configure<GradleGalaxyExtension>("galaxy") {
-        publishing {
-            simple {
-                config.toExtension()(this)
-                publication(configuration)
-            }
+        mavenPublishing {
+            config.toExtension()(this)
+            publication(configuration)
         }
     }
 }
@@ -273,15 +269,15 @@ fun Project.setupPublishingSimple(
  *
  * @return The [MavenPublication] that was created
  */
-@Deprecated("Use galaxy { publishing { simple { ... }; env { ... } } } instead")
+@Deprecated("Use galaxy { mavenPublishing { ... } } instead")
 fun Project.setupPublishingEnv(
     simpleConfig: PublishingSimpleConfig = PublishingSimpleConfig(this),
     envConfig: PublishingEnvConfig = PublishingEnvConfig(),
 ) {
     extensions.configure<GradleGalaxyExtension>("galaxy") {
-        publishing {
-            simple(simpleConfig.toExtension())
-            env(envConfig.toExtension())
+        mavenPublishing {
+            simpleConfig.toExtension()(this)
+            envConfig.toExtension()(this)
         }
     }
 }
@@ -292,16 +288,16 @@ fun Project.setupPublishingEnv(
  * @param config The configuration for setting up publishing for project platforms
  */
 @Deprecated(
-    "Use galaxy { publishing { platforms { ... } } } instead",
+    "Use galaxy { minecraft { platformPublishing { ... } } } instead",
     ReplaceWith(
-        "project.extensions.configure<GradleGalaxyExtension>(\"galaxy\") { publishing { platforms(config.toExtension()) } }",
+        "project.extensions.configure<GradleGalaxyExtension>(\"galaxy\") { minecraft { platformPublishing(config.toExtension()) } }",
         "xyz.srnyx.gradlegalaxy.extensions.GradleGalaxyExtension"))
 fun Project.setupPublishingPlatforms(
     config: PublishingPlatformConfig,
 ) {
     project.extensions.configure<GradleGalaxyExtension>("galaxy") {
-        publishing {
-            platforms(config.toExtension())
+        minecraft {
+            platformPublishing(config.toExtension())
         }
     }
 }

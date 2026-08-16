@@ -45,14 +45,14 @@ abstract class TestingExtension @Inject internal constructor(
 
 abstract class JUnitExtension @Inject constructor(
     objects: ObjectFactory,
-) : DependencyExtension(
-    objects,
-    repositories = listOf(REPOSITORIES.MAVEN_CENTRAL),
-    group = "org.junit",
-    name = "junit-bom",
-    configurations = listOf("testImplementation"),
-    platform = true,
-) {
+) : DependencyExtension(objects) {
+    init { apply {
+        repositories.set(listOf(REPOSITORIES.MAVEN_CENTRAL))
+        group.set("org.junit")
+        name.set("junit-bom")
+        configurations.set(listOf("testImplementation"))
+        platform.set(true)
+    } }
     var testAction: Test.() -> Unit = {}
 
     fun testAction(testAction: Test.() -> Unit) {

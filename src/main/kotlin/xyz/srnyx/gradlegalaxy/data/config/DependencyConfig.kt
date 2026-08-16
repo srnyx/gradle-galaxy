@@ -25,7 +25,7 @@ data class DependencyConfig(
 
         config.configurations
             ?.takeIf { it.isNotEmpty() }
-            ?.let { configurations = it }
+            ?.let { configurations.set(it) }
         action = config.configurationAction
     }
 }

@@ -3,13 +3,14 @@ package xyz.srnyx.gradlegalaxy.extensions.minecraft
 import org.gradle.api.Project
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.MapProperty
+import org.gradle.api.provider.Property
 import org.gradle.api.provider.SetProperty
 import org.gradle.api.tasks.Input
-import org.gradle.api.tasks.Optional
 import xyz.srnyx.gradlegalaxy.annotations.Used
 import xyz.srnyx.gradlegalaxy.extensions.DeferredActions
 import xyz.srnyx.gradlegalaxy.extensions.JavaExtension
 import xyz.srnyx.gradlegalaxy.extensions.Phase
+import xyz.srnyx.gradlegalaxy.extensions.minecraft.publishing.PlatformPublishingExtension
 import xyz.srnyx.gradlegalaxy.utility.addReplacementsTask
 import javax.inject.Inject
 
@@ -20,11 +21,12 @@ abstract class MinecraftExtension @Inject internal constructor(
     private val java: JavaExtension,
     objects: ObjectFactory,
 ) {
-    //TODO generate majority of plugin.yml automatically instead of using replacements
-    @get:Input @get:Optional
-    var replacementFiles: SetProperty<String> = objects.setProperty(String::class.java).convention(listOf("plugin.yml"))
-    @get:Input @get:Optional
-    var replacements: MapProperty<String, String> = objects.mapProperty(String::class.java, String::class.java).convention(mapOf("defaultReplacements" to "true"))
+    @get:Input
+    val folia: Property<Boolean> = objects.property(Boolean::class.java).convention(false)
+    @get:Input
+    val replacementFiles: SetProperty<String> = objects.setProperty(String::class.java).convention(listOf("plugin.yml"))
+    @get:Input
+    val replacements: MapProperty<String, String> = objects.mapProperty(String::class.java, String::class.java).convention(mapOf("defaultReplacements" to "true"))
 
     // Project-wide setup
     val pluginYml = objects.newInstance(PluginYmlExtension::class.java)
@@ -36,6 +38,9 @@ abstract class MinecraftExtension @Inject internal constructor(
     val paper = objects.newInstance(PaperExtension::class.java)
     // Dependency + setup merged onto one type
     val annoyingAPI = objects.newInstance(AnnoyingApiExtension::class.java, java, this)
+    // Cross-cutting: read by pluginYml (depend/softdepend) and platformPublishing (modrinth/curseforge/hangar)
+    val dependency = objects.newInstance(MinecraftDependencyExtension::class.java)
+    val platformPublishing = PlatformPublishingExtension(project, this, objects)
 
     private var applied = false
 
@@ -44,6 +49,16 @@ abstract class MinecraftExtension @Inject internal constructor(
     fun pluginYml(action: PluginYmlExtension.() -> Unit) {
         pluginYml.action()
         deferred.defer(Phase.WIRE) { pluginYml.setup(project, this) }
+    }
+    @Used
+    fun dependency(action: MinecraftDependencyExtension.() -> Unit) {
+        dependency.action()
+        deferred.defer(Phase.WIRE) { dependency.setup(project, pluginYml) }
+    }
+    @Used
+    fun platformPublishing(action: PlatformPublishingExtension.() -> Unit) {
+        platformPublishing.action()
+        deferred.defer(Phase.WIRE) { platformPublishing.setup(project) }
     }
     @Used
     fun runPaper(action: RunPaperExtension.() -> Unit = {}) {

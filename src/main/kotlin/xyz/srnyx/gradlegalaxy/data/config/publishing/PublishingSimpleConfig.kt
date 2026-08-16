@@ -7,7 +7,7 @@ import xyz.srnyx.gradlegalaxy.annotations.Used
 import xyz.srnyx.gradlegalaxy.data.pom.DeveloperData
 import xyz.srnyx.gradlegalaxy.data.pom.LicenseData
 import xyz.srnyx.gradlegalaxy.data.pom.ScmData
-import xyz.srnyx.gradlegalaxy.extensions.PublishingSimpleExtension
+import xyz.srnyx.gradlegalaxy.extensions.MavenPublishingExtension
 
 
 /**
@@ -46,7 +46,7 @@ data class PublishingSimpleConfig(
     var developers: List<DeveloperData> = emptyList(),
     val scm: ScmData? = null,
 ) {
-    internal fun toExtension(): PublishingSimpleExtension.() -> Unit = {
+    internal fun toExtension(): MavenPublishingExtension.() -> Unit = {
         val config: PublishingSimpleConfig = this@PublishingSimpleConfig
 
         groupId.set(config.groupId)

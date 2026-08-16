@@ -1,6 +1,6 @@
 package xyz.srnyx.gradlegalaxy.enums
 
-import xyz.srnyx.gradlegalaxy.utility.SemanticVersion
+import org.gradle.util.internal.VersionNumber
 
 
 /**
@@ -25,7 +25,7 @@ enum class PaperVersion(val groupId: String, val artifactId: String) {
          * Parses a version string to a [PaperVersion]
          */
         fun parse(versionString: String): PaperVersion {
-            val version = SemanticVersion(versionString)
+            val version = VersionNumber.parse(versionString)
             return when {
                 version.major != 1 -> REST
                 version.minor < 9 -> BELOW_1_9

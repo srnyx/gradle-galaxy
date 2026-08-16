@@ -19,19 +19,15 @@ import javax.inject.Inject
 
 /**
  * Fires immediately when `java { }` is called, unlike every other `galaxy { }` entry.
- * It only ever *writes* plain [Project] state (`group`/`version`/`description`/etc.), and nothing
- * reads that state until every other entry's deferred [Phase.WIRE] actions run ([DeferredActions]),
+ * It only ever *writes* plain [Project] state (`version`/etc.), and nothing reads that
+ * state until every other entry's deferred [Phase.WIRE] actions run ([DeferredActions]),
  * so there's no ordering hazard in applying it eagerly.
  */
 abstract class JavaExtension @Inject constructor(
     objects: ObjectFactory,
 ) {
     @get:Input @get:Optional
-    val group: Property<String> = objects.property(String::class.java)
-    @get:Input @get:Optional
     val version: Property<String> = objects.property(String::class.java)
-    @get:Input @get:Optional
-    val description: Property<String> = objects.property(String::class.java)
     @get:Input @get:Optional
     val javaVersion: Property<JavaVersion> = objects.property(JavaVersion::class.java)
     @get:Input
@@ -49,7 +45,6 @@ abstract class JavaExtension @Inject constructor(
         if (applied) return
         applied = true
 
-        project.group = group.getOrElse(project.group.toString())
         project.version = version.orNull
             ?: project.version.takeIf { it != Project.DEFAULT_VERSION }
             ?: when {
@@ -59,7 +54,6 @@ abstract class JavaExtension @Inject constructor(
                 else -> null
             }
             ?: "snapshot"
-        project.description = description.getOrElse(project.description.toString())
 
         javaVersion.orNull?.let { project.setJavaVersion(it, force = true) }
         textEncoding.orNull?.let { project.setTextEncoding(it) }

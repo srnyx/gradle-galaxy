@@ -14,13 +14,13 @@ abstract class LazyLibraryExtension @Inject internal constructor(
     private val project: Project,
     private val java: JavaExtension,
     objects: ObjectFactory,
-) : DependencyExtension(
-    objects,
-    repositories = listOf(REPOSITORIES.SRNYX_SNAPSHOTS, REPOSITORIES.SRNYX_RELEASES),
-    group = "xyz.srnyx",
-    name = "lazy-library",
-    configurations = listOf("implementation", "testImplementation")
-) {
+) : DependencyExtension(objects) {
+    init { apply {
+        repositories.set(listOf(REPOSITORIES.SRNYX_SNAPSHOTS, REPOSITORIES.SRNYX_RELEASES))
+        group.set("xyz.srnyx")
+        name.set("lazy-library")
+        configurations.set(listOf("implementation", "testImplementation"))
+    } }
     fun setup() {
         check(project.hasJavaPlugin()) { "Java plugin is not applied!" }
         check(project.hasShadowPlugin()) { "Shadow plugin is required for Lazy Library!" }

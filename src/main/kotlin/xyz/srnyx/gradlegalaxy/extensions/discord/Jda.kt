@@ -19,13 +19,13 @@ import javax.inject.Inject
 abstract class JdaExtension @Inject constructor(
     objects: ObjectFactory,
     private val java: JavaExtension,
-) : DependencyExtension(
-    objects,
-    repositories = listOf(REPOSITORIES.MAVEN_CENTRAL),
-    group = "net.dv8tion",
-    name = "JDA",
-    configurations = listOf("implementation", "testImplementation"),
-) {
+) : DependencyExtension(objects) {
+    init { apply {
+        repositories.set(listOf(REPOSITORIES.MAVEN_CENTRAL))
+        group.set("net.dv8tion")
+        name.set("JDA")
+        configurations.set(listOf("implementation", "testImplementation"))
+    } }
     @get:Input @get:Optional
     val excludeOpus: Property<Boolean> = objects.property(Boolean::class.java).convention(true)
     @get:Input @get:Optional

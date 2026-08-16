@@ -23,12 +23,12 @@ data class JavaSetupConfig(
     val archiveClassifier: String? = "",
     val textEncoding: String? = "UTF-8",
 ) {
-    internal fun toExtension(): JavaExtension.() -> Unit = {
+    internal fun toExtension(project: Project): JavaExtension.() -> Unit = {
         val config = this@JavaSetupConfig
 
-        group.set(config.group)
+        config.group?.let { project.group = it }
         version.set(config.version)
-        description.set(config.description)
+        config.description?.let { project.description = it }
         javaVersion.set(config.javaVersion)
         archiveClassifier.set(config.archiveClassifier)
         textEncoding.set(config.textEncoding)

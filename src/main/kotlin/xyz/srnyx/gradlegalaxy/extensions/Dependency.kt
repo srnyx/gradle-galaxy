@@ -4,8 +4,10 @@ import org.gradle.api.Project
 import org.gradle.api.artifacts.ModuleDependency
 import org.gradle.api.artifacts.dsl.DependencyHandler
 import org.gradle.api.model.ObjectFactory
+import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.Optional
 import org.gradle.kotlin.dsl.add
 import org.gradle.kotlin.dsl.maven
 import xyz.srnyx.gradlegalaxy.utility.hasJavaPlugin
@@ -18,16 +20,32 @@ import javax.inject.Inject
  */
 open class DependencyExtension @Inject constructor(
     objects: ObjectFactory,
-    var repositories: List<String>,
-    var group: String,
-    var name: String,
-    var configurations: List<String>,
-    /** Whether this dependency is a BOM/platform (e.g. `junit-bom`) — added via [DependencyHandler.platform] instead of as a regular library. */
-    var platform: Boolean = false,
 ) {
+    @get:Input @get:Optional
+    val repositories: ListProperty<String> = objects.listProperty(String::class.java)
+    @get:Input
+    val group: Property<String> = objects.property(String::class.java)
+    @get:Input
+    val name: Property<String> = objects.property(String::class.java)
     @get:Input
     val version: Property<String> = objects.property(String::class.java)
+    @get:Input
+    val configurations: ListProperty<String> = objects.listProperty(String::class.java).convention(listOf("compileOnly", "testImplementation"))
+    /**
+     * Whether this dependency is a BOM/platform (e.g. `junit-bom`) — added via [DependencyHandler.platform] instead of as a regular library
+     * */
+    @get:Input
+    val platform: Property<Boolean> = objects.property(Boolean::class.java).convention(false)
     var action: ModuleDependency.() -> Unit = {}
+
+
+    fun parse(notation: String) {
+        val split = notation.split(":")
+        check(split.size == 3) { "Notation must be in the form 'group:name:version'" }
+        group.set(split[0])
+        name.set(split[1])
+        version.set(split[2])
+    }
 
     fun action(action: ModuleDependency.() -> Unit) {
         val previousAction = this.action
@@ -38,16 +56,16 @@ open class DependencyExtension @Inject constructor(
     }
 
     internal open fun add(project: Project) {
-        check(version.isPresent) { "Dependency version is not configured!" }
+        if (group.orNull == null || name.orNull == null || version.orNull == null) return
         check(project.hasJavaPlugin()) { "Java plugin is not applied!" }
 
         // Repositories
-        repositories.forEach { project.repositories.maven(it) }
+        repositories.get().forEach { project.repositories.maven(it) }
 
         // Add dependency
-        val notation = "${group}:${name}:${version.get()}"
-        configurations.forEach { configuration ->
-            if (platform) {
+        val notation = "${group.get()}:${name.get()}:${version.get()}"
+        configurations.get().forEach { configuration ->
+            if (platform.get()) {
                 val dependency = project.dependencies.platform(notation)
                 if (dependency is ModuleDependency) action(dependency)
                 project.dependencies.add(configuration, dependency)

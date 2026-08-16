@@ -11,7 +11,7 @@ open class MockBukkitConfig(
     fun toExtension(): MockBukkitExtension.() -> Unit = {
         val config: MockBukkitConfig = this@MockBukkitConfig
 
-        group = config.group
+        group.set(config.group)
         minecraftVersion.set(config.minecraftVersion)
     }
 }

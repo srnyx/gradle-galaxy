@@ -40,13 +40,13 @@ abstract class AnnoyingApiExtension @Inject constructor(
     objects: ObjectFactory,
     private val java: JavaExtension,
     private val minecraft: MinecraftExtension,
-) : DependencyExtension(
-    objects,
-    repositories = listOf(REPOSITORIES.SRNYX_SNAPSHOTS, REPOSITORIES.SRNYX_RELEASES),
-    group = "xyz.srnyx",
-    name = "annoying-api",
-    configurations = listOf("implementation", "testImplementation"),
-) {
+) : DependencyExtension(objects) {
+    init { apply {
+        repositories.set(listOf(REPOSITORIES.SRNYX_SNAPSHOTS, REPOSITORIES.SRNYX_RELEASES))
+        group.set("xyz.srnyx")
+        name.set("annoying-api")
+        configurations.set(listOf("implementation", "testImplementation"))
+    } }
     val metadata = objects.newInstance(MetadataExtension::class.java)
     val customRuntimeLibraries = objects.newInstance(CustomRuntimeLibrariesExtension::class.java)
 
@@ -376,7 +376,7 @@ interface GenerateRuntimeLibraryEnumExtension {
         val outputDir = project.layout.buildDirectory.dir("generated/sources/gradle-galaxy/main/java")
         val outputFile = outputDir.map { it.file("$packageFolder/library/$enumName.java") }
         val generateEnumTask = project.tasks.register("generateRuntimeLibrary") {
-            group = "build"
+            group = "galaxy"
             description = "Generates the $enumName enum for the Annoying API runtime libraries"
 
             inputs.property("enum", enum)

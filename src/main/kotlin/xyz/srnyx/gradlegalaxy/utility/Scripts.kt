@@ -381,7 +381,7 @@ fun Project.addPlatformsResourceFileTask(platforms: Map<PluginPlatform, String>)
     val platformsProvider = project.provider { json.encodeToString(mapOf("platforms" to platforms)) }
 
     val task = tasks.register("writePlatformsResourceFile") {
-        group = "build"
+        group = "galaxy"
         description = "Writes the platforms.json file"
 
         inputs.property("text", platformsProvider)

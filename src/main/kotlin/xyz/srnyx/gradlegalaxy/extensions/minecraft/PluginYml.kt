@@ -1,6 +1,5 @@
 package xyz.srnyx.gradlegalaxy.extensions.minecraft
 
-import org.gradle.api.GradleException
 import org.gradle.api.Project
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.ListProperty
@@ -18,6 +17,9 @@ import javax.inject.Inject
 abstract class PluginYmlExtension @Inject constructor(
     objects: ObjectFactory
 ) {
+    @Used val STARTUP = "STARTUP"
+    @Used val POSTWORLD = "POSTWORLD"
+
     /**
      * Defaults to project name
      */
@@ -63,11 +65,6 @@ abstract class PluginYmlExtension @Inject constructor(
     val provides: ListProperty<String> = objects.listProperty(String::class.java)
 
 
-    @Used
-    fun load(load: Load) {
-        this.load.set(load.name)
-    }
-
     internal fun setup(
         project: Project,
         minecraft: MinecraftExtension,
@@ -77,6 +74,7 @@ abstract class PluginYmlExtension @Inject constructor(
         if (description.orNull == null) description.set(project.description)
         if (main.orNull == null) main.set("${project.getPackage()}.${project.name}")
         if (apiVersion.orNull == null) apiVersion.set(minecraft.getMinecraftVersion())
+        if (foliaSupported.orNull == null) foliaSupported.set(minecraft.folia)
 
         val pluginYml = project.layout.projectDirectory.file("src/main/resources/plugin.yml")
         val textProvider = project.provider { buildString {
@@ -137,9 +135,4 @@ abstract class PluginYmlExtension @Inject constructor(
         in VersionNumber.version(1, 13)..VersionNumber.parse("1.20.4") -> "${version.major}.${version.minor}"
         else -> "${version.major}.${version.minor}.${version.patch}"
     }
-}
-
-enum class Load {
-    STARTUP,
-    POSTWORLD,
 }

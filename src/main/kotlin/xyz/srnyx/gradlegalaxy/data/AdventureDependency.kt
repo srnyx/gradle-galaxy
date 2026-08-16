@@ -23,14 +23,12 @@ data class AdventureDependency(val component: Component, val config: DependencyC
             }
         }
 
-        return DependencyExtension(
-            objects,
-            repositories = listOf(REPOSITORIES.MAVEN_CENTRAL),
-            group = "net.kyori",
-            name = component.getComponent(),
-            configurations = config.configurations ?: listOf("implementation"),
-            platform = component == AdventureComponent.BOM
-        ).apply {
+        return DependencyExtension(objects).apply {
+            repositories.set(listOf(REPOSITORIES.MAVEN_CENTRAL))
+            group.set("net.kyori")
+            name.set(component.getComponent())
+            configurations.set(config.configurations ?: listOf("implementation"))
+            platform.set(component == AdventureComponent.BOM)
             version.set(config.version)
             action = config.configurationAction
         }
