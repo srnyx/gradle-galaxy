@@ -23,7 +23,7 @@ abstract class MockBukkitExtension @Inject constructor(
     val minecraftVersion: Property<String> = objects.property(String::class.java).convention("1.20")
 
     override fun add(project: Project) {
-        name.set("$name${minecraftVersion.get()}")
+        name.set("${name.get()}${minecraftVersion.get()}")
 
         // Exclude spigot-api from test classpath so MockBukkit's Paper takes precedence
         project.configurations.named("testImplementation") { exclude("org.spigotmc", "spigot-api") }
