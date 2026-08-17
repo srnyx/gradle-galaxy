@@ -7,7 +7,6 @@ import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Optional
 import xyz.srnyx.gradlegalaxy.enums.PaperVersion
 import xyz.srnyx.gradlegalaxy.extensions.DependencyExtension
-import xyz.srnyx.gradlegalaxy.extensions.Repositories.Companion.REPOSITORIES
 import xyz.srnyx.gradlegalaxy.utility.setJavaVersion
 import javax.inject.Inject
 
@@ -16,7 +15,7 @@ abstract class PaperExtension @Inject constructor(
     objects: ObjectFactory
 ) : DependencyExtension(objects) {
     init { apply {
-        repositories.set(listOf(REPOSITORIES.MAVEN_CENTRAL, REPOSITORIES.SONATYPE_SNAPSHOTS_OLD, REPOSITORIES.PAPER))
+        repositories.set(listOf(MAVEN_CENTRAL, SONATYPE_SNAPSHOTS_OLD, PAPER))
         group.set("io.papermc.paper")
         name.set("paper-api")
         configurations.set(listOf("compileOnly", "testImplementation"))

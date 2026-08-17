@@ -24,7 +24,7 @@ data class AdventureDependency(val component: Component, val config: DependencyC
         }
 
         return DependencyExtension(objects).apply {
-            repositories.set(listOf(REPOSITORIES.MAVEN_CENTRAL))
+            repositories.set(listOf(MAVEN_CENTRAL))
             group.set("net.kyori")
             name.set(component.getComponent())
             configurations.set(config.configurations ?: listOf("implementation"))

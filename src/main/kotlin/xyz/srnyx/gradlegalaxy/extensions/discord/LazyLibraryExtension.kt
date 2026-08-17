@@ -16,7 +16,7 @@ abstract class LazyLibraryExtension @Inject internal constructor(
     objects: ObjectFactory,
 ) : DependencyExtension(objects) {
     init { apply {
-        repositories.set(listOf(REPOSITORIES.SRNYX_SNAPSHOTS, REPOSITORIES.SRNYX_RELEASES))
+        repositories.set(listOf(SRNYX_SNAPSHOTS, SRNYX_RELEASES))
         group.set("xyz.srnyx")
         name.set("lazy-library")
         configurations.set(listOf("implementation", "testImplementation"))

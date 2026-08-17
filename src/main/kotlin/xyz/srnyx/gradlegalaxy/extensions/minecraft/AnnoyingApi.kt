@@ -18,7 +18,6 @@ import xyz.srnyx.gradlegalaxy.data.annoyingapi.Exclude
 import xyz.srnyx.gradlegalaxy.data.annoyingapi.Relocation
 import xyz.srnyx.gradlegalaxy.data.annoyingapi.RuntimeLibrary
 import xyz.srnyx.gradlegalaxy.extensions.DependencyExtension
-import xyz.srnyx.gradlegalaxy.extensions.Repositories.Companion.REPOSITORIES
 import xyz.srnyx.gradlegalaxy.extensions.JavaExtension
 import xyz.srnyx.gradlegalaxy.utility.dotsToBrackets
 import xyz.srnyx.gradlegalaxy.utility.getAnnoyingApiMetadata
@@ -41,7 +40,7 @@ abstract class AnnoyingApiExtension @Inject constructor(
     private val minecraft: MinecraftExtension,
 ) : DependencyExtension(objects) {
     init {
-        repositories.set(listOf(REPOSITORIES.SRNYX_SNAPSHOTS, REPOSITORIES.SRNYX_RELEASES))
+        repositories.set(listOf(SRNYX_SNAPSHOTS, SRNYX_RELEASES))
         group.set("xyz.srnyx")
         name.set("annoying-api")
         configurations.set(listOf("implementation", "testImplementation"))

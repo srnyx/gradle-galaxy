@@ -9,7 +9,6 @@ import org.gradle.api.tasks.Optional
 import org.gradle.kotlin.dsl.maven
 import org.gradle.util.internal.VersionNumber
 import xyz.srnyx.gradlegalaxy.extensions.DependencyExtension
-import xyz.srnyx.gradlegalaxy.extensions.Repositories.Companion.REPOSITORIES
 import xyz.srnyx.gradlegalaxy.utility.setJavaVersion
 import javax.inject.Inject
 
@@ -18,7 +17,7 @@ abstract class SpigotApiExtension @Inject constructor(
     objects: ObjectFactory
 ) : DependencyExtension(objects) {
     init { apply {
-        repositories.set(listOf(REPOSITORIES.MAVEN_CENTRAL, REPOSITORIES.SPIGOT, REPOSITORIES.SPIGOT_SNAPSHOTS))
+        repositories.set(listOf(MAVEN_CENTRAL, SPIGOT, SPIGOT_SNAPSHOTS))
         group.set("org.spigotmc")
         name.set("spigot-api")
         configurations.set(listOf("compileOnly", "testImplementation"))
@@ -35,7 +34,7 @@ abstract class SpigotApiExtension @Inject constructor(
         if (setJavaVersion.get()) project.setJavaVersion(getJavaVersionForMC(version.get()), false)
 
         val semanticVersion = VersionNumber.parse(version.get())
-        if (semanticVersion.major <= 1 && semanticVersion.minor <= 15) project.repositories.maven(REPOSITORIES.SONATYPE_SNAPSHOTS_OLD)
+        if (semanticVersion.major <= 1 && semanticVersion.minor <= 15) project.repositories.maven(SONATYPE_SNAPSHOTS_OLD)
     }
 
     override fun add(project: Project) {
@@ -48,7 +47,7 @@ abstract class SpigotNmsExtension @Inject constructor(
     objects: ObjectFactory
 ) : DependencyExtension(objects) {
     init { apply {
-        repositories.set(listOf(REPOSITORIES.MAVEN_CENTRAL, REPOSITORIES.SPIGOT, REPOSITORIES.SPIGOT_SNAPSHOTS))
+        repositories.set(listOf(MAVEN_CENTRAL, SPIGOT, SPIGOT_SNAPSHOTS))
         group.set("org.spigotmc")
         name.set("spigot")
         configurations.set(listOf("compileOnly", "testImplementation"))

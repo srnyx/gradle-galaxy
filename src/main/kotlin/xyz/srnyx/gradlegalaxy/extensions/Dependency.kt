@@ -20,7 +20,7 @@ import javax.inject.Inject
  */
 open class DependencyExtension @Inject constructor(
     objects: ObjectFactory,
-) {
+) : Repositories() {
     @get:Input @get:Optional
     val repositories: ListProperty<String> = objects.listProperty(String::class.java)
     @get:Input

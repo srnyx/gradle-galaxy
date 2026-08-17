@@ -47,7 +47,7 @@ abstract class JUnitExtension @Inject constructor(
     objects: ObjectFactory,
 ) : DependencyExtension(objects) {
     init { apply {
-        repositories.set(listOf(REPOSITORIES.MAVEN_CENTRAL))
+        repositories.set(listOf(MAVEN_CENTRAL))
         group.set("org.junit")
         name.set("junit-bom")
         configurations.set(listOf("testImplementation"))
