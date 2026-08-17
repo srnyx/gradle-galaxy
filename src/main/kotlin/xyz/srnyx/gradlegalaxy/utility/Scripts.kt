@@ -11,12 +11,10 @@ import kotlinx.serialization.json.jsonPrimitive
 import org.gradle.api.DefaultTask
 import org.gradle.api.JavaVersion
 import org.gradle.api.Project
-import org.gradle.api.Task
 import org.gradle.api.plugins.JavaApplication
 import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.publish.PublishingExtension
 import org.gradle.api.tasks.Copy
-import org.gradle.api.tasks.TaskProvider
 import org.gradle.api.tasks.compile.JavaCompile
 import org.gradle.api.tasks.bundling.Jar
 import org.gradle.api.tasks.javadoc.Javadoc
@@ -26,7 +24,6 @@ import xyz.srnyx.gradlegalaxy.annotations.Used
 import xyz.srnyx.gradlegalaxy.data.annoyingapi.AnnoyingMetadata
 import xyz.srnyx.gradlegalaxy.data.annoyingapi.RuntimeLibrary
 import xyz.srnyx.gradlegalaxy.data.config.annoyingapi.GenerateRuntimeLibraryEnumConfig
-import xyz.srnyx.gradlegalaxy.enums.PluginPlatform
 import xyz.srnyx.gradlegalaxy.extensions.GradleGalaxyExtension
 import xyz.srnyx.gradlegalaxy.extensions.Repositories.Companion.REPOSITORIES
 import java.io.File
@@ -324,17 +321,13 @@ fun String.processRelocationTo(): String = replace("{package}.libs.", "").dotsTo
  * @param from The package to relocate
  * @param to The package to relocate to
  */
-@Deprecated(
-    "Use galaxy { relocate(...) } instead",
-    ReplaceWith("galaxy { relocate(from, to, action) }"))
 fun Project.relocate(
     from: String,
     to: String = "${getPackage()}.libs.${makePackageSafe(from.split(".").last())}",
     action: SimpleRelocator.() -> Unit = {},
 ) {
-    extensions.configure<GradleGalaxyExtension>("galaxy") {
-        relocate(from, to, action)
-    }
+    check(project.hasShadowPlugin()) { "Shadow plugin is not applied!" }
+    project.tasks.named<ShadowJar>("shadowJar") { relocate(from, to, action) }
 }
 
 /**
