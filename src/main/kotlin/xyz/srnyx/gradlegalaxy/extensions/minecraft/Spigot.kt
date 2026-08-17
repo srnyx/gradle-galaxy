@@ -32,7 +32,7 @@ abstract class SpigotApiExtension @Inject constructor(
      * decided on afterward — see [xyz.srnyx.gradlegalaxy.extensions.DeferredActions].
      */
     internal fun setup(project: Project) {
-        if (setJavaVersion.get()) project.setJavaVersion(getJavaVersionForMC(version.get()))
+        if (setJavaVersion.get()) project.setJavaVersion(getJavaVersionForMC(version.get()), false)
 
         val semanticVersion = VersionNumber.parse(version.get())
         if (semanticVersion.major <= 1 && semanticVersion.minor <= 15) project.repositories.maven(REPOSITORIES.SONATYPE_SNAPSHOTS_OLD)
@@ -57,7 +57,7 @@ abstract class SpigotNmsExtension @Inject constructor(
     val setJavaVersion: Property<Boolean> = objects.property(Boolean::class.java).convention(true)
 
     internal fun setup(project: Project) {
-        if (setJavaVersion.get()) project.setJavaVersion(getJavaVersionForMC(version.get()))
+        if (setJavaVersion.get()) project.setJavaVersion(getJavaVersionForMC(version.get()), false)
         project.repositories.mavenLocal()
     }
 

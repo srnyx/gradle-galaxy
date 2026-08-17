@@ -99,7 +99,7 @@ abstract class MetadataExtension @Inject constructor(
 
             // Java version (only if custom not specified)
             if (setJavaVersion.get() && metadata.javaVersion != null) {
-                project.setJavaVersion(JavaVersion.toVersion(metadata.javaVersion))
+                project.setJavaVersion(JavaVersion.toVersion(metadata.javaVersion), false)
             }
 
             // Repositories

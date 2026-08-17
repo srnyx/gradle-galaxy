@@ -4,10 +4,8 @@ import com.github.jengelman.gradle.plugins.shadow.ShadowPlugin
 import com.github.jengelman.gradle.plugins.shadow.relocation.SimpleRelocator
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.booleanOrNull
-import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.gradle.api.DefaultTask
@@ -32,15 +30,11 @@ import xyz.srnyx.gradlegalaxy.enums.PluginPlatform
 import xyz.srnyx.gradlegalaxy.extensions.GradleGalaxyExtension
 import xyz.srnyx.gradlegalaxy.extensions.Repositories.Companion.REPOSITORIES
 import java.io.File
-import java.net.URI
-import java.net.http.HttpClient
-import java.net.http.HttpRequest
-import java.net.http.HttpResponse
 
 import kotlin.text.replace
 
 
-private val json by lazy { Json {
+val json by lazy { Json {
     prettyPrint = true
     prettyPrintIndent = "  "
     ignoreUnknownKeys = true
@@ -221,7 +215,7 @@ fun Project.setTextEncoding(encoding: String = "UTF-8") {
  * @param version The java version to set (example: [JavaVersion.VERSION_1_8])
  * @param force Whether to set the version even if the user already set an explicit `galaxy { java { javaVersion = ... } } }`
  */
-fun Project.setJavaVersion(version: JavaVersion = JavaVersion.VERSION_1_8, force: Boolean = false) {
+fun Project.setJavaVersion(version: JavaVersion = JavaVersion.VERSION_1_8, force: Boolean = true) {
     check(hasJavaPlugin()) { "Java plugin is not applied!" }
 
     // Let an explicit `galaxy { java { javaVersion = ... } }` always win over version defaults
@@ -325,41 +319,14 @@ fun String.dotsToBrackets(): String = replace(".", "{}")
 fun String.processRelocationTo(): String = replace("{package}.libs.", "").dotsToBrackets()
 
 /**
- * Retrieve the versions of the specified platform from Hangar
- *
- * @param platform The platform to retrieve versions for (default: `PAPER`)
- *
- * @return The versions of the specified platform in a [LinkedHashSet] sorted by version (highest to lowest)
- */
-fun retrieveHangarPlatformVersions(platform: String = "PAPER"): LinkedHashSet<String> {
-    // Make API request
-    val response = HttpClient.newBuilder().build().send(
-        HttpRequest.newBuilder()
-            .uri(URI.create("https://hangar.papermc.io/api/v1/platforms/${platform}/versions"))
-            .GET()
-            .build(),
-        HttpResponse.BodyHandlers.ofString())
-    if (response.statusCode() != 200) {
-        throw IllegalStateException("Failed to retrieve Hangar platform versions for $platform: ${response.statusCode()} ${response.body()}")
-    }
-
-    // Flatten versions
-    val versions = LinkedHashSet<String>()
-    for (element in json.decodeFromString<JsonArray>(response.body())) {
-        val jsonObject = element.jsonObject
-        // Add subVersions first as version is lowest
-        for (subVersion in jsonObject["subVersions"]!!.jsonArray) versions.add(subVersion.jsonPrimitive.content)
-        versions.add(jsonObject["version"]!!.jsonPrimitive.content)
-    }
-    return versions
-}
-
-/**
  * Relocates the specified package to the specified package
  *
  * @param from The package to relocate
  * @param to The package to relocate to
  */
+@Deprecated(
+    "Use galaxy { relocate(...) } instead",
+    ReplaceWith("galaxy { relocate(from, to, action) }"))
 fun Project.relocate(
     from: String,
     to: String = "${getPackage()}.libs.${makePackageSafe(from.split(".").last())}",
@@ -368,34 +335,6 @@ fun Project.relocate(
     extensions.configure<GradleGalaxyExtension>("galaxy") {
         relocate(from, to, action)
     }
-}
-
-/**
- * Adds a task to generate the `platforms.json` resources file, listing out the plugin's publishing platforms
- *
- * @param platforms The platforms to add to the `platforms.json` file
- *
- * @return The task that generates the `platforms.json` resources file
- */
-fun Project.addPlatformsResourceFileTask(platforms: Map<PluginPlatform, String>): TaskProvider<Task> {
-    val platformsFile = project.layout.buildDirectory.file("resources/main/platforms.json").get().asFile
-    val platformsProvider = project.provider { json.encodeToString(mapOf("platforms" to platforms)) }
-
-    val task = tasks.register("writePlatformsResourceFile") {
-        group = "galaxy"
-        description = "Writes the platforms.json file"
-
-        inputs.property("text", platformsProvider)
-        outputs.file(platformsFile)
-
-        doLast {
-            platformsFile.writeText(platformsProvider.get())
-        }
-    }
-
-    project.tasks.named("processResources") { dependsOn(task) }
-
-    return task
 }
 
 /**

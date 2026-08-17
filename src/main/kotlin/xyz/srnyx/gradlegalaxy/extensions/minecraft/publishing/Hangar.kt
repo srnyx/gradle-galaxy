@@ -2,6 +2,10 @@ package xyz.srnyx.gradlegalaxy.extensions.minecraft.publishing
 
 import io.papermc.hangarpublishplugin.HangarPublishExtension
 import io.papermc.hangarpublishplugin.model.HangarPublication
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import org.gradle.api.Project
 import org.gradle.api.file.RegularFile
 import org.gradle.api.provider.Provider
@@ -10,7 +14,11 @@ import xyz.srnyx.gradlegalaxy.annotations.Used
 import xyz.srnyx.gradlegalaxy.enums.PluginPlatform
 import xyz.srnyx.gradlegalaxy.enums.ReleaseChannel
 import xyz.srnyx.gradlegalaxy.utility.getEnvironmentVariable
-import xyz.srnyx.gradlegalaxy.utility.retrieveHangarPlatformVersions
+import xyz.srnyx.gradlegalaxy.utility.json
+import java.net.URI
+import java.net.http.HttpClient
+import java.net.http.HttpRequest
+import java.net.http.HttpResponse
 
 
 class HangarExtension {
@@ -88,4 +96,34 @@ internal fun PlatformPublishingExtension.setupHangar(
 
     // Ensure publishAllPublicationsToHangar runs with/after publishMods
     project.tasks.named("publishMods") { finalizedBy("publishAllPublicationsToHangar") }
+}
+
+/**
+ * Retrieve the versions of the specified platform from Hangar
+ *
+ * @param platform The platform to retrieve versions for (default: `PAPER`)
+ *
+ * @return The versions of the specified platform in a [LinkedHashSet] sorted by version (highest to lowest)
+ */
+private fun retrieveHangarPlatformVersions(platform: String = "PAPER"): LinkedHashSet<String> {
+    // Make API request
+    val response = HttpClient.newBuilder().build().send(
+        HttpRequest.newBuilder()
+            .uri(URI.create("https://hangar.papermc.io/api/v1/platforms/${platform}/versions"))
+            .GET()
+            .build(),
+        HttpResponse.BodyHandlers.ofString())
+    if (response.statusCode() != 200) {
+        throw IllegalStateException("Failed to retrieve Hangar platform versions for $platform: ${response.statusCode()} ${response.body()}")
+    }
+
+    // Flatten versions
+    val versions = LinkedHashSet<String>()
+    for (element in json.decodeFromString<JsonArray>(response.body())) {
+        val jsonObject = element.jsonObject
+        // Add subVersions first as version is lowest
+        for (subVersion in jsonObject["subVersions"]!!.jsonArray) versions.add(subVersion.jsonPrimitive.content)
+        versions.add(jsonObject["version"]!!.jsonPrimitive.content)
+    }
+    return versions
 }

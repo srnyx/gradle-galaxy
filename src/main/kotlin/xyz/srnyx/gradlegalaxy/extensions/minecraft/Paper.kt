@@ -28,7 +28,7 @@ abstract class PaperExtension @Inject constructor(
      * Runs in [xyz.srnyx.gradlegalaxy.extensions.Phase.WIRE] — see [SpigotApiExtension.setup]'s KDoc for why.
      */
     internal fun setup(project: Project) {
-        if (setJavaVersion.get()) project.setJavaVersion(getJavaVersionForMC(version.get()))
+        if (setJavaVersion.get()) project.setJavaVersion(getJavaVersionForMC(version.get()), false)
     }
 
     override fun add(project: Project) {

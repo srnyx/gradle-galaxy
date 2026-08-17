@@ -4,19 +4,20 @@ import me.modmuss50.mpp.ModPublishExtension
 import me.modmuss50.mpp.platforms.curseforge.Curseforge
 import me.modmuss50.mpp.platforms.modrinth.Modrinth
 import org.gradle.api.Project
+import org.gradle.api.Task
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.MapProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.SetProperty
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Optional
+import org.gradle.api.tasks.TaskProvider
 import org.gradle.jvm.tasks.Jar
 import org.gradle.kotlin.dsl.named
 import xyz.srnyx.gradlegalaxy.annotations.Used
 import xyz.srnyx.gradlegalaxy.enums.PluginPlatform
 import xyz.srnyx.gradlegalaxy.enums.ReleaseChannel
 import xyz.srnyx.gradlegalaxy.extensions.minecraft.MinecraftExtension
-import xyz.srnyx.gradlegalaxy.utility.addPlatformsResourceFileTask
 import xyz.srnyx.gradlegalaxy.utility.getEnvironmentVariable
 import xyz.srnyx.gradlegalaxy.utility.hasHangarPublishPlugin
 import xyz.srnyx.gradlegalaxy.utility.hasModPublishPlugin
@@ -24,6 +25,7 @@ import xyz.srnyx.gradlegalaxy.utility.hasShadowPlugin
 import xyz.srnyx.gradlegalaxy.utility.inGitHubPreRelease
 import xyz.srnyx.gradlegalaxy.utility.inGitHubPublish
 import xyz.srnyx.gradlegalaxy.utility.inGitHubWorkflow
+import xyz.srnyx.gradlegalaxy.utility.json
 
 
 class PlatformPublishingExtension(
@@ -205,7 +207,7 @@ class PlatformPublishingExtension(
         if (platforms.orNull?.isEmpty() == true) return
 
         // Add resource file task
-        if (addResourceFile.get()) project.addPlatformsResourceFileTask(platforms.get())
+        if (addResourceFile.get()) addPlatformsResourceFileTask()
 
         // Default apiTiers to Paper/Spigot dependency checking
         if (apiTiers.orNull.isNullOrEmpty()) when {
@@ -230,5 +232,27 @@ class PlatformPublishingExtension(
         if (project.hasModPublishPlugin()) setupModPublish(project, releaseChannel, changelogText, primaryFile)
 
         if (project.hasHangarPublishPlugin()) setupHangar(project, releaseChannel, changelogText, primaryFile)
+    }
+
+    /**
+     * Adds a task to generate the `platforms.json` resources file, listing out the plugin's publishing platforms
+     */
+    private fun addPlatformsResourceFileTask() {
+        val platformsFile = project.layout.buildDirectory.file("resources/main/platforms.json").get().asFile
+        val platformsProvider = project.provider { json.encodeToString(mapOf("platforms" to platforms.get())) }
+
+        val task = project.tasks.register("writePlatformsResourceFile") {
+            group = "galaxy"
+            description = "Writes the platforms.json file"
+
+            inputs.property("text", platformsProvider)
+            outputs.file(platformsFile)
+
+            doLast {
+                platformsFile.writeText(platformsProvider.get())
+            }
+        }
+
+        project.tasks.named("processResources") { dependsOn(task) }
     }
 }

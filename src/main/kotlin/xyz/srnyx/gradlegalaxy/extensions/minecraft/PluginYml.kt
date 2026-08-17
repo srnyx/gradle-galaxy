@@ -11,6 +11,7 @@ import org.gradle.kotlin.dsl.named
 import org.gradle.language.jvm.tasks.ProcessResources
 import org.gradle.util.internal.VersionNumber
 import xyz.srnyx.gradlegalaxy.annotations.Used
+import xyz.srnyx.gradlegalaxy.data.pom.DeveloperData
 import xyz.srnyx.gradlegalaxy.utility.getPackage
 import xyz.srnyx.gradlegalaxy.utility.makePackageSafe
 import java.io.File
@@ -21,6 +22,10 @@ abstract class PluginYmlExtension @Inject constructor(
     private val project: Project,
     private val objects: ObjectFactory
 ) {
+    // DeveloperData
+    @Used val SRNYX: DeveloperData = DeveloperData.srnyx
+    @Used val DKIM19375: DeveloperData = DeveloperData.dkim19375
+    // load
     @Used val STARTUP = "STARTUP"
     @Used val POSTWORLD = "POSTWORLD"
 
@@ -93,6 +98,15 @@ abstract class PluginYmlExtension @Inject constructor(
     @get:Input @get:Optional
     val permissions: ListProperty<Permission> = objects.listProperty(Permission::class.java)
 
+
+    /**
+     * Adds [DeveloperData.id] to [authors] and sets [website]
+     */
+    @Used
+    fun developerData(data: DeveloperData) {
+        data.id?.let { authors.add(it) }
+        data.url?.let { website.set(it) }
+    }
 
     @Used
     fun command(name: String, action: Command.() -> Unit = {}) {
