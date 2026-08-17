@@ -52,6 +52,7 @@ abstract class PublishingPlatformsProjectDataExtension @Inject constructor(
         val urlString = url.get()
         val tokenString = token.orNull
         val jsonData = Json.encodeToString(ProjectData.serializer(), data)
+        val dryRun = platformPublishing.dryRun.get() || tokenString == null
 
         val publishProjectData = project.tasks.register("publishProjectData") {
             group = "galaxy"
@@ -59,7 +60,7 @@ abstract class PublishingPlatformsProjectDataExtension @Inject constructor(
 
             doLast {
                 // Dry run (print to console)
-                if (platformPublishing.dryRun.get() || tokenString == null) {
+                if (dryRun) {
                     logger.lifecycle("Dry run: $jsonData")
                     return@doLast
                 }
