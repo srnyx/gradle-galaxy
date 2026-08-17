@@ -3,8 +3,9 @@ package xyz.srnyx.gradlegalaxy.data.config.publishing
 import me.modmuss50.mpp.ModPublishExtension
 import me.modmuss50.mpp.platforms.curseforge.Curseforge
 import me.modmuss50.mpp.platforms.modrinth.Modrinth
-import org.gradle.api.Action
 import xyz.srnyx.gradlegalaxy.enums.PluginPlatform
+import xyz.srnyx.gradlegalaxy.extensions.minecraft.publishing.HangarExtension
+import xyz.srnyx.gradlegalaxy.extensions.minecraft.publishing.PlatformPublishingExtension
 
 
 data class PublishingPlatformConfig(
@@ -14,25 +15,27 @@ data class PublishingPlatformConfig(
     val loaders: List<String> = listOf("spigot", "paper", "purpur"),
     val addAnnoyingApiDependency: Boolean = true,
     val dryRun: Boolean = false,
-    val modrinthAction: Action<Modrinth> = Action {},
-    val curseForgeAction: Action<Curseforge> = Action {},
-    val hangarAction: Action<HangarAction> = Action {},
-    val action: Action<ModPublishExtension> = Action {},
-)
+    val modrinthAction: Modrinth.() -> Unit = {},
+    val curseForgeAction: Curseforge.() -> Unit = {},
+    val hangarAction: HangarExtension.() -> Unit = {},
+    val action: ModPublishExtension.() -> Unit = {},
+) {
+    internal fun toExtension(): PlatformPublishingExtension.() -> Unit = {
+        val config: PublishingPlatformConfig = this@PublishingPlatformConfig
 
-class HangarAction {
-    val dependencies: MutableList<HangarDependency> = mutableListOf()
+        minecraftVersionStart.set(config.minecraftVersionStart)
+        minecraftVersionEnd.set(config.minecraftVersionEnd)
+        apiTiers.set(emptyList())
+        extraLoaders.set(config.loaders)
+        dryRun.set(config.dryRun)
+        addAnnoyingApiDependency.set(config.addAnnoyingApiDependency)
 
-    fun optional(id: String) {
-        dependencies.add(HangarDependency(id, false))
-    }
-
-    fun required(id: String) {
-        dependencies.add(HangarDependency(id, true))
+        modPublishPlugin(action)
+        config.platforms[PluginPlatform.MODRINTH]?.let { modrinth(it, modrinthAction) }
+        config.platforms[PluginPlatform.CURSEFORGE]?.let { curseforge(it, curseForgeAction) }
+        config.platforms[PluginPlatform.HANGAR]?.let { hangar(it, hangarAction) }
+        config.platforms[PluginPlatform.SPIGOT]?.let { spigot(it) }
+        config.platforms[PluginPlatform.EXTERNAL]?.let { external(it) }
+        config.platforms[PluginPlatform.MANUAL]?.let { manual(it) }
     }
 }
-
-data class HangarDependency(
-    val id: String,
-    val required: Boolean,
-)

@@ -1,6 +1,7 @@
 package xyz.srnyx.gradlegalaxy.data.config
 
-import org.gradle.api.artifacts.ExternalModuleDependency
+import org.gradle.api.artifacts.ModuleDependency
+import xyz.srnyx.gradlegalaxy.extensions.DependencyExtension
 
 
 /**
@@ -11,11 +12,20 @@ import org.gradle.api.artifacts.ExternalModuleDependency
  * @param configurations The configurations to add the dependency to. Defaults to a list containing [configuration] if provided, otherwise `null` (default: `null`)
  * @param configurationAction The action to apply to the dependency (default: `{}`)
  *
- * @deprecated Use [configurations] instead of [configuration]
+ * @deprecated Use `galaxy { }`'s dependency functions (e.g. `magicMongo(version) { }`) instead
  */
 data class DependencyConfig(
     val version: String,
     @Deprecated("Use configurations instead") val configuration: String? = null,
-    val configurations: List<String>? = configuration?.let { listOf(it) },
-    var configurationAction: ExternalModuleDependency.() -> Unit = {}
-)
+    var configurations: List<String>? = configuration?.let { listOf(it) },
+    var configurationAction: ModuleDependency.() -> Unit = {}
+) {
+    internal fun toExtension(): DependencyExtension.() -> Unit = {
+        val config: DependencyConfig = this@DependencyConfig
+
+        config.configurations
+            ?.takeIf { it.isNotEmpty() }
+            ?.let { configurations.set(it) }
+        action = config.configurationAction
+    }
+}

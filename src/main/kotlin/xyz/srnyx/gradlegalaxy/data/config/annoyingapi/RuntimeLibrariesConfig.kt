@@ -1,6 +1,9 @@
 package xyz.srnyx.gradlegalaxy.data.config.annoyingapi
 
+import xyz.srnyx.gradlegalaxy.extensions.minecraft.RuntimeLibrariesExtension
 
+
+/** Configuration for a set of runtime library dependencies */
 data class RuntimeLibrariesConfig(
     val addRepositories: Boolean = true,
     /**
@@ -12,4 +15,10 @@ data class RuntimeLibrariesConfig(
      */
     val configurations: List<String> = listOf("testImplementation"),
     val relocate: Boolean = true,
-)
+) {
+    internal fun toExtension(): RuntimeLibrariesExtension.() -> Unit = {
+        addRepositories.set(this@RuntimeLibrariesConfig.addRepositories)
+        configurations.set(this@RuntimeLibrariesConfig.configurations)
+        relocate.set(this@RuntimeLibrariesConfig.relocate)
+    }
+}

@@ -1,5 +1,7 @@
 package xyz.srnyx.gradlegalaxy.data.config.publishing
 
+import xyz.srnyx.gradlegalaxy.extensions.MavenPublishingExtension
+
 
 /**
  * Configuration for publishing using environment variables
@@ -14,4 +16,13 @@ data class PublishingEnvConfig(
     var usernameEnv: String = "MAVEN_NAME",
     var passwordEnv: String = "MAVEN_SECRET",
     var mavenUrl: String? = null,
-)
+) {
+    internal fun toExtension(): MavenPublishingExtension.() -> Unit = {
+        val config: PublishingEnvConfig = this@PublishingEnvConfig
+
+        mavenUrlEnv.set(config.mavenUrlEnv)
+        usernameEnv.set(config.usernameEnv)
+        passwordEnv.set(config.passwordEnv)
+        mavenUrl.set(config.mavenUrl)
+    }
+}

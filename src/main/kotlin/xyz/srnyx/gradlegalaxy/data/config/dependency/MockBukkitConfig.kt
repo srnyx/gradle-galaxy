@@ -1,7 +1,17 @@
 package xyz.srnyx.gradlegalaxy.data.config.dependency
 
+import xyz.srnyx.gradlegalaxy.extensions.testing.MockBukkitExtension
 
-data class MockBukkitConfig(
-    val group: String = "com.github.seeseemelk",
-    val minecraftVersion: String = "1.20",
-)
+
+/** Configuration for `galaxy { mockBukkit { } }` */
+open class MockBukkitConfig(
+    var group: String = "com.github.seeseemelk",
+    var minecraftVersion: String = "1.20",
+) {
+    fun toExtension(): MockBukkitExtension.() -> Unit = {
+        val config: MockBukkitConfig = this@MockBukkitConfig
+
+        group.set(config.group)
+        minecraftVersion.set(config.minecraftVersion)
+    }
+}

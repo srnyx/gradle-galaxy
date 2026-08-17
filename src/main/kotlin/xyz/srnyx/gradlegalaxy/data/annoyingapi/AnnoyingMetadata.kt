@@ -11,6 +11,4 @@ data class AnnoyingMetadata(
     val runtimeLibraries: List<RuntimeLibrary> = emptyList(),
     val excludes: List<Exclude> = emptyList(),
 ) {
-    fun getRuntimeLibrary(name: String): RuntimeLibrary? = runtimeLibraries.find { it.name == name }
-
 }

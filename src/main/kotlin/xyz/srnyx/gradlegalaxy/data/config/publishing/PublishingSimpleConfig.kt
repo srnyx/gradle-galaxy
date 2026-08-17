@@ -2,12 +2,12 @@ package xyz.srnyx.gradlegalaxy.data.config.publishing
 
 import org.gradle.api.Project
 import org.gradle.api.component.SoftwareComponent
-import org.gradle.api.publish.maven.MavenPublication
 import org.gradle.kotlin.dsl.get
 import xyz.srnyx.gradlegalaxy.annotations.Used
 import xyz.srnyx.gradlegalaxy.data.pom.DeveloperData
 import xyz.srnyx.gradlegalaxy.data.pom.LicenseData
 import xyz.srnyx.gradlegalaxy.data.pom.ScmData
+import xyz.srnyx.gradlegalaxy.extensions.MavenPublishingExtension
 
 
 /**
@@ -45,7 +45,31 @@ data class PublishingSimpleConfig(
     var licenses: List<LicenseData> = emptyList(),
     var developers: List<DeveloperData> = emptyList(),
     val scm: ScmData? = null,
-)
+) {
+    internal fun toExtension(): MavenPublishingExtension.() -> Unit = {
+        val config: PublishingSimpleConfig = this@PublishingSimpleConfig
+
+        groupId.set(config.groupId)
+        artifactId.set(config.artifactId)
+        version.set(config.version)
+        withJavadocSourcesJars.set(config.withJavadocSourcesJars)
+        silenceMissingJavadocWarnings.set(config.silenceMissingJavadocWarnings)
+        component.set(config.component)
+        artifacts.set(config.artifacts)
+        textArtifacts.set(config.textArtifacts)
+        licenses.set(config.licenses)
+        developers.set(config.developers)
+        scm.set(config.scm)
+
+        publication {
+            pom {
+                name.set(config.name)
+                description.set(config.description)
+                url.set(config.url)
+            }
+        }
+    }
+}
 
 /**
  * See [PublishingSimpleConfig]
