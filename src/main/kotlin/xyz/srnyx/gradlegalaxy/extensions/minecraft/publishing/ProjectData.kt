@@ -59,7 +59,7 @@ abstract class PublishingPlatformsProjectDataExtension @Inject constructor(
 
             doLast {
                 // Dry run (print to console)
-                if (tokenString == null) {
+                if (platformPublishing.dryRun.get() || tokenString == null) {
                     logger.lifecycle("Dry run: $jsonData")
                     return@doLast
                 }
