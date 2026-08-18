@@ -161,7 +161,7 @@ abstract class CustomRuntimeLibrariesExtension @Inject constructor(
 
 class RuntimeLibraryBuilder internal constructor(
     private val objects: ObjectFactory,
-    private val customRuntimeLibraries: CustomRuntimeLibrariesExtension,
+    private val runtimeLibraries: RuntimeLibrariesExtension,
     private val name: String,
 ) {
     /** Nested [library] declarations, flattened in parent-before-descendant (pre-order) declaration order */
@@ -188,10 +188,13 @@ class RuntimeLibraryBuilder internal constructor(
 
     @Used
     fun dependency(name: String, action: RuntimeLibraryBuilder.() -> Unit) {
-        val builder = RuntimeLibraryBuilder(objects, customRuntimeLibraries, name)
+        val builder = RuntimeLibraryBuilder(objects, runtimeLibraries, name)
         builder.action()
-        customRuntimeLibraries.libraries.add(builder.build())
+        dependencies.addAll(builder.dependencies)
+        dependencies.addAll(builder.children.map { it.name })
         dependencies.add(name)
+        runtimeLibraries.libraries.add(builder.build())
+        runtimeLibraries.libraries.addAll(builder.children)
     }
 
     @Used
@@ -213,7 +216,7 @@ class RuntimeLibraryBuilder internal constructor(
      */
     @Used
     fun library(name: String, dependency: Boolean = true, action: RuntimeLibraryBuilder.() -> Unit) {
-        val builder = RuntimeLibraryBuilder(objects, customRuntimeLibraries, name)
+        val builder = RuntimeLibraryBuilder(objects, runtimeLibraries, name)
         builder.repositories.convention(repositories)
         builder.group.convention(group)
         builder.artifact.convention(artifact)
@@ -228,13 +231,13 @@ class RuntimeLibraryBuilder internal constructor(
 
     internal fun build(): RuntimeLibrary = RuntimeLibrary(
         name = name,
-        repositories = repositories.get(),
+        repositories = repositories.get().distinct(),
         group = group.get(),
         artifact = artifact.get(),
         version = version.get(),
         excludes = excludes.get(),
         relocations = relocations.get(),
-        dependencies = dependencies.get()
+        dependencies = dependencies.get().distinct()
     )
 }
 
