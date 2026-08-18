@@ -304,25 +304,25 @@ abstract class RuntimeLibrariesExtension @Inject constructor(
 }
 
 abstract class GenerateRuntimeLibraryEnumExtension @Inject constructor(
-    project: Project,
     objects: ObjectFactory,
 ) {
     @get:Input
     val relocateImports: Property<Boolean> = objects.property(Boolean::class.java).convention(true)
-    @get:Input
-    val packagePath: Property<String> = objects.property(String::class.java).convention(project.getPackage())
+    @get:Input @get:Optional
+    val packagePath: Property<String> = objects.property(String::class.java)
 
     fun process(
         project: Project,
         libraries: List<RuntimeLibrary>,
         annoyingMetadata: AnnoyingMetadata? = null,
     ) {
-        val packageFolder = packagePath.get().replace(".", "/")
+        val packagePathValue = packagePath.getOrElse(project.getPackage())
+        val packageFolder = packagePathValue.replace(".", "/")
         val enumName = "${project.name}Library"
 
         val enum = buildString {
             // Package
-            append("package ${packagePath.get()}.library;")
+            append("package $packagePathValue.library;")
             append("\n")
 
             // Imports
