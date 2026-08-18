@@ -240,7 +240,7 @@ class RuntimeLibraryExtension internal constructor(
         children.addAll(library.children)
     }
 
-    internal fun toData(): RuntimeLibrary = RuntimeLibrary(
+    fun toData(): RuntimeLibrary = RuntimeLibrary(
         name = name,
         repositories = repositories.get().distinct(),
         group = group.get(),
