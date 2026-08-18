@@ -183,7 +183,7 @@ abstract class MavenPublishingExtension @Inject constructor(
     }
 }
 
-abstract class TextArtifactExtension(
+abstract class TextArtifactExtension @Inject constructor(
     objects: ObjectFactory
 ) {
     @get:Input
