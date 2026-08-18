@@ -37,7 +37,7 @@ abstract class MinecraftExtension @Inject internal constructor(
     val spigotNMS = objects.newInstance(SpigotNmsExtension::class.java)
     val paper = objects.newInstance(PaperExtension::class.java)
     // Dependency + setup merged onto one type
-    val annoyingAPI = objects.newInstance(AnnoyingApiExtension::class.java, java, this)
+    val annoyingAPI = objects.newInstance(AnnoyingApiExtension::class.java, deferred, java, this)
     // Cross-cutting: read by pluginYml (depend/softdepend) and platformPublishing (modrinth/curseforge/hangar)
     val dependency = objects.newInstance(MinecraftDependencyExtension::class.java)
     val platformPublishing = PlatformPublishingExtension(project, this, objects)

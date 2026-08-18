@@ -7,6 +7,7 @@ import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.Optional
 import org.gradle.kotlin.dsl.configure
 import org.gradle.kotlin.dsl.exclude
@@ -16,8 +17,10 @@ import xyz.srnyx.gradlegalaxy.data.annoyingapi.AnnoyingMetadata
 import xyz.srnyx.gradlegalaxy.data.annoyingapi.Exclude
 import xyz.srnyx.gradlegalaxy.data.annoyingapi.Relocation
 import xyz.srnyx.gradlegalaxy.data.annoyingapi.RuntimeLibrary
+import xyz.srnyx.gradlegalaxy.extensions.DeferredActions
 import xyz.srnyx.gradlegalaxy.extensions.DependencyExtension
 import xyz.srnyx.gradlegalaxy.extensions.JavaExtension
+import xyz.srnyx.gradlegalaxy.extensions.Phase
 import xyz.srnyx.gradlegalaxy.utility.dotsToBrackets
 import xyz.srnyx.gradlegalaxy.utility.getAnnoyingApiMetadata
 import xyz.srnyx.gradlegalaxy.utility.getPackage
@@ -33,8 +36,9 @@ import javax.inject.Inject
  * `minecraft { annoyingAPI(version) { } }` alone already applies full [java]/[minecraft]/`minecraft.runPaper`
  * defaults — no separate `galaxy { java { } }` / `minecraft { }` / `minecraft { runPaper { } }` calls needed.
  */
-abstract class AnnoyingApiExtension @Inject constructor(
+abstract class AnnoyingApiExtension @Inject internal constructor(
     objects: ObjectFactory,
+    deferred: DeferredActions,
     private val java: JavaExtension,
     private val minecraft: MinecraftExtension,
 ) : DependencyExtension(objects) {
@@ -46,7 +50,7 @@ abstract class AnnoyingApiExtension @Inject constructor(
     }
 
     val metadata = objects.newInstance(MetadataExtension::class.java)
-    val customRuntimeLibraries = objects.newInstance(CustomRuntimeLibrariesExtension::class.java)
+    val customRuntimeLibraries = objects.newInstance(CustomRuntimeLibrariesExtension::class.java, deferred)
 
     fun metadata(action: MetadataExtension.() -> Unit) = metadata.action()
     fun customRuntimeLibraries(action: CustomRuntimeLibrariesExtension.() -> Unit) = customRuntimeLibraries.action()
@@ -63,7 +67,7 @@ abstract class AnnoyingApiExtension @Inject constructor(
 
         val annoyingMetadata: AnnoyingMetadata? = metadata.process(project, this)
 
-        customRuntimeLibraries.process(project, annoyingMetadata)
+        customRuntimeLibraries.annoyingMetadata.set(annoyingMetadata)
     }
 }
 
@@ -121,12 +125,23 @@ abstract class MetadataExtension @Inject constructor(
     }
 }
 
-abstract class CustomRuntimeLibrariesExtension @Inject constructor(
-    private val objects: ObjectFactory
+abstract class CustomRuntimeLibrariesExtension @Inject internal constructor(
+    private val project: Project,
+    private val objects: ObjectFactory,
+    deferred: DeferredActions,
 ) : RuntimeLibrariesExtension(objects) {
     init {
         configurations.convention(listOf("compileOnly", "testImplementation"))
+
+        // Self-sufficient: processes/generates on its own, without needing `annoyingAPI(version) { }` to have run
+        deferred.defer(Phase.FINALIZE) { process(project, annoyingMetadata.orNull) }
     }
+
+    /**
+     * Set by [AnnoyingApiExtension.setup] when nested under `annoyingAPI(version) { }`; absent otherwise
+     */
+    @get:Internal
+    internal val annoyingMetadata: Property<AnnoyingMetadata> = objects.property(AnnoyingMetadata::class.java)
 
     var generateRuntimeLibraryEnum: GenerateRuntimeLibraryEnumExtension = objects.newInstance(GenerateRuntimeLibraryEnumExtension::class.java)
 
