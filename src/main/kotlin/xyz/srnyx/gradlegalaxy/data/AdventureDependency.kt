@@ -5,7 +5,6 @@ import xyz.srnyx.gradlegalaxy.data.config.DependencyConfig
 import xyz.srnyx.gradlegalaxy.enums.AdventureComponent
 import xyz.srnyx.gradlegalaxy.enums.Component
 import xyz.srnyx.gradlegalaxy.extensions.DependencyExtension
-import xyz.srnyx.gradlegalaxy.extensions.Repositories.Companion.REPOSITORIES
 
 /**
  * Represents a dependency on a component of Adventure
@@ -26,7 +25,7 @@ data class AdventureDependency(val component: Component, val config: DependencyC
         return DependencyExtension(objects).apply {
             repositories.set(listOf(MAVEN_CENTRAL))
             group.set("net.kyori")
-            name.set(component.getComponent())
+            artifact.set(component.getComponent())
             configurations.set(config.configurations ?: listOf("implementation"))
             platform.set(component == AdventureComponent.BOM)
             version.set(config.version)

@@ -8,7 +8,6 @@ import org.gradle.api.tasks.Optional
 import org.gradle.kotlin.dsl.exclude
 import org.gradle.kotlin.dsl.get
 import xyz.srnyx.gradlegalaxy.extensions.DependencyExtension
-import xyz.srnyx.gradlegalaxy.extensions.Repositories.Companion.REPOSITORIES
 import xyz.srnyx.gradlegalaxy.extensions.JavaExtension
 import xyz.srnyx.gradlegalaxy.utility.addCompilerArgs
 import xyz.srnyx.gradlegalaxy.utility.hasShadowPlugin
@@ -23,7 +22,7 @@ abstract class JdaExtension @Inject constructor(
     init { apply {
         repositories.set(listOf(MAVEN_CENTRAL))
         group.set("net.dv8tion")
-        name.set("JDA")
+        artifact.set("JDA")
         configurations.set(listOf("implementation", "testImplementation"))
     } }
     @get:Input @get:Optional

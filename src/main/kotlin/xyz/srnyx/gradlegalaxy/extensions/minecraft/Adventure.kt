@@ -21,32 +21,32 @@ abstract class AdventureExtension @Inject internal constructor(
     val api: DependencyExtension = DependencyExtension(objects).apply {
         repositories.set(listOf(MAVEN_CENTRAL))
         group.set("net.kyori")
-        name.set("adventure-api")
+        artifact.set("adventure-api")
         configurations.set(listOf("implementation"))
     }
     val nbt: DependencyExtension = DependencyExtension(objects).apply {
         repositories.set(listOf(MAVEN_CENTRAL))
         group.set("net.kyori")
-        name.set("adventure-nbt")
+        artifact.set("adventure-nbt")
         configurations.set(listOf("implementation"))
     }
     val key: DependencyExtension = DependencyExtension(objects).apply {
         repositories.set(listOf(MAVEN_CENTRAL))
         group.set("net.kyori")
-        name.set("adventure-key")
+        artifact.set("adventure-key")
         configurations.set(listOf("implementation"))
     }
     val bom: DependencyExtension = DependencyExtension(objects).apply {
         repositories.set(listOf(MAVEN_CENTRAL))
         group.set("net.kyori")
-        name.set("adventure-bom")
+        artifact.set("adventure-bom")
         configurations.set(listOf("testImplementation"))
         platform.set(true)
     }
     val annotationProcessors: DependencyExtension = DependencyExtension(objects).apply {
         repositories.set(listOf(MAVEN_CENTRAL))
         group.set("net.kyori")
-        name.set("adventure-annotation-processors")
+        artifact.set("adventure-annotation-processors")
         configurations.set(listOf("annotationProcessor"))
     }
 
@@ -90,43 +90,43 @@ abstract class AdventurePlatformExtension @Inject internal constructor(
     val api: DependencyExtension = DependencyExtension(objects).apply {
         repositories.set(listOf(MAVEN_CENTRAL))
         group.set("net.kyori")
-        name.set("adventure-platform-api")
+        artifact.set("adventure-platform-api")
         configurations.set(listOf("implementation"))
     }
     val bukkit: DependencyExtension = DependencyExtension(objects).apply {
         repositories.set(listOf(MAVEN_CENTRAL))
         group.set("net.kyori")
-        name.set("adventure-platform-bukkit")
+        artifact.set("adventure-platform-bukkit")
         configurations.set(listOf("implementation"))
     }
     val bungeecord: DependencyExtension = DependencyExtension(objects).apply {
         repositories.set(listOf(MAVEN_CENTRAL))
         group.set("net.kyori")
-        name.set("adventure-platform-bungeecord")
+        artifact.set("adventure-platform-bungeecord")
         configurations.set(listOf("implementation"))
     }
     val spongeapi: DependencyExtension = DependencyExtension(objects).apply {
         repositories.set(listOf(MAVEN_CENTRAL))
         group.set("net.kyori")
-        name.set("adventure-platform-spongeapi")
+        artifact.set("adventure-platform-spongeapi")
         configurations.set(listOf("implementation"))
     }
     val fabric: DependencyExtension = DependencyExtension(objects).apply {
         repositories.set(listOf(MAVEN_CENTRAL))
         group.set("net.kyori")
-        name.set("adventure-platform-fabric")
+        artifact.set("adventure-platform-fabric")
         configurations.set(listOf("implementation"))
     }
     val viaversion: DependencyExtension = DependencyExtension(objects).apply {
         repositories.set(listOf(MAVEN_CENTRAL))
         group.set("net.kyori")
-        name.set("adventure-platform-viaversion")
+        artifact.set("adventure-platform-viaversion")
         configurations.set(listOf("implementation"))
     }
     val facet: DependencyExtension = DependencyExtension(objects).apply {
         repositories.set(listOf(MAVEN_CENTRAL))
         group.set("net.kyori")
-        name.set("adventure-platform-facet")
+        artifact.set("adventure-platform-facet")
         configurations.set(listOf("implementation"))
     }
 
@@ -179,7 +179,7 @@ abstract class AdventureTextExtension @Inject internal constructor(
     val minimessage: DependencyExtension = DependencyExtension(objects).apply {
         repositories.set(listOf(MAVEN_CENTRAL))
         group.set("net.kyori")
-        name.set("adventure-text-minimessage")
+        artifact.set("adventure-text-minimessage")
         configurations.set(listOf("implementation"))
     }
 
@@ -204,49 +204,49 @@ abstract class AdventureTextSerializerExtension @Inject internal constructor(
     val legacy: DependencyExtension = DependencyExtension(objects).apply {
         repositories.set(listOf(MAVEN_CENTRAL))
         group.set("net.kyori")
-        name.set("adventure-text-serializer-legacy")
+        artifact.set("adventure-text-serializer-legacy")
         configurations.set(listOf("implementation"))
     }
     val bungeecord: DependencyExtension = DependencyExtension(objects).apply {
         repositories.set(listOf(MAVEN_CENTRAL))
         group.set("net.kyori")
-        name.set("adventure-text-serializer-bungeecord")
+        artifact.set("adventure-text-serializer-bungeecord")
         configurations.set(listOf("implementation"))
     }
     val configurate3: DependencyExtension = DependencyExtension(objects).apply {
         repositories.set(listOf(MAVEN_CENTRAL))
         group.set("net.kyori")
-        name.set("adventure-text-serializer-configurate3")
+        artifact.set("adventure-text-serializer-configurate3")
         configurations.set(listOf("implementation"))
     }
     val configurate4: DependencyExtension = DependencyExtension(objects).apply {
         repositories.set(listOf(MAVEN_CENTRAL))
         group.set("net.kyori")
-        name.set("adventure-text-serializer-configurate4")
+        artifact.set("adventure-text-serializer-configurate4")
         configurations.set(listOf("implementation"))
     }
     val json: DependencyExtension = DependencyExtension(objects).apply {
         repositories.set(listOf(MAVEN_CENTRAL))
         group.set("net.kyori")
-        name.set("adventure-text-serializer-json")
+        artifact.set("adventure-text-serializer-json")
         configurations.set(listOf("implementation"))
     }
     val gson: DependencyExtension = DependencyExtension(objects).apply {
         repositories.set(listOf(MAVEN_CENTRAL))
         group.set("net.kyori")
-        name.set("adventure-text-serializer-gson")
+        artifact.set("adventure-text-serializer-gson")
         configurations.set(listOf("implementation"))
     }
     val ansi: DependencyExtension = DependencyExtension(objects).apply {
         repositories.set(listOf(MAVEN_CENTRAL))
         group.set("net.kyori")
-        name.set("adventure-text-serializer-ansi")
+        artifact.set("adventure-text-serializer-ansi")
         configurations.set(listOf("implementation"))
     }
     val plain: DependencyExtension = DependencyExtension(objects).apply {
         repositories.set(listOf(MAVEN_CENTRAL))
         group.set("net.kyori")
-        name.set("adventure-text-serializer-plain")
+        artifact.set("adventure-text-serializer-plain")
         configurations.set(listOf("implementation"))
     }
 
@@ -303,13 +303,13 @@ abstract class AdventureTextSerializerImplementationExtension @Inject internal c
     val json: DependencyExtension = DependencyExtension(objects).apply {
         repositories.set(listOf(MAVEN_CENTRAL))
         group.set("net.kyori")
-        name.set("adventure-text-serializer-json-impl")
+        artifact.set("adventure-text-serializer-json-impl")
         configurations.set(listOf("implementation"))
     }
     val gson: DependencyExtension = DependencyExtension(objects).apply {
         repositories.set(listOf(MAVEN_CENTRAL))
         group.set("net.kyori")
-        name.set("adventure-text-serializer-gson-impl")
+        artifact.set("adventure-text-serializer-gson-impl")
         configurations.set(listOf("implementation"))
     }
 
@@ -334,7 +334,7 @@ abstract class AdventureTextLoggerExtension @Inject internal constructor(
     val slf4j: DependencyExtension = DependencyExtension(objects).apply {
         repositories.set(listOf(MAVEN_CENTRAL))
         group.set("net.kyori")
-        name.set("adventure-text-logger-slf4j")
+        artifact.set("adventure-text-logger-slf4j")
         configurations.set(listOf("implementation"))
     }
 
@@ -354,7 +354,7 @@ abstract class AdventureExtraExtension @Inject internal constructor(
     val kotlin: DependencyExtension = DependencyExtension(objects).apply {
         repositories.set(listOf(MAVEN_CENTRAL))
         group.set("net.kyori")
-        name.set("adventure-extra-kotlin")
+        artifact.set("adventure-extra-kotlin")
         configurations.set(listOf("implementation"))
     }
 

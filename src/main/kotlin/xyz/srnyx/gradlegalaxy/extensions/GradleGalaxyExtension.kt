@@ -34,7 +34,7 @@ abstract class GradleGalaxyExtension @Inject constructor(
     val magicMongo: DependencyExtension = DependencyExtension(objects).apply {
         repositories.set(listOf("https://repo.srnyx.com/snapshots/", "https://repo.srnyx.com/releases/"))
         group.set("xyz.srnyx")
-        name.set("magic-mongo")
+        artifact.set("magic-mongo")
         configurations.set(listOf("implementation", "testImplementation"))
     }
 

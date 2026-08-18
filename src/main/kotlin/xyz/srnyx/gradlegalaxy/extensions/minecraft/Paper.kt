@@ -17,7 +17,7 @@ abstract class PaperExtension @Inject constructor(
     init { apply {
         repositories.set(listOf(MAVEN_CENTRAL, SONATYPE_SNAPSHOTS_OLD, PAPER))
         group.set("io.papermc.paper")
-        name.set("paper-api")
+        artifact.set("paper-api")
         configurations.set(listOf("compileOnly", "testImplementation"))
     } }
     @get:Input @get:Optional
@@ -33,7 +33,7 @@ abstract class PaperExtension @Inject constructor(
     override fun add(project: Project) {
         val paperVersion = PaperVersion.parse(version.get())
         group.set(paperVersion.groupId)
-        name.set(paperVersion.artifactId)
+        artifact.set(paperVersion.artifactId)
         version.set(getVersionString(version.get()))
 
         super.add(project)

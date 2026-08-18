@@ -42,7 +42,7 @@ abstract class AnnoyingApiExtension @Inject constructor(
     init {
         repositories.set(listOf(SRNYX_SNAPSHOTS, SRNYX_RELEASES))
         group.set("xyz.srnyx")
-        name.set("annoying-api")
+        artifact.set("annoying-api")
         configurations.set(listOf("implementation", "testImplementation"))
     }
 

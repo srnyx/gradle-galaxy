@@ -16,7 +16,7 @@ import javax.inject.Inject
 
 /**
  * Subclasses override [add] to layer on version-dependent behavior (e.g. [xyz.srnyx.gradlegalaxy.extensions.minecraft.PaperExtension]
- * resolving `group`/`name` from the Minecraft version) before delegating to `super.add(project)`.
+ * resolving `group`/`artifact` from the Minecraft version) before delegating to `super.add(project)`.
  */
 open class DependencyExtension @Inject constructor(
     objects: ObjectFactory,
@@ -26,7 +26,7 @@ open class DependencyExtension @Inject constructor(
     @get:Input
     val group: Property<String> = objects.property(String::class.java)
     @get:Input
-    val name: Property<String> = objects.property(String::class.java)
+    val artifact: Property<String> = objects.property(String::class.java)
     @get:Input
     val version: Property<String> = objects.property(String::class.java)
     @get:Input
@@ -41,9 +41,9 @@ open class DependencyExtension @Inject constructor(
 
     fun parse(notation: String) {
         val split = notation.split(":")
-        check(split.size == 3) { "Notation must be in the form 'group:name:version'" }
+        check(split.size == 3) { "Notation must be in the form 'group:artifact:version'" }
         group.set(split[0])
-        name.set(split[1])
+        artifact.set(split[1])
         version.set(split[2])
     }
 
@@ -56,14 +56,14 @@ open class DependencyExtension @Inject constructor(
     }
 
     internal open fun add(project: Project) {
-        if (group.orNull == null || name.orNull == null || version.orNull == null) return
+        if (group.orNull == null || artifact.orNull == null || version.orNull == null) return
         check(project.hasJavaPlugin()) { "Java plugin is not applied!" }
 
         // Repositories
         repositories.get().forEach { project.repositories.maven(it) }
 
         // Add dependency
-        val notation = "${group.get()}:${name.get()}:${version.get()}"
+        val notation = "${group.get()}:${artifact.get()}:${version.get()}"
         configurations.get().forEach { configuration ->
             if (platform.get()) {
                 val dependency = project.dependencies.platform(notation)

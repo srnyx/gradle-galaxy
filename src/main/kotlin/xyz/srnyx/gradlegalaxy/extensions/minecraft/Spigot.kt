@@ -19,7 +19,7 @@ abstract class SpigotApiExtension @Inject constructor(
     init { apply {
         repositories.set(listOf(MAVEN_CENTRAL, SPIGOT, SPIGOT_SNAPSHOTS))
         group.set("org.spigotmc")
-        name.set("spigot-api")
+        artifact.set("spigot-api")
         configurations.set(listOf("compileOnly", "testImplementation"))
     } }
     @get:Input @get:Optional
@@ -49,7 +49,7 @@ abstract class SpigotNmsExtension @Inject constructor(
     init { apply {
         repositories.set(listOf(MAVEN_CENTRAL, SPIGOT, SPIGOT_SNAPSHOTS))
         group.set("org.spigotmc")
-        name.set("spigot")
+        artifact.set("spigot")
         configurations.set(listOf("compileOnly", "testImplementation"))
     } }
     @get:Input @get:Optional

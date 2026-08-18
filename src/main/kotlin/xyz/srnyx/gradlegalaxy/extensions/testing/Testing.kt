@@ -7,7 +7,6 @@ import org.gradle.kotlin.dsl.dependencies
 import org.gradle.kotlin.dsl.named
 import xyz.srnyx.gradlegalaxy.extensions.DeferredActions
 import xyz.srnyx.gradlegalaxy.extensions.DependencyExtension
-import xyz.srnyx.gradlegalaxy.extensions.Repositories.Companion.REPOSITORIES
 import xyz.srnyx.gradlegalaxy.extensions.Phase
 import javax.inject.Inject
 
@@ -49,7 +48,7 @@ abstract class JUnitExtension @Inject constructor(
     init { apply {
         repositories.set(listOf(MAVEN_CENTRAL))
         group.set("org.junit")
-        name.set("junit-bom")
+        artifact.set("junit-bom")
         configurations.set(listOf("testImplementation"))
         platform.set(true)
     } }
