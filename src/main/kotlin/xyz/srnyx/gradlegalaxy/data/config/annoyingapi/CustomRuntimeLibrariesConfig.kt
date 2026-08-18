@@ -16,9 +16,8 @@ data class CustomRuntimeLibrariesConfig(
     val generateRuntimeLibraryEnumConfig: GenerateRuntimeLibraryEnumConfig? = GenerateRuntimeLibraryEnumConfig(),
 ) {
     internal fun toExtension(): CustomRuntimeLibrariesExtension.() -> Unit = {
-        addRawLibraries(runtimeLibraries)
+        addDataLibraries(runtimeLibraries)
         processConfig?.let { processConfig ->
-            addRepositories.set(processConfig.addRepositories)
             configurations.set(processConfig.configurations)
             relocate.set(processConfig.relocate)
         }

@@ -5,7 +5,7 @@ import xyz.srnyx.gradlegalaxy.extensions.minecraft.RuntimeLibrariesExtension
 
 /** Configuration for a set of runtime library dependencies */
 data class RuntimeLibrariesConfig(
-    val addRepositories: Boolean = true,
+    @Deprecated("Doesn't do anything anymore") val addRepositories: Boolean = true,
     /**
      * Dependency classpaths to add the dependencies to (e.g. `compileOnly`, `implementation`, `testImplementation`, etc.).
      *
@@ -17,8 +17,9 @@ data class RuntimeLibrariesConfig(
     val relocate: Boolean = true,
 ) {
     internal fun toExtension(): RuntimeLibrariesExtension.() -> Unit = {
-        addRepositories.set(this@RuntimeLibrariesConfig.addRepositories)
-        configurations.set(this@RuntimeLibrariesConfig.configurations)
-        relocate.set(this@RuntimeLibrariesConfig.relocate)
+        val config = this@RuntimeLibrariesConfig
+
+        configurations.set(config.configurations)
+        relocate.set(config.relocate)
     }
 }

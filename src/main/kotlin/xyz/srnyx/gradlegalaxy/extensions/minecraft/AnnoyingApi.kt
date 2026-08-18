@@ -8,7 +8,6 @@ import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Optional
-import org.gradle.kotlin.dsl.add
 import org.gradle.kotlin.dsl.configure
 import org.gradle.kotlin.dsl.exclude
 import org.gradle.kotlin.dsl.maven
@@ -69,7 +68,7 @@ abstract class AnnoyingApiExtension @Inject constructor(
 }
 
 abstract class MetadataExtension @Inject constructor(
-    objects: ObjectFactory,
+    private val objects: ObjectFactory,
 ) {
     @get:Input
     val useMetadata: Property<Boolean> = objects.property(Boolean::class.java).convention(true)
@@ -105,7 +104,7 @@ abstract class MetadataExtension @Inject constructor(
             if (addRepositories.get()) metadata.repositories.forEach { project.repositories.maven(it) }
 
             // Runtime libraries
-            runtimeLibraries.libraries.set(metadata.runtimeLibraries)
+            runtimeLibraries.libraries.set(metadata.runtimeLibraries.map { it.toExtension(objects, runtimeLibraries) })
             runtimeLibraries.process(project)
         }
 
@@ -132,17 +131,17 @@ abstract class CustomRuntimeLibrariesExtension @Inject constructor(
     var generateRuntimeLibraryEnum: GenerateRuntimeLibraryEnumExtension = objects.newInstance(GenerateRuntimeLibraryEnumExtension::class.java)
 
     @Used
-    fun library(name: String, action: RuntimeLibraryBuilder.() -> Unit) {
-        val builder = RuntimeLibraryBuilder(objects, this, name)
+    fun library(name: String, action: RuntimeLibraryExtension.() -> Unit) {
+        val builder = RuntimeLibraryExtension(objects, this, name)
         builder.action()
-        libraries.add(builder.build())
+        libraries.add(builder)
         libraries.addAll(builder.children)
     }
     fun generateRuntimeLibraryEnum(action: GenerateRuntimeLibraryEnumExtension.() -> Unit) = generateRuntimeLibraryEnum.action()
 
     /** Backward-compat bridge for the deprecated `CustomRuntimeLibrariesConfig(runtimeLibraries = listOf(...))`. */
-    internal fun addRawLibraries(libraries: List<RuntimeLibrary>) {
-        this.libraries.addAll(libraries)
+    internal fun addDataLibraries(libraries: List<RuntimeLibrary>) {
+        this.libraries.addAll(libraries.map { it.toExtension(objects, this) })
     }
 
     internal fun process(
@@ -155,31 +154,28 @@ abstract class CustomRuntimeLibrariesExtension @Inject constructor(
         super.process(project)
 
         // Generate enum
-        generateRuntimeLibraryEnum.process(project, libraries.get(), annoyingMetadata)
+        generateRuntimeLibraryEnum.process(project, libraries.get().map { it.toData() }, annoyingMetadata)
     }
 }
 
-class RuntimeLibraryBuilder internal constructor(
+class RuntimeLibraryExtension internal constructor(
     private val objects: ObjectFactory,
     private val runtimeLibraries: RuntimeLibrariesExtension,
     private val name: String,
-) {
-    /** Nested [library] declarations, flattened in parent-before-descendant (pre-order) declaration order */
-    internal val children: MutableList<RuntimeLibrary> = mutableListOf()
+) : DependencyExtension(objects) {
+    init {
+        // Default to RuntimeLibrariesExtension.configurations
+        configurations.convention(null)
+    }
 
-    @get:Input
-    val group: Property<String> = objects.property(String::class.java)
-    @get:Input
-    val artifact: Property<String> = objects.property(String::class.java)
-    @get:Input
-    val version: Property<String> = objects.property(String::class.java)
+    /** Nested [library] declarations, flattened in parent-before-descendant (pre-order) declaration order */
+    internal val children: MutableList<RuntimeLibraryExtension> = mutableListOf()
+
     /**
      * Names of other declared runtime libraries that this one depends on
      */
     @get:Input
     val dependencies: ListProperty<String> = objects.listProperty(String::class.java).convention(emptyList())
-    @get:Input
-    val repositories: ListProperty<String> = objects.listProperty(String::class.java).convention(emptyList())
     @get:Input
     val excludes: ListProperty<Exclude> = objects.listProperty(Exclude::class.java).convention(emptyList())
     @get:Input
@@ -187,14 +183,14 @@ class RuntimeLibraryBuilder internal constructor(
 
 
     @Used
-    fun dependency(name: String, action: RuntimeLibraryBuilder.() -> Unit) {
-        val builder = RuntimeLibraryBuilder(objects, runtimeLibraries, name)
-        builder.action()
-        dependencies.addAll(builder.dependencies)
-        dependencies.addAll(builder.children.map { it.name })
+    fun dependency(name: String, action: RuntimeLibraryExtension.() -> Unit) {
+        val library = RuntimeLibraryExtension(objects, runtimeLibraries, name)
+        library.action()
+        dependencies.addAll(library.dependencies)
+        dependencies.addAll(library.children.map { it.name })
         dependencies.add(name)
-        runtimeLibraries.libraries.add(builder.build())
-        runtimeLibraries.libraries.addAll(builder.children)
+        runtimeLibraries.libraries.add(library)
+        runtimeLibraries.libraries.addAll(library.children)
     }
 
     @Used
@@ -215,21 +211,21 @@ class RuntimeLibraryBuilder internal constructor(
      * entry unless [dependency] is `false`.
      */
     @Used
-    fun library(name: String, dependency: Boolean = true, action: RuntimeLibraryBuilder.() -> Unit) {
-        val builder = RuntimeLibraryBuilder(objects, runtimeLibraries, name)
-        builder.repositories.convention(repositories)
-        builder.group.convention(group)
-        builder.artifact.convention(artifact)
-        builder.version.convention(version)
-        builder.excludes.convention(excludes)
-        builder.relocations.convention(relocations)
-        if (dependency) builder.dependencies.add(this.name)
-        builder.action()
-        children.add(builder.build())
-        children.addAll(builder.children)
+    fun library(name: String, dependency: Boolean = true, action: RuntimeLibraryExtension.() -> Unit) {
+        val library = RuntimeLibraryExtension(objects, runtimeLibraries, name)
+        library.repositories.convention(repositories)
+        library.group.convention(group)
+        library.artifact.convention(artifact)
+        library.version.convention(version)
+        library.excludes.convention(excludes)
+        library.relocations.convention(relocations)
+        if (dependency) library.dependencies.add(this.name)
+        library.action()
+        children.add(library)
+        children.addAll(library.children)
     }
 
-    internal fun build(): RuntimeLibrary = RuntimeLibrary(
+    internal fun toData(): RuntimeLibrary = RuntimeLibrary(
         name = name,
         repositories = repositories.get().distinct(),
         group = group.get(),
@@ -246,9 +242,7 @@ abstract class RuntimeLibrariesExtension @Inject constructor(
     objects: ObjectFactory
 ) {
     @get:Input
-    val libraries: ListProperty<RuntimeLibrary> = objects.listProperty(RuntimeLibrary::class.java)
-    @get:Input
-    val addRepositories: Property<Boolean> = objects.property(Boolean::class.java).convention(true)
+    val libraries: ListProperty<RuntimeLibraryExtension> = objects.listProperty(RuntimeLibraryExtension::class.java)
     /**
      * Dependency classpaths to add the dependencies to (e.g. `compileOnly`, `implementation`, `testImplementation`, etc.).
      *
@@ -266,19 +260,23 @@ abstract class RuntimeLibrariesExtension @Inject constructor(
 
         val getPackage = project.getPackage()
         libraries.get().forEach { library ->
-            // Add repositories
-            if (addRepositories.get()) library.repositories.forEach { repo -> project.repositories.maven(repo) }
+            // Default configurations
+            library.configurations.takeIf { it.orNull.isNullOrEmpty() }?.set(configurations)
 
-            // Add dependencies
-            configurations.get().forEach { configuration ->
-                project.dependencies.add(configuration, "${library.group}:${library.artifact}:${library.version}") {
-                    // Excludes
-                    library.excludes.forEach { exclude(it.group, it.module) }
-                }
+            // Modify action
+            val previous = library.action
+            library.action = {
+                previous(this)
+
+                // Excludes
+                library.excludes.get().forEach { exclude(it.group, it.module) }
             }
 
+            // Add dependency
+            library.add(project)
+
             // Relocations
-            if (relocate.get()) library.relocations.forEach { relocation ->
+            if (relocate.get()) library.relocations.get().forEach { relocation ->
                 val to = relocation.to?.replace("{package}", getPackage)
                 if (to != null) {
                     project.relocate(relocation.from, to)
@@ -290,29 +288,31 @@ abstract class RuntimeLibrariesExtension @Inject constructor(
     }
 }
 
-interface GenerateRuntimeLibraryEnumExtension {
-    @get:Input @get:Optional
-    val relocateImports: Property<Boolean>
-    @get:Input @get:Optional
-    val packagePath: Property<String>
+abstract class GenerateRuntimeLibraryEnumExtension @Inject constructor(
+    project: Project,
+    objects: ObjectFactory,
+) {
+    @get:Input
+    val relocateImports: Property<Boolean> = objects.property(Boolean::class.java).convention(true)
+    @get:Input
+    val packagePath: Property<String> = objects.property(String::class.java).convention(project.getPackage())
 
     fun process(
         project: Project,
         libraries: List<RuntimeLibrary>,
         annoyingMetadata: AnnoyingMetadata? = null,
     ) {
-        val packagePath = packagePath.getOrElse(project.getPackage())
-        val packageFolder = packagePath.replace(".", "/")
+        val packageFolder = packagePath.get().replace(".", "/")
         val enumName = "${project.name}Library"
 
         val enum = buildString {
             // Package
-            append("package $packagePath.library;")
+            append("package ${packagePath.get()}.library;")
             append("\n")
 
             // Imports
             val annoyingPackage = annoyingMetadata?.packageName ?: "xyz.srnyx.annoyingapi"
-            val libsLibby = "${if (relocateImports.getOrElse(true)) "$annoyingPackage.libs" else "net.byteflux"}.libby"
+            val libsLibby = "${if (relocateImports.get()) "$annoyingPackage.libs" else "net.byteflux"}.libby"
             append("\nimport $libsLibby.Library;")
             append("\nimport $libsLibby.relocation.Relocation;")
             append("\nimport org.jetbrains.annotations.NotNull;")

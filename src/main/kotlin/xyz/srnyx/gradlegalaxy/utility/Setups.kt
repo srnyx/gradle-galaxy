@@ -75,7 +75,6 @@ fun Project.setupMC(
  *    4. Excludes some Annoying API dependencies
  * 3. Calls [setupMC] with the specified parameters
  * 4. Calls [annoyingAPI] with the specified parameters
- * 5. Calls [addPlatformsResourceFileTask] if enabled
  * 6. Calls [setupPublishingPlatforms] with the specified parameters
  *
  * @return The metadata for Annoying API if [MetadataConfig.useMetadata] is true, otherwise null
@@ -251,7 +250,7 @@ fun Project.setupPublishingSimple(
 ) {
     extensions.configure<GradleGalaxyExtension>("galaxy") {
         mavenPublishing {
-            config.toExtension()(this)
+            config.toExtension(objects, providers)(this)
             publication(configuration)
         }
     }
@@ -276,7 +275,7 @@ fun Project.setupPublishingEnv(
 ) {
     extensions.configure<GradleGalaxyExtension>("galaxy") {
         mavenPublishing {
-            simpleConfig.toExtension()(this)
+            simpleConfig.toExtension(objects, providers)(this)
             envConfig.toExtension()(this)
         }
     }

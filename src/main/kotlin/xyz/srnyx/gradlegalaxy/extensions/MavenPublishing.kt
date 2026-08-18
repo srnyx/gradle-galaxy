@@ -12,7 +12,7 @@ import org.gradle.internal.extensions.stdlib.capitalized
 import org.gradle.kotlin.dsl.apply
 import org.gradle.kotlin.dsl.create
 import org.gradle.kotlin.dsl.get
-import xyz.srnyx.gradlegalaxy.data.config.publishing.TextArtifact
+import xyz.srnyx.gradlegalaxy.annotations.Used
 import xyz.srnyx.gradlegalaxy.data.pom.DeveloperData
 import xyz.srnyx.gradlegalaxy.data.pom.LicenseData
 import xyz.srnyx.gradlegalaxy.data.pom.ScmData
@@ -24,8 +24,16 @@ import javax.inject.Inject
 
 
 abstract class MavenPublishingExtension @Inject constructor(
-    objects: ObjectFactory
+    private val objects: ObjectFactory
 ) {
+    // LicenseData
+    @Used val MIT = LicenseData.MIT
+    @Used val APACHE_2_0 = LicenseData.APACHE_2_0
+    @Used val GPL_V3 = LicenseData.GPL_V3
+    // DeveloperData
+    @Used val SRNYX = DeveloperData.srnyx
+    @Used val DKIM19375 = DeveloperData.dkim19375
+
     // Publication
     @get:Input @get:Optional
     val groupId: Property<String> = objects.property(String::class.java)
@@ -42,7 +50,7 @@ abstract class MavenPublishingExtension @Inject constructor(
     @get:Input @get:Optional
     val artifacts: ListProperty<Any> = objects.listProperty(Any::class.java)
     @get:Input @get:Optional
-    val textArtifacts: ListProperty<TextArtifact> = objects.listProperty(TextArtifact::class.java)
+    val textArtifacts: ListProperty<TextArtifactExtension> = objects.listProperty(TextArtifactExtension::class.java)
     @get:Input @get:Optional
     val licenses: ListProperty<LicenseData> = objects.listProperty(LicenseData::class.java)
     @get:Input @get:Optional
@@ -61,6 +69,13 @@ abstract class MavenPublishingExtension @Inject constructor(
     val passwordEnv: Property<String> = objects.property(String::class.java).convention("MAVEN_SECRET")
     @get:Input @get:Optional
     val mavenUrl: Property<String> = objects.property(String::class.java)
+
+
+    fun textArtifact(action: TextArtifactExtension.() -> Unit) {
+        val textArtifact = objects.newInstance(TextArtifactExtension::class.java)
+        textArtifact.action()
+        textArtifacts.add(textArtifact)
+    }
 
     fun publication(action: MavenPublication.() -> Unit) {
         val previous = publicationAction
@@ -91,11 +106,11 @@ abstract class MavenPublishingExtension @Inject constructor(
 
             extension.artifacts.orNull?.forEach(this::artifact)
             textArtifacts.orNull?.forEach { textArtifact ->
-                val taskName = "generate${textArtifact.classifier.capitalized()}TextArtifact"
-                val extensionSuffix = textArtifact.extension?.let { ".$it" } ?: ""
+                val taskName = "generate${textArtifact.classifier.get().capitalized()}TextArtifact"
+                val extensionSuffix = textArtifact.extension.orNull?.let { ".$it" } ?: ""
                 val outputFile = project.layout.buildDirectory.file("generated/publications/${this.artifactId}-${this.version}-${textArtifact.classifier}$extensionSuffix")
 
-                val textProvider = project.provider { textArtifact.text.invoke() }
+                val textProvider = project.provider { textArtifact.text.get() }
                 val task = project.tasks.register(taskName) {
                     group = "galaxy"
                     description = "Generates the ${textArtifact.classifier} artifact for publication ${this.name}"
@@ -112,8 +127,8 @@ abstract class MavenPublishingExtension @Inject constructor(
                 }
 
                 artifact(outputFile) {
-                    this.classifier = textArtifact.classifier
-                    this.extension = textArtifact.extension
+                    this.classifier = textArtifact.classifier.get()
+                    this.extension = textArtifact.extension.orNull
                     builtBy(task)
                 }
             }
@@ -166,4 +181,15 @@ abstract class MavenPublishingExtension @Inject constructor(
             }
         }
     }
+}
+
+abstract class TextArtifactExtension(
+    objects: ObjectFactory
+) {
+    @get:Input
+    val text: Property<String> = objects.property(String::class.java)
+    @get:Input
+    val classifier: Property<String> = objects.property(String::class.java)
+    @get:Input @get:Optional
+    val extension: Property<String> = objects.property(String::class.java)
 }

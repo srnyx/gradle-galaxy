@@ -2,6 +2,8 @@ package xyz.srnyx.gradlegalaxy.data.config.publishing
 
 import org.gradle.api.Project
 import org.gradle.api.component.SoftwareComponent
+import org.gradle.api.model.ObjectFactory
+import org.gradle.api.provider.ProviderFactory
 import org.gradle.kotlin.dsl.get
 import xyz.srnyx.gradlegalaxy.annotations.Used
 import xyz.srnyx.gradlegalaxy.data.pom.DeveloperData
@@ -46,7 +48,10 @@ data class PublishingSimpleConfig(
     var developers: List<DeveloperData> = emptyList(),
     val scm: ScmData? = null,
 ) {
-    internal fun toExtension(): MavenPublishingExtension.() -> Unit = {
+    internal fun toExtension(
+        objects: ObjectFactory,
+        providers: ProviderFactory
+    ): MavenPublishingExtension.() -> Unit = {
         val config: PublishingSimpleConfig = this@PublishingSimpleConfig
 
         groupId.set(config.groupId)
@@ -56,7 +61,7 @@ data class PublishingSimpleConfig(
         silenceMissingJavadocWarnings.set(config.silenceMissingJavadocWarnings)
         component.set(config.component)
         artifacts.set(config.artifacts)
-        textArtifacts.set(config.textArtifacts)
+        textArtifacts.set(config.textArtifacts.map { it.toExtension(objects, providers) })
         licenses.set(config.licenses)
         developers.set(config.developers)
         scm.set(config.scm)

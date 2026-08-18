@@ -366,7 +366,7 @@ fun Project.generateAnnoyingApiRuntimeLibraryEnum(
     extensions.configure<GradleGalaxyExtension>("galaxy") {
         minecraft {
             annoyingAPI.customRuntimeLibraries {
-                addRawLibraries(libraries.toList())
+                addDataLibraries(libraries.toList())
                 generateRuntimeLibraryEnum(generateRuntimeLibraryEnumConfig.toExtension())
             }
         }
