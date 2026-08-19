@@ -59,7 +59,7 @@ open class DependencyExtension @Inject constructor(
         version.set(split[2])
     }
 
-    fun relocate(action: RelocateExtension.() -> Unit) {
+    fun relocate(action: RelocateExtension.() -> Unit = {}) {
         val relocation = objects.newInstance(RelocateExtension::class.java, this)
         relocation.action()
         relocations.add(relocation)
@@ -91,12 +91,14 @@ open class DependencyExtension @Inject constructor(
     internal open fun add(project: Project) {
         if (group.orNull == null || artifact.orNull == null || version.orNull == null) return
         check(project.hasJavaPlugin()) { "Java plugin is not applied!" }
+        val versionValue = version.get()
 
-        // Repositories
+        // Repositories (dev/snapshot = add mavenLocal())
+        if (versionValue == "dev" || versionValue == "snapshot") project.repositories.mavenLocal()
         repositories.get().forEach { project.repositories.maven(it) }
 
         // Add dependency
-        val notation = "${group.get()}:${artifact.get()}:${version.get()}"
+        val notation = "${group.get()}:${artifact.get()}:${versionValue}"
         configurations.get().forEach { configuration ->
             if (platform.get()) {
                 val dependency = project.dependencies.platform(notation)

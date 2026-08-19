@@ -340,6 +340,7 @@ fun Project.relocate(
 fun Project.getAnnoyingApiMetadata(version: String): AnnoyingMetadata? {
     // Add srnyx's repositories
     repositories {
+        if (version == "dev" || version == "snapshot") mavenLocal()
         maven(REPOSITORIES.SRNYX_RELEASES)
         maven(REPOSITORIES.SRNYX_SNAPSHOTS)
     }
