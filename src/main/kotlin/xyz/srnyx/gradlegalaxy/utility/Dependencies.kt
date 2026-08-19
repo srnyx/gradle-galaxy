@@ -4,7 +4,6 @@ import org.gradle.api.Project
 import org.gradle.api.artifacts.ExternalModuleDependency
 import org.gradle.api.artifacts.ModuleDependency
 import org.gradle.kotlin.dsl.accessors.runtime.addDependencyTo
-import xyz.srnyx.gradlegalaxy.annotations.Used
 import xyz.srnyx.gradlegalaxy.data.AdventureDependency
 import xyz.srnyx.gradlegalaxy.data.config.DependencyConfig
 import xyz.srnyx.gradlegalaxy.data.config.dependency.MockBukkitConfig
@@ -216,7 +215,7 @@ fun Project.mockBukkit(
  *
  * @return The [T] of the added dependency
  */
-@Used
+@Deprecated("Use galaxy { dependency { add(...) } } instead")
 fun <T: ModuleDependency> Project.dependencyRelocate(
     dependency: T,
     relocateFrom: String,
@@ -240,15 +239,21 @@ fun <T: ModuleDependency> Project.dependencyRelocate(
  *
  * @return The [ExternalModuleDependency] of the added dependency
  */
-@Used
+@Deprecated("Use galaxy { dependency { add(...) } } instead")
 fun Project.dependencyRelocate(
     dependency: String,
     relocateFrom: String = dependency.split(":").first(),
     relocateTo: String = "${project.getPackage()}.libs.${relocateFrom.split(".").last()}",
     configuration: String = "implementation",
-    configurationAction: ExternalModuleDependency.() -> Unit = {}
-): ExternalModuleDependency {
-    check(hasShadowPlugin()) { "Shadow plugin is not applied!" }
-    project.relocate(relocateFrom, relocateTo)
-    return addDependencyTo(dependencies, configuration, dependency, configurationAction)
+    configurationAction: ModuleDependency.() -> Unit = {}
+) {
+    extensions.configure<GradleGalaxyExtension>("galaxy") {
+        dependency {
+            add(dependency) {
+                configurations.set(listOf(configuration))
+                action(configurationAction)
+                relocate(relocateFrom, relocateTo)
+            }
+        }
+    }
 }

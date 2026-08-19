@@ -2,6 +2,7 @@ package xyz.srnyx.gradlegalaxy.data.annoyingapi
 
 import kotlinx.serialization.Serializable
 import org.gradle.api.model.ObjectFactory
+import org.gradle.kotlin.dsl.exclude
 import xyz.srnyx.gradlegalaxy.extensions.minecraft.RuntimeLibrariesExtension
 import xyz.srnyx.gradlegalaxy.extensions.minecraft.RuntimeLibraryExtension
 
@@ -23,15 +24,17 @@ data class RuntimeLibrary(
     internal fun toExtension(
         objects: ObjectFactory,
         runtimeLibraries: RuntimeLibrariesExtension,
-    ): RuntimeLibraryExtension = RuntimeLibraryExtension(objects, runtimeLibraries, name).apply {
+    ): RuntimeLibraryExtension = objects.newInstance(RuntimeLibraryExtension::class.java, runtimeLibraries, name).apply {
         val data = this@RuntimeLibrary
 
         repositories.set(data.repositories)
         group.set(data.group)
         artifact.set(data.artifact)
         version.set(data.version)
-        excludes.set(data.excludes)
-        relocations.set(data.relocations)
+        relocations.set(data.relocations.map { it.toExtension(objects) })
         dependencies.set(data.dependencies)
+
+        // Add excludes through action
+        action = { data.excludes.forEach { exclude(it.group, it.module) } }
     }
 }

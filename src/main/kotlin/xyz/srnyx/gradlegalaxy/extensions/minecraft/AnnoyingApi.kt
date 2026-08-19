@@ -2,6 +2,7 @@ package xyz.srnyx.gradlegalaxy.extensions.minecraft
 
 import org.gradle.api.JavaVersion
 import org.gradle.api.Project
+import org.gradle.api.artifacts.ModuleDependency
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.provider.ListProperty
@@ -15,7 +16,6 @@ import org.gradle.kotlin.dsl.maven
 import xyz.srnyx.gradlegalaxy.annotations.Used
 import xyz.srnyx.gradlegalaxy.data.annoyingapi.AnnoyingMetadata
 import xyz.srnyx.gradlegalaxy.data.annoyingapi.Exclude
-import xyz.srnyx.gradlegalaxy.data.annoyingapi.Relocation
 import xyz.srnyx.gradlegalaxy.data.annoyingapi.RuntimeLibrary
 import xyz.srnyx.gradlegalaxy.extensions.DeferredActions
 import xyz.srnyx.gradlegalaxy.extensions.DependencyExtension
@@ -52,6 +52,7 @@ abstract class AnnoyingApiExtension @Inject internal constructor(
     val metadata = objects.newInstance(MetadataExtension::class.java)
     val customRuntimeLibraries = objects.newInstance(CustomRuntimeLibrariesExtension::class.java, deferred)
 
+
     fun metadata(action: MetadataExtension.() -> Unit) = metadata.action()
     fun customRuntimeLibraries(action: CustomRuntimeLibrariesExtension.() -> Unit) = customRuntimeLibraries.action()
 
@@ -86,6 +87,7 @@ abstract class MetadataExtension @Inject constructor(
     val excludes: Property<Boolean> = objects.property(Boolean::class.java).convention(true)
 
     var runtimeLibraries = objects.newInstance(RuntimeLibrariesExtension::class.java)
+
 
     fun runtimeLibraries(action: RuntimeLibrariesExtension.() -> Unit) = runtimeLibraries.action()
 
@@ -147,7 +149,7 @@ abstract class CustomRuntimeLibrariesExtension @Inject internal constructor(
 
     @Used
     fun library(name: String, action: RuntimeLibraryExtension.() -> Unit) {
-        val builder = RuntimeLibraryExtension(objects, this, name)
+        val builder = objects.newInstance(RuntimeLibraryExtension::class.java, this, name)
         builder.action()
         libraries.add(builder)
         libraries.addAll(builder.children)
@@ -173,7 +175,8 @@ abstract class CustomRuntimeLibrariesExtension @Inject internal constructor(
     }
 }
 
-class RuntimeLibraryExtension internal constructor(
+abstract class RuntimeLibraryExtension @Inject constructor(
+    private val project: Project,
     private val objects: ObjectFactory,
     private val runtimeLibraries: RuntimeLibrariesExtension,
     private val name: String,
@@ -191,15 +194,11 @@ class RuntimeLibraryExtension internal constructor(
      */
     @get:Input
     val dependencies: ListProperty<String> = objects.listProperty(String::class.java).convention(emptyList())
-    @get:Input
-    val excludes: ListProperty<Exclude> = objects.listProperty(Exclude::class.java).convention(emptyList())
-    @get:Input
-    val relocations: ListProperty<Relocation> = objects.listProperty(Relocation::class.java).convention(emptyList())
 
 
     @Used
     fun dependency(name: String, action: RuntimeLibraryExtension.() -> Unit) {
-        val library = RuntimeLibraryExtension(objects, runtimeLibraries, name)
+        val library = objects.newInstance(RuntimeLibraryExtension::class.java, runtimeLibraries, name)
         library.action()
         dependencies.addAll(library.dependencies)
         dependencies.addAll(library.children.map { it.name })
@@ -208,51 +207,46 @@ class RuntimeLibraryExtension internal constructor(
         runtimeLibraries.libraries.addAll(library.children)
     }
 
-    @Used
-    fun exclude(group: String, module: String) {
-        excludes.add(Exclude(group, module))
-    }
-
-    /** Relocates [from] to `{package}.libs.<lastSegmentOf(from)>` if [to] isn't specified. */
-    @Used
-    fun relocate(from: String, to: String? = null) {
-        relocations.add(Relocation(from, to))
-    }
-
     /**
      * Declares a runtime library named [name] nested under this one — inherits [repositories], [group],
-     * [artifact], [version], [excludes], and [relocations] from this (enclosing) library as conventions
+     * [artifact], [version], and [relocations] from this (enclosing) library as conventions
      * (anything set explicitly on the nested builder still wins), and adds this library as a [dependencies]
      * entry unless [dependency] is `false`.
      */
     @Used
     fun library(name: String, dependency: Boolean = true, action: RuntimeLibraryExtension.() -> Unit) {
-        val library = RuntimeLibraryExtension(objects, runtimeLibraries, name)
-        library.repositories.convention(repositories)
-        library.group.convention(group)
-        library.artifact.convention(artifact)
-        library.version.convention(version)
-        library.excludes.convention(excludes)
-        library.relocations.convention(relocations)
+        val library = objects.newInstance(RuntimeLibraryExtension::class.java, runtimeLibraries, name)
+        library.conventionCopy(this)
         if (dependency) library.dependencies.add(this.name)
         library.action()
         children.add(library)
         children.addAll(library.children)
     }
 
-    fun toData(): RuntimeLibrary = RuntimeLibrary(
-        name = name,
-        repositories = repositories.get().distinct(),
-        group = group.get(),
-        artifact = artifact.get(),
-        version = version.get(),
-        excludes = excludes.get(),
-        relocations = relocations.get(),
-        dependencies = dependencies.get().distinct()
-    )
+    fun toData(): RuntimeLibrary {
+        // We need to extract excludes from action because DependencyExtension doesn't expose them directly
+        val excludes = mutableListOf<Exclude>()
+        val mockDependency = project.dependencies.create("mock:mock:0.0.0") as ModuleDependency
+        action(mockDependency)
+        mockDependency.excludeRules.forEach { excludes.add(Exclude(it.group, it.module)) }
+
+        // Build data library
+        return RuntimeLibrary(
+            name = name,
+            repositories = repositories.get().distinct(),
+            group = group.get(),
+            artifact = artifact.get(),
+            version = version.get(),
+            excludes = excludes,
+            relocations = relocations.get().map { it.toData() },
+            dependencies = dependencies.get().distinct()
+        )
+    }
 }
 
-/** Processes a set of [RuntimeLibrary] dependencies: adds their repositories, dependencies, and relocations. */
+/**
+ * Processes a set of [RuntimeLibrary] dependencies: adds their repositories, dependencies, and relocations
+ */
 abstract class RuntimeLibrariesExtension @Inject constructor(
     objects: ObjectFactory
 ) {
@@ -270,35 +264,19 @@ abstract class RuntimeLibrariesExtension @Inject constructor(
     @get:Input
     val relocate: Property<Boolean> = objects.property(Boolean::class.java).convention(true)
 
+
     internal fun process(project: Project) {
         if (libraries.orNull.isNullOrEmpty()) return
 
-        val getPackage = project.getPackage()
         libraries.get().forEach { library ->
             // Default configurations
             library.configurations.takeIf { it.orNull.isNullOrEmpty() }?.set(configurations)
 
-            // Modify action
-            val previous = library.action
-            library.action = {
-                previous(this)
-
-                // Excludes
-                library.excludes.get().forEach { exclude(it.group, it.module) }
-            }
+            // Relocate
+            library.applyRelocations.convention(relocate)
 
             // Add dependency
             library.add(project)
-
-            // Relocations
-            if (relocate.get()) library.relocations.get().forEach { relocation ->
-                val to = relocation.to?.replace("{package}", getPackage)
-                if (to != null) {
-                    project.relocate(relocation.from, to)
-                } else {
-                    project.relocate(relocation.from)
-                }
-            }
         }
     }
 }

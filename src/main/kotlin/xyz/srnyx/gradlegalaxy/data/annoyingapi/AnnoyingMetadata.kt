@@ -10,5 +10,4 @@ data class AnnoyingMetadata(
     val repositories: List<String> = emptyList(),
     val runtimeLibraries: List<RuntimeLibrary> = emptyList(),
     val excludes: List<Exclude> = emptyList(),
-) {
-}
+)
