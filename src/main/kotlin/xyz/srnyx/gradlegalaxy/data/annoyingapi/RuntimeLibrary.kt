@@ -31,8 +31,10 @@ data class RuntimeLibrary(
         group.set(data.group)
         artifact.set(data.artifact)
         version.set(data.version)
-        relocations.set(data.relocations.map { it.toExtension(objects) })
         dependencies.set(data.dependencies)
+
+        // Relocations
+        data.relocations.forEach { relocate(it.toExtension()) }
 
         // Add excludes through action
         action = { data.excludes.forEach { exclude(it.group, it.module) } }
