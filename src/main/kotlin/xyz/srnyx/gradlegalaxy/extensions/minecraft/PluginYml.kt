@@ -93,7 +93,7 @@ abstract class PluginYmlExtension @Inject constructor(
      * The prefix for permissions that have prefix enabled
      */
     @get:Input
-    val permissionPrefix: Property<String> = objects.property(String::class.java).convention(makePackageSafe(project.name) + ".")
+    val permissionPrefix: Property<String> = objects.property(String::class.java).convention(project.provider { makePackageSafe(project.name) })
     @get:Input
     val commands: ListProperty<Command> = objects.listProperty(Command::class.java).convention(emptyList())
     @get:Input
