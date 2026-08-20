@@ -95,7 +95,7 @@ abstract class PluginYmlExtension @Inject constructor(
     @get:Input
     val permissionPrefix: Property<String> = objects.property(String::class.java).convention(makePackageSafe(project.name) + ".")
     @get:Input
-    val commands: MapProperty<String, Command> = objects.mapProperty(String::class.java, Command::class.java).convention(emptyMap())
+    val commands: ListProperty<Command> = objects.listProperty(Command::class.java).convention(emptyList())
     @get:Input
     val permissions: ListProperty<Permission> = objects.listProperty(Permission::class.java).convention(emptyList())
 
@@ -111,9 +111,9 @@ abstract class PluginYmlExtension @Inject constructor(
 
     @Used
     fun command(name: String, action: Command.() -> Unit = {}) {
-        val command: Command = objects.newInstance(Command::class.java, this)
+        val command: Command = objects.newInstance(Command::class.java, this, name)
         command.action()
-        commands.put(name, command)
+        commands.add(command)
     }
 
     @Used
@@ -209,10 +209,10 @@ abstract class PluginYmlExtension @Inject constructor(
             libraries.forEach { library -> appendLine("  - $library") }
         }
         defaultPermission.orNull?.let { appendLine("default-permission: $it") }
-        commands.get().takeIf(Map<String, Command>::isNotEmpty)?.let { commands ->
+        commands.get().takeIf(List<Command>::isNotEmpty)?.let { commands ->
             appendLine("commands:")
-            commands.forEach { (name, command) ->
-                appendLine("  $name:")
+            commands.forEach { command ->
+                appendLine("  ${command.name}:")
                 command.aliases.orNull?.takeIf(List<String>::isNotEmpty)?.let { aliases ->
                     appendLine("    aliases:")
                     aliases.forEach { alias -> appendLine("      - $alias") }
@@ -262,6 +262,7 @@ abstract class PluginYmlExtension @Inject constructor(
 abstract class Command @Inject constructor(
     private val pluginYml: PluginYmlExtension,
     private val objects: ObjectFactory,
+    val name: String,
 ) {
     @get:Input @get:Optional
     val aliases: ListProperty<String> = objects.listProperty(String::class.java)
@@ -279,6 +280,7 @@ abstract class Command @Inject constructor(
     fun permission(permission: String, action: Permission.() -> Unit = {}) {
         val permissionBuilder: Permission = objects.newInstance(Permission::class.java)
         permissionBuilder.permission.set(permission)
+        permissionBuilder.description.set("Allows the player to use /$name")
         permissionBuilder.action()
         this.permission.set(permissionBuilder)
         pluginYml.permissions.add(permissionBuilder)

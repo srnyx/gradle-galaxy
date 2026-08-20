@@ -85,8 +85,8 @@ abstract class AnnoyingApiExtension @Inject internal constructor(
             val packageFolder = packagePath.replace(".", "/")
             val mainValue = minecraft.pluginYml.main.get()
 
-            val classes: Map<String, String> = minecraft.pluginYml.commands.get().map { (name, command) ->
-                val className = "${name.replaceFirstChar { it.uppercase() }}CmdGen"
+            val classes: Map<String, String> = minecraft.pluginYml.commands.get().associate { command ->
+                val className = "${command.name.replaceFirstChar { it.uppercase() }}CmdGen"
                 className to buildString {
                     // Package
                     appendLine("package $packagePath.commands.generated;")
@@ -118,7 +118,7 @@ abstract class AnnoyingApiExtension @Inject internal constructor(
                     appendLine()
                     appendLine("    @Override @NotNull")
                     appendLine("    public String getName() {")
-                    appendLine("        return \"$name\";")
+                    appendLine("        return \"${command.name}\";")
                     appendLine("    }")
 
                     // permission
@@ -132,7 +132,7 @@ abstract class AnnoyingApiExtension @Inject internal constructor(
 
                     appendLine("}")
                 }
-            }.toMap()
+            }
 
             val outputDir = project.layout.buildDirectory.dir("generated/sources/galaxy/main/java/$packageFolder/commands/generated")
             val generateCommands = project.tasks.register("generateCommands") {
