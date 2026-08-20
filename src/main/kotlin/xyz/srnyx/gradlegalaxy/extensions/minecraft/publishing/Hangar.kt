@@ -1,6 +1,7 @@
 package xyz.srnyx.gradlegalaxy.extensions.minecraft.publishing
 
 import io.papermc.hangarpublishplugin.HangarPublishExtension
+import io.papermc.hangarpublishplugin.HangarPublishTask
 import io.papermc.hangarpublishplugin.model.HangarPublication
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.jsonArray
@@ -13,7 +14,9 @@ import org.gradle.util.internal.VersionNumber
 import xyz.srnyx.gradlegalaxy.annotations.Used
 import xyz.srnyx.gradlegalaxy.enums.PluginPlatform
 import xyz.srnyx.gradlegalaxy.enums.ReleaseChannel
+import org.gradle.kotlin.dsl.withType
 import xyz.srnyx.gradlegalaxy.utility.getEnvironmentVariable
+import xyz.srnyx.gradlegalaxy.utility.hasShadowPlugin
 import xyz.srnyx.gradlegalaxy.utility.json
 import java.net.URI
 import java.net.http.HttpClient
@@ -93,6 +96,12 @@ internal fun PlatformPublishingExtension.setupHangar(
         // Custom action
         hangar.apply(this)
     } }
+
+    // Ensure publishing runs after building
+    project.tasks.withType<HangarPublishTask> {
+        dependsOn("jar")
+        if (project.hasShadowPlugin()) dependsOn("shadowJar")
+    }
 
     // Ensure publishAllPublicationsToHangar runs with/after publishMods
     project.tasks.named("publishMods") { finalizedBy("publishAllPublicationsToHangar") }
