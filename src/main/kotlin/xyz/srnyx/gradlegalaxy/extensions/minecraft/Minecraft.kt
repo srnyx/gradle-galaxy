@@ -29,7 +29,7 @@ abstract class MinecraftExtension @Inject internal constructor(
     val replacements: MapProperty<String, String> = objects.mapProperty(String::class.java, String::class.java).convention(mapOf("defaultReplacements" to "true"))
 
     // Project-wide setup
-    val pluginYml = objects.newInstance(PluginYmlExtension::class.java)
+    val pluginYml = objects.newInstance(PluginYmlExtension::class.java, this)
     val runPaper = RunPaperExtension(objects)
     val adventure = objects.newInstance(AdventureExtension::class.java, deferred)
     // Pure dependencies
@@ -37,7 +37,7 @@ abstract class MinecraftExtension @Inject internal constructor(
     val spigotNMS = objects.newInstance(SpigotNmsExtension::class.java)
     val paper = objects.newInstance(PaperExtension::class.java)
     // Dependency + setup merged onto one type
-    val annoyingAPI = objects.newInstance(AnnoyingApiExtension::class.java, deferred, java, this)
+    val annoyingAPI = objects.newInstance(AnnoyingApiExtension::class.java, deferred)
     // Cross-cutting: read by pluginYml (depend/softdepend) and platformPublishing (modrinth/curseforge/hangar)
     val dependency = objects.newInstance(MinecraftDependencyExtension::class.java)
     val platformPublishing = PlatformPublishingExtension(project, this, objects)
@@ -48,7 +48,7 @@ abstract class MinecraftExtension @Inject internal constructor(
     @Used
     fun pluginYml(action: PluginYmlExtension.() -> Unit) {
         pluginYml.action()
-        deferred.defer(Phase.WIRE) { pluginYml.setup(project, this) }
+        deferred.defer(Phase.WIRE) { pluginYml.setup(project) }
     }
     @Used
     fun dependency(action: MinecraftDependencyExtension.() -> Unit) {
@@ -90,7 +90,7 @@ abstract class MinecraftExtension @Inject internal constructor(
     fun annoyingAPI(version: String, action: AnnoyingApiExtension.() -> Unit = {}) {
         annoyingAPI.version.set(version)
         annoyingAPI.action()
-        deferred.defer(Phase.WIRE) { annoyingAPI.setup(project) }
+        deferred.defer(Phase.WIRE) { annoyingAPI.setup(project, this) }
         deferred.defer(Phase.FINALIZE) { annoyingAPI.add(project) }
     }
 

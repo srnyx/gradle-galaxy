@@ -20,7 +20,8 @@ import javax.inject.Inject
 
 abstract class PluginYmlExtension @Inject constructor(
     private val project: Project,
-    private val objects: ObjectFactory
+    private val objects: ObjectFactory,
+    minecraft: MinecraftExtension,
 ) {
     // DeveloperData
     @Used val SRNYX: DeveloperData = DeveloperData.srnyx
@@ -33,27 +34,27 @@ abstract class PluginYmlExtension @Inject constructor(
      * Defaults to project name
      */
     @get:Input @get:Optional
-    val name: Property<String> = objects.property(String::class.java)
+    val name: Property<String> = objects.property(String::class.java).convention(project.provider { project.name })
     /**
      * Defaults to project version
      */
     @get:Input @get:Optional
-    val version: Property<String> = objects.property(String::class.java)
+    val version: Property<String> = objects.property(String::class.java).convention(project.provider { project.version.toString() })
     /**
      * Defaults to project description
      */
     @get:Input @get:Optional
-    val description: Property<String> = objects.property(String::class.java)
+    val description: Property<String> = objects.property(String::class.java).convention(project.provider { project.description })
     /**
      * Defaults to `mainPackage.name`
      */
     @get:Input @get:Optional
-    val main: Property<String> = objects.property(String::class.java)
+    val main: Property<String> = objects.property(String::class.java).convention(project.provider { "${project.getPackage()}.${project.name}" })
     /**
      * Defaults to Minecraft version from Paper/Spigot
      */
     @get:Input @get:Optional
-    val apiVersion: Property<String> = objects.property(String::class.java)
+    val apiVersion: Property<String> = objects.property(String::class.java).convention(project.provider { minecraft.getMinecraftVersion() })
     @get:Input @get:Optional
     val authors: ListProperty<String> = objects.listProperty(String::class.java)
     /**
@@ -67,7 +68,7 @@ abstract class PluginYmlExtension @Inject constructor(
      * Folia-only
      */
     @get:Input @get:Optional
-    val foliaSupported: Property<Boolean> = objects.property(Boolean::class.java)
+    val foliaSupported: Property<Boolean> = objects.property(Boolean::class.java).convention(minecraft.folia)
     @get:Input @get:Optional
     val load: Property<String> = objects.property(String::class.java)
     @get:Input @get:Optional
@@ -93,10 +94,10 @@ abstract class PluginYmlExtension @Inject constructor(
      */
     @get:Input
     val permissionPrefix: Property<String> = objects.property(String::class.java).convention(makePackageSafe(project.name) + ".")
-    @get:Input @get:Optional
-    val commands: MapProperty<String, Command> = objects.mapProperty(String::class.java, Command::class.java)
-    @get:Input @get:Optional
-    val permissions: ListProperty<Permission> = objects.listProperty(Permission::class.java)
+    @get:Input
+    val commands: MapProperty<String, Command> = objects.mapProperty(String::class.java, Command::class.java).convention(emptyMap())
+    @get:Input
+    val permissions: ListProperty<Permission> = objects.listProperty(Permission::class.java).convention(emptyList())
 
 
     /**
@@ -123,17 +124,7 @@ abstract class PluginYmlExtension @Inject constructor(
         permissions.add(permission)
     }
 
-    internal fun setup(
-        project: Project,
-        minecraft: MinecraftExtension,
-    ) {
-        if (name.orNull == null) name.set(project.name)
-        if (version.orNull == null) version.set(project.version.toString())
-        if (description.orNull == null) description.set(project.description)
-        if (main.orNull == null) main.set("${project.getPackage()}.${project.name}")
-        if (apiVersion.orNull == null) apiVersion.set(minecraft.getMinecraftVersion())
-        if (foliaSupported.orNull == null) foliaSupported.set(minecraft.folia)
-
+    internal fun setup(project: Project) {
         setupTask(project, "main", "processResources")
         setupTask(project, "test", "processTestResources", "Mock")
     }
@@ -218,7 +209,7 @@ abstract class PluginYmlExtension @Inject constructor(
             libraries.forEach { library -> appendLine("  - $library") }
         }
         defaultPermission.orNull?.let { appendLine("default-permission: $it") }
-        commands.orNull?.takeIf(Map<String, Command>::isNotEmpty)?.let { commands ->
+        commands.get().takeIf(Map<String, Command>::isNotEmpty)?.let { commands ->
             appendLine("commands:")
             commands.forEach { (name, command) ->
                 appendLine("  $name:")
@@ -232,7 +223,7 @@ abstract class PluginYmlExtension @Inject constructor(
                 command.permissionMessage.orNull?.let { appendLine("    permission-message: $it") }
             }
         }
-        permissions.orNull?.takeIf(List<Permission>::isNotEmpty)?.let { permissions ->
+        permissions.get().takeIf(List<Permission>::isNotEmpty)?.let { permissions ->
             appendLine("permissions:")
             val seen = mutableSetOf<String>()
             permissions.forEach { permission ->
@@ -265,7 +256,7 @@ abstract class PluginYmlExtension @Inject constructor(
         else -> "${version.major}.${version.minor}.${version.patch}"
     }
 
-    private fun prefixPermission(permission: String) = (if (permissionPrefix.orNull != null) "${permissionPrefix.get()}." else "") + permission
+    internal fun prefixPermission(permission: String) = (if (permissionPrefix.orNull != null) "${permissionPrefix.get()}." else "") + permission
 }
 
 abstract class Command @Inject constructor(

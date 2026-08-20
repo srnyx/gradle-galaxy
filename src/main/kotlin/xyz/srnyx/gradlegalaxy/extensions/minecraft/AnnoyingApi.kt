@@ -19,7 +19,6 @@ import xyz.srnyx.gradlegalaxy.data.annoyingapi.Exclude
 import xyz.srnyx.gradlegalaxy.data.annoyingapi.RuntimeLibrary
 import xyz.srnyx.gradlegalaxy.extensions.DeferredActions
 import xyz.srnyx.gradlegalaxy.extensions.DependencyExtension
-import xyz.srnyx.gradlegalaxy.extensions.JavaExtension
 import xyz.srnyx.gradlegalaxy.extensions.Phase
 import xyz.srnyx.gradlegalaxy.utility.dotsToBrackets
 import xyz.srnyx.gradlegalaxy.utility.getAnnoyingApiMetadata
@@ -29,18 +28,18 @@ import xyz.srnyx.gradlegalaxy.utility.hasShadowPlugin
 import xyz.srnyx.gradlegalaxy.utility.processRelocationTo
 import xyz.srnyx.gradlegalaxy.utility.relocate
 import xyz.srnyx.gradlegalaxy.utility.setJavaVersion
+import java.io.File
 import javax.inject.Inject
+import kotlin.collections.map
 
 
 /**
- * `minecraft { annoyingAPI(version) { } }` alone already applies full [java]/[minecraft]/`minecraft.runPaper`
+ * `minecraft { annoyingAPI(version) { } }` alone already applies full `minecraft.runPaper`
  * defaults — no separate `galaxy { java { } }` / `minecraft { }` / `minecraft { runPaper { } }` calls needed.
  */
 abstract class AnnoyingApiExtension @Inject internal constructor(
     objects: ObjectFactory,
     deferred: DeferredActions,
-    private val java: JavaExtension,
-    private val minecraft: MinecraftExtension,
 ) : DependencyExtension(objects) {
     init {
         repositories.set(listOf(SRNYX_SNAPSHOTS, SRNYX_RELEASES))
@@ -49,6 +48,11 @@ abstract class AnnoyingApiExtension @Inject internal constructor(
         configurations.set(listOf("implementation", "testImplementation"))
     }
 
+    /**
+     * @see [PluginYmlExtension]
+     */
+    val generateCommandsFromGeneratedPluginYml: Property<Boolean> = objects.property(Boolean::class.java).convention(true)
+
     val metadata = objects.newInstance(MetadataExtension::class.java)
     val customRuntimeLibraries = objects.newInstance(CustomRuntimeLibrariesExtension::class.java, deferred)
 
@@ -56,7 +60,10 @@ abstract class AnnoyingApiExtension @Inject internal constructor(
     fun metadata(action: MetadataExtension.() -> Unit) = metadata.action()
     fun customRuntimeLibraries(action: CustomRuntimeLibrariesExtension.() -> Unit) = customRuntimeLibraries.action()
 
-    internal fun setup(project: Project) {
+    internal fun setup(
+        project: Project,
+        minecraft: MinecraftExtension,
+    ) {
         check(project.hasJavaPlugin()) { "Java plugin is not applied!" }
         check(project.hasShadowPlugin()) { "Shadow plugin is required for Annoying API!" }
 
@@ -66,9 +73,89 @@ abstract class AnnoyingApiExtension @Inject internal constructor(
         minecraft.setup(project)
         minecraft.runPaper.setup(project)
 
+        // Get and process metadata
         val annoyingMetadata: AnnoyingMetadata? = metadata.process(project, this)
 
+        // Custom runtime libraries
         customRuntimeLibraries.annoyingMetadata.set(annoyingMetadata)
+
+        // Generate commands task
+        if (generateCommandsFromGeneratedPluginYml.get() && minecraft.pluginYml.commands.get().isNotEmpty()) {
+            val packagePath = project.getPackage()
+            val packageFolder = packagePath.replace(".", "/")
+            val mainValue = minecraft.pluginYml.main.get()
+
+            val classes: Map<String, String> = minecraft.pluginYml.commands.get().map { (name, command) ->
+                val className = "${name.replaceFirstChar { it.uppercase() }}CmdGen"
+                className to buildString {
+                    // Package
+                    appendLine("package $packagePath.commands.generated;")
+                    appendLine()
+
+                    // Imports
+                    val annoyingPackage = annoyingMetadata?.packageName ?: "xyz.srnyx.annoyingapi"
+                    appendLine("import org.jetbrains.annotations.NotNull;")
+                    appendLine("import $annoyingPackage.command.AnnoyingCommand;")
+                    appendLine()
+                    appendLine()
+
+                    // Class declaration
+                    appendLine("public abstract class $className extends AnnoyingCommand {")
+
+                    // plugin
+                    appendLine("    @NotNull protected final $mainValue plugin;")
+                    appendLine()
+                    appendLine("    public $className(@NotNull $mainValue plugin) {")
+                    appendLine("        this.plugin = plugin;")
+                    appendLine("    }")
+                    appendLine()
+                    appendLine("    @Override @NotNull")
+                    appendLine("    public $mainValue getAnnoyingPlugin() {")
+                    appendLine("        return plugin;")
+                    appendLine("    }")
+
+                    // name
+                    appendLine()
+                    appendLine("    @Override @NotNull")
+                    appendLine("    public String getName() {")
+                    appendLine("        return \"$name\";")
+                    appendLine("    }")
+
+                    // permission
+                    command.permission.orNull?.let {
+                        appendLine()
+                        appendLine("    @Override @NotNull")
+                        appendLine("    public String getPermission() {")
+                        appendLine("        return \"${minecraft.pluginYml.prefixPermission(it.permission.get())}\";")
+                        appendLine("    }")
+                    }
+
+                    appendLine("}")
+                }
+            }.toMap()
+
+            val outputDir = project.layout.buildDirectory.dir("generated/sources/galaxy/main/java/$packageFolder/commands/generated")
+            val generateCommands = project.tasks.register("generateCommands") {
+                group = "galaxy"
+                description = "Generates command classes from plugin.yml"
+
+                inputs.properties(classes)
+                outputs.dir(outputDir)
+
+                doLast {
+                    val dir = outputDir.get().asFile
+                    dir.mkdirs()
+                    classes.forEach { (name, text) -> File(dir, "$name.java").writeText(text) }
+                }
+            }
+
+            // Wire generated directory into main Java source set
+            project.extensions.configure<JavaPluginExtension> {
+                sourceSets.named("main") {
+                    java.srcDir(generateCommands.map { it.outputs.files })
+                }
+            }
+        }
     }
 }
 
@@ -300,37 +387,37 @@ abstract class GenerateRuntimeLibraryEnumExtension @Inject constructor(
 
         val enum = buildString {
             // Package
-            append("package $packagePathValue.library;")
-            append("\n")
+            appendLine("package $packagePathValue.library;")
+            appendLine()
 
             // Imports
             val annoyingPackage = annoyingMetadata?.packageName ?: "xyz.srnyx.annoyingapi"
             val libsLibby = "${if (relocateImports.get()) "$annoyingPackage.libs" else "net.byteflux"}.libby"
-            append("\nimport $libsLibby.Library;")
-            append("\nimport $libsLibby.relocation.Relocation;")
-            append("\nimport org.jetbrains.annotations.NotNull;")
-            append("\nimport org.jetbrains.annotations.Nullable;")
-            append("\nimport $annoyingPackage.AnnoyingPlugin;")
-            append("\nimport $annoyingPackage.library.AnnoyingLibrary;")
-            append("\n")
-            append("\nimport java.util.Collection;")
-            append("\nimport java.util.List;")
-            append("\nimport java.util.function.Function;")
-            append("\nimport java.util.function.Supplier;")
-            append("\n")
-            append("\n")
+            appendLine("import $libsLibby.Library;")
+            appendLine("import $libsLibby.relocation.Relocation;")
+            appendLine("import org.jetbrains.annotations.NotNull;")
+            appendLine("import org.jetbrains.annotations.Nullable;")
+            appendLine("import $annoyingPackage.AnnoyingPlugin;")
+            appendLine("import $annoyingPackage.library.AnnoyingLibrary;")
+            appendLine()
+            appendLine("import java.util.Collection;")
+            appendLine("import java.util.List;")
+            appendLine("import java.util.function.Function;")
+            appendLine("import java.util.function.Supplier;")
+            appendLine()
+            appendLine()
 
             // Enum declaration
-            append("\npublic enum $enumName implements AnnoyingLibrary {")
-            append("\n")
+            appendLine("public enum $enumName implements AnnoyingLibrary {")
+            appendLine()
 
             // Libraries
             libraries.forEachIndexed { index, library ->
                 append(buildLibraryEntry(library))
-                if (index < libraries.size - 1) append(",\n")
+                if (index < libraries.size - 1) appendLine(",")
             }
-            append(";\n")
-            append("\n")
+            appendLine(";")
+            appendLine()
 
             // Enum variables/constructors/methods
             append("""
