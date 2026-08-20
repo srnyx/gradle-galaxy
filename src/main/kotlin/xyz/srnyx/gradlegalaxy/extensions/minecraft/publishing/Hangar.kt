@@ -83,10 +83,7 @@ internal fun PlatformPublishingExtension.setupHangar(
             } else {
                 // start -> latest
                 val semanticVersionStart = VersionNumber.parse(minecraftVersionStart.get())
-                platformVersions.set(hangarMinecraftVersions
-                    .map { VersionNumber.parse(it) }
-                    .filter { it >= semanticVersionStart }
-                    .map { it.toString() })
+                platformVersions.set(hangarMinecraftVersions.filter { VersionNumber.parse(it) >= semanticVersionStart })
             }
         } }
 
