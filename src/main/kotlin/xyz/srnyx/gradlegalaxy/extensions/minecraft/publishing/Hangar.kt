@@ -7,6 +7,7 @@ import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import me.modmuss50.mpp.PublishModTask
 import org.gradle.api.Project
 import org.gradle.api.file.RegularFile
 import org.gradle.api.provider.Provider
@@ -100,8 +101,10 @@ internal fun PlatformPublishingExtension.setupHangar(
         if (project.hasShadowPlugin()) dependsOn("shadowJar")
     }
 
-    // Ensure publishAllPublicationsToHangar runs with/after publishMods
-    project.tasks.named("publishMods") { finalizedBy("publishAllPublicationsToHangar") }
+    // Ensure publishAllPublicationsToHangar runs after each MPP task, even if one fails
+    project.tasks.withType<PublishModTask> {
+        finalizedBy("publishAllPublicationsToHangar")
+    }
 }
 
 /**

@@ -225,12 +225,17 @@ class PlatformPublishingExtension(
         // Setup project data publishing
         projectData.setup(project)
 
+        // Hangar requires MPP too as it hooks into publishMods task
+        if (!project.hasModPublishPlugin()) return
+
         val releaseChannel = resolveReleaseChannel()
         val primaryFile = project.tasks.named<Jar>(if (project.hasShadowPlugin()) "shadowJar" else "jar").flatMap { it.archiveFile }
         val changelogText = resolveChangelogText(releaseChannel)
 
-        if (project.hasModPublishPlugin()) setupModPublish(project, releaseChannel, changelogText, primaryFile)
+        // MPP
+        setupModPublish(project, releaseChannel, changelogText, primaryFile)
 
+        // Hangar
         if (project.hasHangarPublishPlugin()) setupHangar(project, releaseChannel, changelogText, primaryFile)
     }
 
