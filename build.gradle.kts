@@ -2,10 +2,10 @@ plugins {
     `kotlin-dsl`
     `maven-publish`
     `java-gradle-plugin`
-    kotlin("jvm") version "1.9.24" // Do not update
-    kotlin("plugin.serialization") version "1.9.24" // Do not update
-    id("com.gradle.plugin-publish") version "1.3.1"
-    id("org.jetbrains.dokka") version "1.9.20" // Do not update because of kotlin("jvm") version
+    kotlin("jvm") version "2.4.0" // Must match Kotlin version embedded by kotlin-dsl
+    kotlin("plugin.serialization") version "2.4.0" // Must match kotlin("jvm") version
+    id("com.gradle.plugin-publish") version "2.1.1"
+    id("org.jetbrains.dokka") version "2.2.0"
 }
 
 // Get version
@@ -55,7 +55,7 @@ tasks.withType<JavaCompile> {
 tasks.register("javadocJar", Jar::class) {
     group = "build"
     description = "Assembles a jar archive containing the javadoc files"
-    val dokkaTask = tasks.getByName("dokkaHtml")
+    val dokkaTask = tasks.getByName("dokkaGenerateHtml")
     dependsOn(dokkaTask)
     from(dokkaTask)
     archiveClassifier.set("javadoc")
