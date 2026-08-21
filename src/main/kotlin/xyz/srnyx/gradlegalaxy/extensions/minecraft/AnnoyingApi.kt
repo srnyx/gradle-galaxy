@@ -139,7 +139,7 @@ abstract class AnnoyingApiExtension @Inject internal constructor(
                 group = "galaxy"
                 description = "Generates command classes from plugin.yml"
 
-                inputs.properties(classes)
+                inputs.property("classes", classes)
                 outputs.dir(outputDir)
 
                 doLast {
