@@ -18,6 +18,10 @@ import xyz.srnyx.gradlegalaxy.extensions.minecraft.MinecraftExtension
 import xyz.srnyx.gradlegalaxy.extensions.minecraft.RuntimeLibraryExtension
 import xyz.srnyx.gradlegalaxy.extensions.testing.TestingExtension
 import xyz.srnyx.gradlegalaxy.utility.getPackage
+import xyz.srnyx.gradlegalaxy.utility.inGitHubPreRelease
+import xyz.srnyx.gradlegalaxy.utility.inGitHubPublish
+import xyz.srnyx.gradlegalaxy.utility.inGitHubRelease
+import xyz.srnyx.gradlegalaxy.utility.inGitHubWorkflow
 import xyz.srnyx.gradlegalaxy.utility.makePackageSafe
 import xyz.srnyx.gradlegalaxy.utility.relocate
 import javax.inject.Inject
@@ -31,6 +35,15 @@ abstract class GradleGalaxyExtension @Inject constructor(
     objects: ObjectFactory
 ) {
     internal val deferred = DeferredActions(project)
+
+    @Used val inGitHubWorkflow: Boolean
+        get() = project.inGitHubWorkflow
+    @Used val inGitHubPublish: Boolean
+        get() = project.inGitHubPublish
+    @Used val inGitHubPreRelease: Boolean
+        get() = project.inGitHubPreRelease
+    @Used val inGitHubRelease: Boolean
+        get() = project.inGitHubRelease
 
     // Project-wide setup
     val repository = objects.newInstance(RepositoryHolder::class.java, project)
@@ -51,6 +64,7 @@ abstract class GradleGalaxyExtension @Inject constructor(
 
 
     fun getPackage() = project.getPackage()
+    fun json(action: JsonBuilder.() -> Unit) = Json { action() }
 
     @Used
     fun relocate(
@@ -58,8 +72,6 @@ abstract class GradleGalaxyExtension @Inject constructor(
         to: String = "${getPackage()}.libs.${makePackageSafe(from.split(".").last())}",
         action: SimpleRelocator.() -> Unit = {}
     ) = project.relocate(from, to, action)
-
-    fun json(action: JsonBuilder.() -> Unit) = Json { action() }
 
     @Used
     fun annoyingMetadata(action: AnnoyingMetadataBuilder.() -> Unit): AnnoyingMetadata {
