@@ -72,7 +72,7 @@ abstract class GradleGalaxyExtension @Inject constructor(
     fun dependency(action: DependenciesExtension.() -> Unit) = dependency.action()
     fun java(action: JavaExtension.() -> Unit) {
         java.action()
-        java.setup(project) // eager: only writes plain Project state, see JavaExtension's KDoc
+        java.setup() // eager: only writes plain Project state, see JavaExtension's KDoc
     }
     fun minecraft(action: MinecraftExtension.() -> Unit) {
         minecraft.action()

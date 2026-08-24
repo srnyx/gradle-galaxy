@@ -24,10 +24,20 @@ import javax.inject.Inject
  * so there's no ordering hazard in applying it eagerly.
  */
 abstract class JavaExtension @Inject constructor(
+    private val project: Project,
     objects: ObjectFactory,
 ) {
-    @get:Input @get:Optional
-    val version: Property<String> = objects.property(String::class.java)
+    @get:Input
+    val version: Property<String> = objects.property(String::class.java).convention(project.provider {
+        project.version.toString().takeIf { it != Project.DEFAULT_VERSION }
+        ?: when {
+            project.inGitHubWorkflow -> project.getEnvironmentVariable("GITHUB_REF_NAME")
+                ?.takeIf { project.inGitHubPublish }
+                ?: project.getEnvironmentVariable("GITHUB_SHA")?.take(7)
+            else -> null
+        }
+        ?: "snapshot"
+    })
     @get:Input @get:Optional
     val javaVersion: Property<JavaVersion> = objects.property(JavaVersion::class.java)
     @get:Input
@@ -41,20 +51,11 @@ abstract class JavaExtension @Inject constructor(
      * Idempotent: multiple `galaxy { }` entries (top-level `java { }`, and any entry that bundles java
      * setup in automatically, like `annoyingAPI { }`) may all call this. Only the first actually applies.
      */
-    internal fun setup(project: Project) {
+    internal fun setup() {
         if (applied) return
         applied = true
 
-        project.version = version.orNull
-            ?: project.version.takeIf { it != Project.DEFAULT_VERSION }
-            ?: when {
-                project.inGitHubWorkflow -> project.getEnvironmentVariable("GITHUB_REF_NAME")
-                    ?.takeIf { project.inGitHubPublish }
-                    ?: project.getEnvironmentVariable("GITHUB_SHA")?.take(7)
-                else -> null
-            }
-            ?: "snapshot"
-
+        project.version = version.get()
         javaVersion.orNull?.let { project.setJavaVersion(it, force = true) }
         textEncoding.orNull?.let { project.setTextEncoding(it) }
 

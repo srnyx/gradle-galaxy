@@ -27,6 +27,6 @@ abstract class LazyLibraryExtension @Inject internal constructor(
         // Every Lazy Library project needs these — applied unconditionally. Each has its own
         // idempotency guard, so this is a no-op wherever the consumer already triggered them
         // themselves (e.g. a separate top-level `galaxy { java { } }`).
-        java.setup(project)
+        java.setup()
     }
 }

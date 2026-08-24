@@ -112,7 +112,7 @@ abstract class MinecraftExtension @Inject internal constructor(
         // Every Minecraft project needs these — applied unconditionally. Each has its own
         // idempotency guard, so this is a no-op wherever the consumer already triggered them
         // themselves (e.g. a separate top-level `galaxy { java { } }`).
-        java.setup(project)
+        java.setup()
 
         if (replacementFiles.orNull != null && replacements.orNull != null) {
             project.addReplacementsTask(replacementFiles.get(), replacements.get())

@@ -46,7 +46,7 @@ abstract class JdaExtension @Inject constructor(
         // Every JDA project needs these — applied unconditionally. Each has its own
         // idempotency guard, so this is a no-op wherever the consumer already triggered them
         // themselves (e.g. a separate top-level `galaxy { java { } }`).
-        java.setup(project)
+        java.setup()
 
         project.setMainClass(extension.mainClassName.orNull)
         project.addCompilerArgs("-parameters")
