@@ -12,6 +12,7 @@ import xyz.srnyx.gradlegalaxy.extensions.JavaExtension
 import xyz.srnyx.gradlegalaxy.extensions.Phase
 import xyz.srnyx.gradlegalaxy.extensions.minecraft.publishing.PlatformPublishingExtension
 import xyz.srnyx.gradlegalaxy.utility.addReplacementsTask
+import xyz.srnyx.gradlegalaxy.utility.getDefaultReplacements
 import javax.inject.Inject
 
 
@@ -26,7 +27,7 @@ abstract class MinecraftExtension @Inject internal constructor(
     @get:Input
     val replacementFiles: SetProperty<String> = objects.setProperty(String::class.java).convention(listOf("plugin.yml"))
     @get:Input
-    val replacements: MapProperty<String, String> = objects.mapProperty(String::class.java, String::class.java).convention(mapOf("defaultReplacements" to "true"))
+    val replacements: MapProperty<String, String> = objects.mapProperty(String::class.java, String::class.java).convention(project.provider { project.getDefaultReplacements() })
 
     // Project-wide setup
     val pluginYml = objects.newInstance(PluginYmlExtension::class.java, this)
