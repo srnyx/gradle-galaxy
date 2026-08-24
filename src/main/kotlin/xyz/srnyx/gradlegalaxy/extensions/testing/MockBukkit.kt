@@ -24,8 +24,17 @@ abstract class MockBukkitExtension @Inject constructor(
     override fun add(project: Project) {
         artifact.set("${artifact.get()}${minecraftVersion.get()}")
 
-        // Exclude spigot-api from test classpath so MockBukkit's Paper takes precedence
-        project.configurations.named("testImplementation") { exclude("org.spigotmc", "spigot-api") }
+        // Exclude the project's own server API from the test classpath so MockBukkit's own
+        // (transitive, version-matched) Spigot/Paper APIs takes precedence instead.
+        // `io.papermc.paper:paper-api` itself is deliberately NOT excluded: projects that
+        // already use it (Paper 1.17+) shares MockBukkit's own coordinate, so normal Gradle
+        // version-conflict resolution already picks MockBukkit's newer version.
+        project.configurations.named("testImplementation") {
+            exclude("org.spigotmc", "spigot-api")
+            exclude("org.spigotmc", "spigot")
+            exclude("com.destroystokyo.paper", "paper-api")
+            exclude("org.github.paperspigot", "paperspigot-api")
+        }
 
         super.add(project)
     }
