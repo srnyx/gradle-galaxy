@@ -21,7 +21,8 @@ class RunPaperExtension(objects: ObjectFactory) {
     @get:Input
     val serverProperties: MapProperty<String, String> = objects.mapProperty(String::class.java, String::class.java).convention(mapOf(
         "allow-flight" to "true",
-        "enable-command-block" to "true"))
+        "enable-command-block" to "true",
+        "enforce-secure-profile" to "false"))
     /**
      * The JDK used to *launch* the `runServer` process — independent of the project's compile [javaVersion][xyz.srnyx.gradlegalaxy.extensions.JavaExtension.javaVersion].
      * Defaults to 21 since newer JDKs can run older bytecode fine, so this covers old and new Paper versions alike.
