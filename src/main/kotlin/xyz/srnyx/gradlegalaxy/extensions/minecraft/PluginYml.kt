@@ -172,20 +172,20 @@ abstract class PluginYmlExtension @Inject constructor(
      * Builds the `plugin.yml` text, using [nameValue]/[mainValue] instead of [name]/[main] so the `Mock`-prefixed test variant can reuse it
      */
     private fun buildText(nameValue: String, mainValue: String): String = buildString {
-        appendLine("name: $nameValue")
+        appendLine("name: \"$nameValue\"")
         appendLine("version: ${version.get()}")
-        appendLine("description: ${description.get()}")
+        appendLine("description: \"${description.get()}\"")
         appendLine("main: $mainValue")
         apiVersion.orNull?.let { appendLine("api-version: ${normalizeApiVersion(it)}") }
         authors.orNull?.takeIf(List<String>::isNotEmpty)?.let { authors ->
             appendLine("authors:")
-            authors.forEach { author -> appendLine("  - $author") }
+            authors.forEach { author -> appendLine("  - \"$author\"") }
         }
         contributors.orNull?.takeIf(List<String>::isNotEmpty)?.let { contributors ->
             appendLine("contributors:")
-            contributors.forEach { contributor -> appendLine("  - $contributor") }
+            contributors.forEach { contributor -> appendLine("  - \"$contributor\"") }
         }
-        website.orNull?.takeIf(String::isNotBlank)?.let { website -> appendLine("website: $website") }
+        website.orNull?.takeIf(String::isNotBlank)?.let { website -> appendLine("website: \"$website\"") }
         foliaSupported.orNull?.takeIf { it }?.let { appendLine("folia-supported: true") }
         load.orNull?.takeIf(String::isNotBlank)?.let { appendLine("load: $it") }
         depend.orNull?.takeIf(List<String>::isNotEmpty)?.let { depend ->
@@ -217,10 +217,10 @@ abstract class PluginYmlExtension @Inject constructor(
                     appendLine("    aliases:")
                     aliases.forEach { alias -> appendLine("      - $alias") }
                 }
-                command.description.orNull?.let { appendLine("    description: $it") }
-                command.usage.orNull?.let { appendLine("    usage: $it") }
+                command.description.orNull?.let { appendLine("    description: \"$it\"") }
+                command.usage.orNull?.let { appendLine("    usage: \"$it\"") }
                 command.permission.orNull?.let { appendLine("    permission: ${prefixPermission(it.permission.get())}") }
-                command.permissionMessage.orNull?.let { appendLine("    permission-message: $it") }
+                command.permissionMessage.orNull?.let { appendLine("    permission-message: \"$it\"") }
             }
         }
         permissions.get().takeIf(List<Permission>::isNotEmpty)?.let { permissions ->
@@ -235,7 +235,7 @@ abstract class PluginYmlExtension @Inject constructor(
                 }
 
                 appendLine("  $name:")
-                permission.description.orNull?.let { appendLine("    description: $it") }
+                permission.description.orNull?.let { appendLine("    description: \"$it\"") }
                 permission.default.orNull?.let { appendLine("    default: $it") }
                 permission.children.orNull?.takeIf(Map<String, Boolean>::isNotEmpty)?.let { children ->
                     appendLine("    children:")
