@@ -66,11 +66,17 @@ abstract class GradleGalaxyExtension @Inject constructor(
     fun getPackage() = project.getPackage()
     fun json(action: JsonBuilder.() -> Unit) = Json { action() }
 
+    // We need 2 separate methods because " = {}" makes Shadow required
     @Used
     fun relocate(
         from: String,
         to: String = "${getPackage()}.libs.${makePackageSafe(from.split(".").last())}",
-        action: SimpleRelocator.() -> Unit = {}
+    ) = project.relocate(from, to)
+    @Used
+    fun relocate(
+        from: String,
+        to: String = "${getPackage()}.libs.${makePackageSafe(from.split(".").last())}",
+        action: SimpleRelocator.() -> Unit
     ) = project.relocate(from, to, action)
 
     @Used
