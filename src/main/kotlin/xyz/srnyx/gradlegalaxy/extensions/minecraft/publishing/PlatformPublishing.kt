@@ -178,25 +178,25 @@ class PlatformPublishingExtension(
 
     // File exists: file contents
     // In GitHub workflow:
-    //   Non-STABLE: "github.com/REPO/commit/SHA"
-    //   STABLE: release link
+    //   Not publishing: "github.com/REPO/commit/SHA"
+    //   Publishing: release link
     // Else: "No changelog specified"
-    private fun resolveChangelogText(releaseChannel: ReleaseChannel): String {
+    private fun resolveChangelogText(): String {
         val changelogFile = project.file("Changelogs/${project.version}.md")
         return when {
             // File
             changelogFile.exists() -> changelogFile.readText()
 
             project.inGitHubWorkflow -> run {
-                val gitHubRepository =
-                    project.getEnvironmentVariable("GITHUB_REPOSITORY") ?: return@run "No changelog specified"
+                val gitHubRepository = project.getEnvironmentVariable("GITHUB_REPOSITORY") ?: return@run "No changelog specified"
                 val githubLink = "https://github.com/${gitHubRepository}"
 
-                // Non-STABLE: commit SHA
-                if (releaseChannel != ReleaseChannel.RELEASE) return@run "${githubLink}/commit/${project.getEnvironmentVariable("GITHUB_SHA")}"
+                // Not publishing: commit SHA
+                if (!project.inGitHubPublish) return@run "${githubLink}/commit/${project.getEnvironmentVariable("GITHUB_SHA")}"
 
-                // STABLE: release link
-                "${githubLink}/releases/tag/${project.version}"
+                // Publishing: release link (use the actual tag from the workflow, which may differ from project.version)
+                val tag = project.getEnvironmentVariable("GITHUB_REF_NAME") ?: project.version.toString()
+                "${githubLink}/releases/tag/${tag}"
             }
 
             else -> "No changelog specified"
@@ -229,8 +229,8 @@ class PlatformPublishingExtension(
         if (!project.hasModPublishPlugin()) return
 
         val releaseChannel = resolveReleaseChannel()
+        val changelogText = resolveChangelogText()
         val primaryFile = project.tasks.named<Jar>(if (project.hasShadowPlugin()) "shadowJar" else "jar").flatMap { it.archiveFile }
-        val changelogText = resolveChangelogText(releaseChannel)
 
         // MPP
         setupModPublish(project, releaseChannel, changelogText, primaryFile)
