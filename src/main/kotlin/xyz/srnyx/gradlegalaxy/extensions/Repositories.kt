@@ -53,6 +53,9 @@ open class Repositories {
     val FASTSTATS_SNAPSHOTS = "https://repo.faststats.dev/snapshots/"
     val OKAERI_RELEASES = "https://repo.okaeri.cloud/releases/"
     val OKAERI_SNAPSHOTS = "https://repo.okaeri.cloud/snapshots/"
+    val DEVAUTH = "https://pkgs.dev.azure.com/djtheredstoner/DevAuth/_packaging/public/maven/v1"
+    val WISP_FOREST_RELEASES = "https://maven.wispforest.io/releases/"
+    val WISP_FOREST_SNAPSHOTS = "https://maven.wispforest.io/snapshots/"
     val ESSENTIALS_RELEASES = "https://repo.essentialsx.net/releases/"
     val ESSENTIALS_SNAPSHOTS = "https://repo.essentialsx.net/snapshots/"
 }
